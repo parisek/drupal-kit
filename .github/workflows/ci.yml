@@ -33,6 +33,13 @@ jobs:
 
       - run: composer install --no-progress
 
+      - name: Bridge web/autoload.php to vendor/autoload.php
+        run: |
+          cat > web/autoload.php <<'PHP'
+          <?php
+          return require __DIR__ . '/../vendor/autoload.php';
+          PHP
+
       - name: Symlink module into Drupal extension discovery path
         run: |
           mkdir -p web/modules/contrib/custom_components
