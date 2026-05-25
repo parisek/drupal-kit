@@ -6,9 +6,6 @@ use Twig\Extension\AbstractExtension;
 use Twig\Environment;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
-use PHP_Typography\Settings;
-use PHP_Typography\PHP_Typography;
-use Symfony\Component\Yaml\Yaml;
 use Drupal\Core\Locale\CountryManager;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
@@ -65,11 +62,6 @@ class TwigExtension extends AbstractExtension {
       new TwigFilter(
         'country_name',
         [$this, 'getCountryName']
-      ),
-      new TwigFilter(
-        'typography',
-        [$this, 'getTypography'],
-        ['is_safe' => ['html']]
       ),
       new TwigFilter(
         'resizer',
@@ -335,75 +327,6 @@ class TwigExtension extends AbstractExtension {
     }
 
     return $images;
-  }
-
-  /**
-   * Runs the PHP-Typography.
-   *
-   * @param string $string
-   *   The string of text to apply the filter to.
-   * @param array $arguments
-   *   An optional array containing the settings for the typography library.
-   *   This should be set as a hash (key value pair) in twig template.
-   * @param bool $use_defaults
-   *   - TRUE: a sane set of defaults are loaded.
-   *   - FALSE: settings will need to be passed in and no defaults will
-   *     be applied.
-   *
-   * @return string|array
-   *   A processed and filtered string to return to the template.
-   *
-   * @throws \Exception
-   *   An exception is thrown if a string is not passed.
-   */
-  public static function getTypography($string, array $arguments = [], $use_defaults = TRUE) {
-    if (is_array($string)) {
-      // If it's render array just return it.
-      return $string;
-    }
-    $settings = new Settings($use_defaults);
-    // Load the defaults from the theme and merge them with any
-    // supplied arguments from the calling function in the template.
-    $arguments = array_merge(self::getDefaults(), $arguments);
-    // Process the arguments and add them to the settings object.
-    foreach ($arguments as $setting => $value) {
-      $settings->{$setting}($value);
-    }
-    $typo = new PHP_Typography();
-
-    // Process the string with any provided arguments (and/or defaults) and
-    // return it.
-    $string = $typo->process($string, $settings);
-    return $string;
-  }
-
-  /**
-   * Gets defaults from a YAML file if it exists in the active theme directory.
-   *
-   * @return array
-   *   A set of defaults loaded from a YAML file if found.
-   */
-  private static function getDefaults() {
-    $defaults = [];
-    $file_path = static::getFilePath();
-    if (file_exists($file_path)) {
-      $defaults = Yaml::parse(file_get_contents($file_path));
-    }
-    return $defaults;
-  }
-
-  /**
-   * Returns path to settings file.
-   *
-   * @return string
-   *   The file path to the typography_defaults.yml file.
-   */
-  public static function getFilePath() {
-    // phpcs:ignore DrupalPractice.Objects.GlobalDrupal.GlobalDrupal
-    $current_theme_name = \Drupal::service('theme.manager')->getActiveTheme()->getName();
-    // phpcs:ignore DrupalPractice.Objects.GlobalDrupal.GlobalDrupal
-    $file_path = \Drupal::service('extension.path.resolver')->getPath('theme', $current_theme_name) . '/static/typography.yml';
-    return $file_path;
   }
 
 }

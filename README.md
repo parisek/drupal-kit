@@ -17,6 +17,7 @@ drush en custom_components
 - `custom_components.resizer` — image style + focal point + responsive variant generator.
 - `custom_components.menu_active_trail_resolver` — resolves the active menu trail accounting for entity references and aliases.
 - `custom_components.twig_extension` — registers Twig functions used by component templates.
+- `custom_components.typography_twig_extension` — provides the `|typography` Twig filter; delegates to `parisek/twig-typography` and resolves typography config from `{active_theme}/static/typography.yml`.
 - `custom_components.route_subscriber` — alters routes for entity access edge cases.
 
 **Base classes**

@@ -4,14 +4,14 @@
     "description": "Provides functionality for components.",
     "license": "GPL-2.0-or-later",
     "require": {
-        "php": ">=8.1",
-        "drupal/core": "^10 || ^11",
+        "php": ">=8.3",
         "drupal/components": "^3.2",
         "drupal/config_pages": "^2.19",
+        "drupal/core": "^10 || ^11",
         "drupal/extra_field": "^3.0",
         "drupal/twig_real_content": "^1.0",
         "drupal/twig_tweak": "^3.4",
-        "mundschenk-at/php-typography": "^6.0.0"
+        "parisek/twig-typography": "^1.2"
     },
     "suggest": {
         "drupal/commerce": "Enables commerce_product entity rendering in EntityHelper.",
@@ -30,5 +30,17 @@
     },
     "extra": {
         "installer-name": "custom_components"
+    },
+    "repositories": [{
+        "name": "drupal",
+        "type": "composer",
+        "url": "https://packages.drupal.org/8"
+    }],
+    "config": {
+        "allow-plugins": {
+            "drupal/core-composer-scaffold": false,
+            "phpstan/extension-installer": false,
+            "dealerdirect/phpcodesniffer-composer-installer": false
+        }
     }
 }

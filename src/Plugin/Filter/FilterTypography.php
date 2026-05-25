@@ -1,13 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\custom_components\Plugin\Filter;
 
 use Drupal\Component\Utility\Html;
-use PHP_Typography\Settings;
-use PHP_Typography\PHP_Typography;
+use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\custom_components\Twig\TypographyExtension;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
-use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Provides a filter to format typography.
@@ -19,7 +21,28 @@ use Symfony\Component\Yaml\Yaml;
  *   type = Drupal\filter\Plugin\FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
  * )
  */
-class FilterTypography extends FilterBase {
+class FilterTypography extends FilterBase implements ContainerFactoryPluginInterface {
+
+  public function __construct(
+    array $configuration,
+    $plugin_id,
+    $plugin_definition,
+    private readonly TypographyExtension $typography,
+  ) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): self {
+    return new self(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $container->get('custom_components.typography_twig_extension'),
+    );
+  }
 
   /**
    * {@inheritdoc}
@@ -27,37 +50,20 @@ class FilterTypography extends FilterBase {
   public function process($text, $langcode) {
     $result = new FilterProcessResult($text);
 
-    $typo = new PHP_Typography();
-    $use_defaults = TRUE;
-    $settings = new Settings($use_defaults);
-
-    $current_theme_name = \Drupal::service('theme.manager')->getActiveTheme()->getName();
-    $file_path = \Drupal::service('extension.path.resolver')->getPath('theme', $current_theme_name) . '/static/typography.yml';
-    $arguments = [];
-    if (file_exists($file_path)) {
-      $arguments = Yaml::parse(file_get_contents($file_path));
-    }
-    // Process the arguments and add them to the settings object.
-    foreach ($arguments as $setting => $value) {
-      $settings->{$setting}($value);
-    }
-
-    $text = $typo->process($text, $settings);
+    $text = $this->typography->applyTypography($text);
 
     $html_dom = Html::load($text);
     $blockquote = $html_dom->getElementsByTagName('blockquote');
     foreach ($blockquote as $b) {
       $classes = $b->getAttribute('class');
       $classes = (strlen($classes) > 0) ? explode(' ', $classes) : [];
-      if (!in_array('blockquote', $classes)) {
+      if (!in_array('blockquote', $classes, TRUE)) {
         $classes[] = 'blockquote';
       }
       $b->setAttribute('class', implode(' ', $classes));
     }
 
-    $text = Html::serialize($html_dom);
-
-    $result->setProcessedText($text);
+    $result->setProcessedText(Html::serialize($html_dom));
     return $result;
   }
 
