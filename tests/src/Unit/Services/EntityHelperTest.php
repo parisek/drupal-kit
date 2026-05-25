@@ -1832,11 +1832,11 @@ class EntityHelperTest extends TestCase {
     // URL string doesn't match any field — returned as literal.
     $result = $this->entityHelper->mapFields($entity, [
       'url' => '/blog/post-1',
-      'api_key' => 'AIzaSyBiWhf_hkt2H8dEBco54SMvx7d5y_4elk8',
+      'api_key' => 'this-is-a-test-placeholder-not-a-real-key',
       'title' => 'title',
     ]);
     $this->assertSame('/blog/post-1', $result['url']);
-    $this->assertSame('AIzaSyBiWhf_hkt2H8dEBco54SMvx7d5y_4elk8', $result['api_key']);
+    $this->assertSame('this-is-a-test-placeholder-not-a-real-key', $result['api_key']);
     // 'title' matches field_title — resolved as field value.
     $this->assertSame('Hello', $result['title']);
   }
