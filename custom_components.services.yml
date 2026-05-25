@@ -10,7 +10,7 @@ services:
       - { name: twig.extension }
   custom_components.typography_twig_extension:
     class: Drupal\custom_components\Twig\TypographyExtension
-    arguments: ["@theme.manager", "@extension.path.resolver"]
+    arguments: ["@theme.manager", "@extension.path.resolver", "%app.root%"]
     tags:
       - { name: twig.extension }
   custom_components.entity_helper:

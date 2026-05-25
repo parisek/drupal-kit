@@ -30,6 +30,7 @@ final class TypographyExtension extends AbstractExtension {
   public function __construct(
     private readonly ThemeManagerInterface $themeManager,
     private readonly ExtensionPathResolver $extensionPathResolver,
+    private readonly string $appRoot,
   ) {}
 
   /**
@@ -68,7 +69,8 @@ final class TypographyExtension extends AbstractExtension {
   private function upstreamForActiveTheme(): UpstreamTypographyExtension {
     $themeName = $this->themeManager->getActiveTheme()->getName();
     if (!isset($this->cache[$themeName])) {
-      $path = $this->extensionPathResolver->getPath('theme', $themeName) . '/static/typography.yml';
+      $themePath = $this->extensionPathResolver->getPath('theme', $themeName);
+      $path = \rtrim($this->appRoot, '/') . '/' . \ltrim($themePath, '/') . '/static/typography.yml';
       $parsed = \file_exists($path) ? Yaml::parseFile($path) : NULL;
       $config = \is_array($parsed) ? $parsed : [];
       $this->cache[$themeName] = new UpstreamTypographyExtension($config);

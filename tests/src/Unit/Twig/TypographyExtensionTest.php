@@ -52,6 +52,9 @@ class TypographyExtensionTest extends TestCase {
     $this->extension = new TypographyExtension(
       $this->themeManager,
       $this->extensionPathResolver,
+      // appRoot is empty here — the path resolver mock returns absolute tmpDir
+      // paths, so no prefix is needed in tests. Production wires "%app.root%".
+      '',
     );
   }
 
