@@ -3,15 +3,15 @@
 namespace Drupal\Tests\custom_components\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
-use Drupal\custom_components\Services\EntityHelper;
 
 /**
  * Verifies the kernel-test pipeline can boot the module.
  *
- * Acts as the canary for the CI workflow: passes only when composer has
- * scaffolded Drupal, the module is symlinked into web/modules/contrib, and
- * PHPUnit can bootstrap from web/core/tests/bootstrap.php with sqlite
- * in-memory.
+ * Canary for the CI workflow: passes only when composer has scaffolded
+ * Drupal at web/core, the module is symlinked into web/modules/contrib,
+ * and PHPUnit can bootstrap from web/core/tests/bootstrap.php with sqlite
+ * in-memory. Deliberately does NOT instantiate EntityHelper — that has 15
+ * dependencies and would couple this smoke test to issue #4 fixtures.
  *
  * @group custom_components
  */
@@ -23,16 +23,12 @@ class SmokeTest extends KernelTestBase {
   protected static $modules = ['custom_components'];
 
   /**
-   * The module is discoverable and its primary service is wired up.
+   * The module is discoverable and enabled in the kernel container.
    */
-  public function testEntityHelperServiceIsAvailable(): void {
+  public function testModuleIsEnabled(): void {
     $this->assertTrue(
       $this->container->get('module_handler')->moduleExists('custom_components'),
       'custom_components module is enabled in the kernel container.',
-    );
-    $this->assertInstanceOf(
-      EntityHelper::class,
-      $this->container->get('custom_components.entity_helper'),
     );
   }
 
