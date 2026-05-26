@@ -62,6 +62,10 @@ Drupal core (enable via `drush en …`):
 
 - [`comment`](https://www.drupal.org/docs/8/core/modules/comment) — comment entity support (`comment_body` field on Comment entities).
 
+Drupal core patches (apply via [`cweagans/composer-patches`](https://github.com/cweagans/composer-patches)):
+
+- [drupal.org#2466553](https://www.drupal.org/project/drupal/issues/2466553) — adds `menu.language_tree_manipulator` to Drupal core. When applied, `EntityHelper::getMenu()` filters menu links by the current content language. When absent, the filter step is silently skipped and menu items for all languages appear.
+
 ## Tests
 
 Tests are self-contained — the package's CI scaffolds Drupal via Composer and runs [PHPUnit](https://phpunit.de/) against `web/core/tests/bootstrap.php` with sqlite in-memory.

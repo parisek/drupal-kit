@@ -49,6 +49,9 @@ services:
       - "@language_manager"
       - "@entity_type.manager"
       - "@request_stack"
+      # Optional — Drupal core patch (drupal.org#2466553) provides it.
+      # NULL when patch is absent; filter is skipped silently.
+      - "@?menu.language_tree_manipulator"
   custom_components.media_array_builder:
     class: Drupal\custom_components\Services\MediaArrayBuilder
     arguments:

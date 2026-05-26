@@ -35,22 +35,9 @@ class EntityHelperMenuTest extends EntityHelperKernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('menu_link_content');
 
-    // EntityHelper::getMenu() includes `menu.language_tree_manipulator`
-    // in its manipulator stack — that service comes from a Drupal core
-    // patch (https://www.drupal.org/project/drupal/issues/2466553) that
-    // htdvere has applied but a vanilla kernel-test container does not.
-    // Register a no-op stub so the manipulator chain resolves and we can
-    // assert on the rest of the pipeline.
-    $this->container->set(
-      'menu.language_tree_manipulator',
-      new class() {
-
-        public function filterLanguage(array $tree): array {
-          return $tree;
-        }
-
-      },
-    );
+    // The `menu.language_tree_manipulator` core-patch service is now
+    // optional — MenuTreeBuilder gracefully skips its manipulator entry
+    // when the service is absent (#43). No stub needed here anymore.
   }
 
   /**
