@@ -1,0 +1,13 @@
+# PHPStan baseline — legacy errors at level 5 we're accepting for now.
+#
+# The baseline shrinks over time: any time you fix a real error,
+# delete its entry from this file. CI fails on NEW errors that aren't
+# listed here.
+#
+# Regenerate after a code change if you fix listed issues:
+#   vendor/bin/phpstan analyse --generate-baseline=phpstan-baseline.neon
+#
+# Long-term goal: level 7 / 8 with this file empty (tracked in v1.5.0).
+
+parameters:
+    ignoreErrors: []

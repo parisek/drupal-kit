@@ -1,4 +1,9 @@
 parameters:
-    level: 1
+    level: 5
     paths:
         - src
+    drupal:
+        drupal_root: web
+
+includes:
+    - phpstan-baseline.neon

@@ -19,8 +19,8 @@
     },
     "require-dev": {
         "phpunit/phpunit": "^10 || ^11",
-        "phpstan/phpstan": "^1.8",
-        "mglaman/phpstan-drupal": "^1.3",
+        "phpstan/phpstan": "^2.0",
+        "mglaman/phpstan-drupal": "^2.0",
         "drupal/core-dev": "^11",
         "composer/installers": "^2.0",
         "drupal/image_effects": "^4.0",
