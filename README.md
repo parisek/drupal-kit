@@ -23,7 +23,7 @@ Requires [PHP 8.3+](https://www.php.net/releases/8.3/) and [Drupal](https://www.
 **Services**
 
 - `custom_components.entity_helper` — high-level entity loading and rendering helpers consumed by display plugins and Twig templates.
-- `custom_components.resizer` — image style + focal point + responsive variant generator.
+- `Drupal\custom_components\Services\Resizer` — static utility: image style + focal point + responsive variant generator. Call `Resizer::resizer($images, $variants)` directly.
 - `custom_components.menu_active_trail_resolver` — resolves the active menu trail accounting for entity references and aliases.
 - `custom_components.twig_extension` — registers Twig functions used by component templates.
 - `custom_components.typography_twig_extension` — provides the `|typography` Twig filter; delegates to [`parisek/twig-typography`](https://github.com/parisek/twig-typography) and resolves typography config from `{active_theme}/static/typography.yml`.

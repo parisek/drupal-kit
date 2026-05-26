@@ -103,8 +103,12 @@ class Resizer {
    * appropriate image effects (scale, crop, smart_crop, canvas) and converting
    * to modern format (AVIF if supported, WebP as fallback).
    *
-   * @param array|mixed $image
-   *   The source image data array containing:
+   * @param array|mixed $images
+   *   Either a single image data array OR an array of image arrays.
+   *   When given an array of images, the LAST one is used as the source
+   *   (callers historically pass the output of EntityHelper::getMediaField,
+   *   which is an array-of-images). A single image is accepted too and
+   *   wrapped via defensive coercion. The image array contains:
    *   - src: (string) Image source URL.
    *   - type: (string) MIME type.
    *   - width: (int) Original width.
@@ -123,21 +127,28 @@ class Resizer {
    *   Array of image variant data for use in picture/source elements.
    */
   // phpcs:ignore Generic.NamingConventions.ConstructorName.OldStyle
-  public static function resizer(mixed $image, array $variants): array {
-    $images = [];
+  public static function resizer(mixed $images, array $variants): array {
+    $result = [];
 
-    if (is_countable($image)) {
-      $image = end($image);
+    // Defensive coercion: accept either a single image (associative
+    // array with 'src') or an array of images. Pre-v1.4.0 the code
+    // did `is_countable + end()` which collapsed associative arrays
+    // to whatever value was last (height/alt), producing a scalar
+    // that broke the next isset('src') check — fragile for direct
+    // callers. Now: if the input is a list, pick the last image;
+    // if it's an assoc array with 'src', treat it as the single image.
+    if (!is_array($images)) {
+      return $result;
     }
-
-    if (!isset($image['src']) || empty($image['src'])) {
-      return $images;
+    $image = isset($images['src']) ? $images : end($images);
+    if (!is_array($image) || !isset($image['src']) || empty($image['src'])) {
+      return $result;
     }
 
     // SVG images are not resized.
     if (($image['type'] ?? '') === 'image/svg+xml') {
-      $images[] = $image;
-      return $images;
+      $result[] = $image;
+      return $result;
     }
 
     $default_image = [
@@ -205,7 +216,7 @@ class Resizer {
 
           if ($success || $stage_file_proxy_enabled) {
             $format = self::getOutputFormat();
-            $images[] = [
+            $result[] = [
               'src' => $resize_src,
               'type' => $format['mime'] ?? $default_image['type'],
               'width' => $variant['width'],
@@ -218,9 +229,9 @@ class Resizer {
     }
 
     // Add original as fallback image.
-    $images[] = $default_image;
+    $result[] = $default_image;
 
-    return $images;
+    return $result;
   }
 
   /**
