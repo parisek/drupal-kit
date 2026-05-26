@@ -30,13 +30,16 @@ jobs:
         #   v1.1.0 baseline (mocked units only): 32.31% — floor at 30
         #   v1.2.0 #18 (media kernel tests):     40.76% — interim
         #   v1.2.0 #19 (field-getter kernel):    45.88% — floor at 45
+        #   v1.3.0 #31 (Resizer):                47.92%
+        #   v1.3.0 #32 (image/file/media):       51.67%
+        #   v1.3.0 #34 (formatField integration):51.67% (dispatch reaches existing)
+        #   v1.3.0 #35 (ComponentBase form API): 53.03% — floor at 53
         # 80% (v1.1.0 aspirational target) needs the deferred
-        # Resizer kernel coverage, getImageField/getFileField/
-        # getMediaField, getOfficeHoursField + other contrib-gated
-        # getters, and DisplayBase / ComponentBase paths — tracked
-        # for v1.3.0 as a focused follow-up.
+        # MediaArrayBuilder oembed + Lottie (#33), DisplayBase form
+        # API, contrib-gated getters (getOfficeHoursField + 4 more),
+        # and remaining edge cases — tracked for v1.4.0.
         env:
-          MIN_COVERAGE: '45'
+          MIN_COVERAGE: '53'
         run: |
           php -r '
             $min = (int) getenv("MIN_COVERAGE");

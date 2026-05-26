@@ -77,7 +77,10 @@ Historical ratchet:
 - v1.1.0 baseline (mocked units only): **32.31%** — floor 30
 - v1.2.0 #18 media kernel tests: **40.76%**
 - v1.2.0 #19 field-getter kernel tests: **45.88%** — floor 45
-- v1.3.0 target (Resizer + remaining getters + contrib-gated): **70%+** aspirational
+- v1.3.0 #31 Resizer kernel suite: **47.92%**
+- v1.3.0 #32 image/file/media getters: **51.67%**
+- v1.3.0 #35 ComponentBase form API: **53.03%** — floor 53
+- v1.4.0 target (oembed + Lottie + DisplayBase form + contrib-gated): **65%+** intermediate
 
 ## PHPStan
 

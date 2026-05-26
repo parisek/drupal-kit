@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-05-26
+
+### Added
+- **Resizer kernel test suite** (#31) — first kernel-level coverage of `Drupal\custom_components\Services\Resizer`. New `ResizerKernelTestBase` + 6 tests covering the SVG passthrough, external-URL fallback, countable-input collapse, and the local-file image-style derivative path. `drupal/image_effects`, `drupal/focal_point`, `drupal/file_mdm` added to require-dev so the auto-orient + focal_point-aware crop effects can run in the kernel container.
+- **EntityHelper image/file/media field-getter kernel tests** (#32) — `getImageField`, `getFileField`, `getMediaField` against real Drupal field API. New `EntityHelperMediaFieldsKernelTestBase` composes the test_article fixture with the PNG + Image-Media helpers. Includes cache-tag bubble assertion for `getMediaField`.
+- **formatField polymorphic dispatch kernel tests** (#34) — one test per field-type branch (string, text_long, datetime, daterange, link, list_string, boolean, float, entity_reference) verifying the dispatch reaches the correct typed getter. Plus `formatFields` batch and `mapFields` string-config + empty-map paths.
+- **ComponentBase form API kernel tests** (#35) — real `FormState` instance; verifies `buildConfigurationForm` render-array shape, default-value pre-population from configuration, and `submitConfigurationForm` persistence.
+
+### Changed
+- **CI coverage floor raised**: 45% → 53%. Coverage went from 45.88% (v1.2.0) to 53.03% (v1.3.0). The 80% target now sits in v1.4.0; the remaining gaps are MediaArrayBuilder oembed/Lottie (#33, convoluted), DisplayBase form API, and contrib-gated field getters.
+
+### Deferred to v1.4.0
+- `buildRemoteVideo` (oembed) + `buildLottie` kernel coverage (#33) — the stub-bundle approach needs a careful seam that survives without bit-rotting; better as a focused PR.
+- `DisplayBase` form API — needs extra_field plugin discovery setup.
+- Contrib-gated getters (`getOfficeHoursField`, `getAddressField`, `getGeoField`, `getPriceField`, `getWebformField`).
+- `MenuActiveTrailResolver` remaining 50% uncovered paths.
+- `TypographyExtension::applyTypography` variants.
+- `MenuTreeBuilder::renderLinks` deep paths (menu link content + custom field formatter).
+
 ## [1.2.0] — 2026-05-26
 
 ### Added
