@@ -40,10 +40,13 @@ class EntityHelperDateFieldsKernelTest extends EntityHelperFieldsKernelTestBase 
   public function testGetDateFieldReturnsValue(): void {
     $node = $this->createTestNode(['field_published_at' => '2024-03-14T10:00:00']);
     $value = $this->entityHelper->getDateField($node, 'published_at');
-    // Implementation may return a structured array or string; assert
-    // that the timestamp source is somewhere in the result.
-    $serialized = is_array($value) ? json_encode($value) : (string) $value;
-    $this->assertStringContainsString('2024', $serialized);
+    // Implementation returns a Unix timestamp (string) for single-value
+    // datetime fields. 2024-03-14T10:00:00 UTC = 1710410400.
+    $ts = is_array($value) ? (int) reset($value) : (int) $value;
+    $this->assertGreaterThan(0, $ts);
+    // Within a reasonable window of the expected timestamp (±1 day
+    // tolerance for timezone surprises in CI).
+    $this->assertEqualsWithDelta(1710410400, $ts, 86400);
   }
 
   /**

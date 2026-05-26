@@ -87,8 +87,21 @@ class EntityHelperReferenceFieldsKernelTest extends EntityHelperFieldsKernelTest
     ]);
 
     $value = $this->entityHelper->getEntityReferenceField($node, 'topics');
-    $serialized = is_array($value) ? json_encode($value) : (string) $value;
-    $this->assertStringContainsString('Gamma', $serialized);
+    // Result is an array containing the referenced entity (possibly
+    // wrapped). Walk it and look for the Term we created by id.
+    $found_id = NULL;
+    $stack = is_array($value) ? $value : [$value];
+    while ($stack) {
+      $item = array_shift($stack);
+      if ($item instanceof \Drupal\Core\Entity\EntityInterface) {
+        $found_id = (int) $item->id();
+        break;
+      }
+      if (is_array($item)) {
+        $stack = array_merge($stack, $item);
+      }
+    }
+    $this->assertSame((int) $term->id(), $found_id);
   }
 
 }

@@ -40,8 +40,11 @@ class EntityHelperTextFieldsKernelTest extends EntityHelperFieldsKernelTestBase 
     $this->attachField('headline', 'string');
     // Multi-value string for return_format=array path.
     $this->attachField('tags', 'string', ['cardinality' => -1]);
-    // Long text (textarea).
-    $this->attachField('body', 'text_long');
+    // Long text (textarea). Field name avoids 'body' because
+    // getTextareaField exempts that name from the field_ prefix
+    // normalization for Node entities (real Drupal body fields are
+    // unprefixed). Using 'content' keeps the prefix path intact.
+    $this->attachField('content', 'text_long');
     // Numeric (float).
     $this->attachField('score', 'float');
     // Boolean.
@@ -98,12 +101,12 @@ class EntityHelperTextFieldsKernelTest extends EntityHelperFieldsKernelTestBase 
    * @covers ::getTextareaField
    */
   public function testGetTextareaFieldReturnsValue(): void {
-    $node = $this->createTestNode(['field_body' => [
+    $node = $this->createTestNode(['field_content' => [
       'value' => 'Long content here',
       'format' => 'plain_text',
     ]]);
     // Renderer wraps in <p>; we just want substring presence.
-    $result = $this->entityHelper->getTextareaField($node, 'body');
+    $result = $this->entityHelper->getTextareaField($node, 'content');
     $this->assertStringContainsString('Long content here', (string) $result);
   }
 
@@ -112,7 +115,7 @@ class EntityHelperTextFieldsKernelTest extends EntityHelperFieldsKernelTestBase 
    */
   public function testGetTextareaFieldEmptyReturnsEmptyString(): void {
     $node = $this->createTestNode();
-    $this->assertSame('', $this->entityHelper->getTextareaField($node, 'body'));
+    $this->assertSame('', $this->entityHelper->getTextareaField($node, 'content'));
   }
 
   /**
