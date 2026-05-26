@@ -531,6 +531,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getLinkField'])
       ->getMock();
@@ -583,6 +584,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getMediaField'])
       ->getMock();
@@ -623,6 +625,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getTermField'])
       ->getMock();
@@ -663,6 +666,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getEntityReferenceField'])
       ->getMock();
@@ -703,6 +707,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getEntityReferenceField'])
       ->getMock();
@@ -780,6 +785,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getWebformField'])
       ->getMock();
@@ -964,6 +970,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods($methods)
       ->getMock();
