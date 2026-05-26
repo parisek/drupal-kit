@@ -1168,7 +1168,7 @@ class EntityHelper {
     if ($field instanceof FieldItemListInterface) {
       foreach ($field as $item) {
         if ($item) {
-          $value[] = (boolean) $item->value;
+          $value[] = (bool) $item->value;
         }
       }
     }

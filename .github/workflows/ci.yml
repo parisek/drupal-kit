@@ -25,7 +25,7 @@ jobs:
 
       - run: vendor/bin/phpunit --coverage-clover coverage.xml --coverage-text
 
-      - run: vendor/bin/phpstan analyse --no-progress
+      - run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G
 
       - name: Enforce line-coverage threshold
         # Ratchet floor — raised as each batch of kernel tests lands.

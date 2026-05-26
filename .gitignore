@@ -1,7 +1,12 @@
 /vendor/
 /web/
+/recipes/
 composer.lock
 coverage.xml
 .phpunit.result.cache
 .phpunit.cache/
 .DS_Store
+# drupal/core-composer-scaffold generates these at project root during
+# `composer install` (we're a library, not a site project).
+/.editorconfig
+/.gitattributes

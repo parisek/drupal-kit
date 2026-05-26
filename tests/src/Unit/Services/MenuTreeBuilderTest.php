@@ -3,6 +3,8 @@
 namespace Drupal\Tests\custom_components\Unit\Services;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\Context\CacheContextsManager;
+use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
@@ -53,6 +55,24 @@ class MenuTreeBuilderTest extends TestCase {
     $this->entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
 
     $this->requestStack = $this->createMock(RequestStack::class);
+
+    // CacheableMetadata::createFromRenderArray() drains through
+    // Cache::mergeContexts() which uses \Drupal::service('cache_contexts_manager').
+    // Without a container set up the test crashes the first time it runs in
+    // a fresh process (CI order was hiding the gap via container leak from
+    // EntityHelperTest's setUp).
+    $cache_contexts_manager = $this->createMock(CacheContextsManager::class);
+    $cache_contexts_manager->method('assertValidTokens')->willReturn(TRUE);
+    $container = new ContainerBuilder();
+    $container->set('cache_contexts_manager', $cache_contexts_manager);
+    \Drupal::setContainer($container);
+  }
+
+  protected function tearDown(): void {
+    if (\Drupal::hasContainer()) {
+      \Drupal::unsetContainer();
+    }
+    parent::tearDown();
   }
 
   /**

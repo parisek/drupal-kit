@@ -26,19 +26,15 @@ parameters:
             path: src/Services/EntityHelper.php
 
         # PHPDoc-derived always-true ifs (defensive instanceof checks).
+        # treatPhpDocTypesAsCertain: false suppresses Resizer's
+        # entries — leaving only the EntityHelper ones.
         -
             identifier: if.alwaysTrue
-            paths:
-                - src/Services/EntityHelper.php
-                - src/Services/Resizer.php
+            path: src/Services/EntityHelper.php
 
         -
             identifier: function.alreadyNarrowedType
             path: src/Services/EntityHelper.php
-
-        -
-            identifier: booleanAnd.leftAlwaysTrue
-            path: src/Services/Resizer.php
 
         # Plugin factory returns concrete class instead of `static`.
         -
