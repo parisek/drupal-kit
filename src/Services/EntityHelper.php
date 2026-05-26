@@ -160,6 +160,12 @@ class EntityHelper {
   protected MenuTreeBuilder $menuTreeBuilder;
 
   /**
+   * Builds Media / File render arrays (delegated from generateMedia* /
+   * generateFile* methods).
+   */
+  protected MediaArrayBuilder $mediaArrayBuilder;
+
+  /**
    * Accumulated cacheable metadata from entity-loading methods.
    *
    * @var \Drupal\Core\Cache\CacheableMetadata
@@ -187,6 +193,7 @@ class EntityHelper {
     MenuActiveTrailResolver $menu_active_trail_resolver,
     TaxonomyTreeBuilder $taxonomy_tree_builder,
     MenuTreeBuilder $menu_tree_builder,
+    MediaArrayBuilder $media_array_builder,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->routeMatch = $route_match;
@@ -205,6 +212,7 @@ class EntityHelper {
     $this->menuActiveTrailResolver = $menu_active_trail_resolver;
     $this->taxonomyTreeBuilder = $taxonomy_tree_builder;
     $this->menuTreeBuilder = $menu_tree_builder;
+    $this->mediaArrayBuilder = $media_array_builder;
     $this->cacheMetadata = new CacheableMetadata();
   }
 
@@ -779,270 +787,63 @@ class EntityHelper {
    * Generate data from a remote video media entity.
    */
   public function generateMediaRemoteVideo(MediaInterface $media) {
-
-    $video = [];
-
-    $url = $media->getSource()->getSourceFieldValue($media);
-    preg_match('%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)([^"&?/ ]{11})%i', $url, $match);
-    if (count($match)) {
-      $video['iframe'] = 'https://www.youtube.com/embed/' . $match[1];
-    }
-    else {
-      $video['iframe'] = $url;
-    }
-    if ($media->hasField('field_media_image') && !$media->field_media_image->isEmpty()) {
-      $video['image'] = $this->getImageField($media, 'media_image');
-    }
-    elseif ($media->thumbnail->entity) {
-      $video['image'] = $this->generateFileImage($media->thumbnail->entity);
-    }
-
-    return $video;
+    return $this->mediaArrayBuilder->buildRemoteVideo($media, [$this, 'getImageField']);
   }
 
   /**
    * Generate data from a video media entity.
    */
   public function generateMediaVideo(MediaInterface $media) {
-
-    $langcode = $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
-
-    $data = [];
-
-    $fid = $media->getSource()->getSourceFieldValue($media);
-    // phpcs:ignore DrupalPractice.Objects.GlobalClass.GlobalClass
-    $file = $fid ? File::load($fid) : NULL;
-    if ($file) {
-      $data = [
-        'title' => $file->getFilename(),
-        'type' => $file->getMimeType(),
-        'src' => $file->createFileUrl(FALSE),
-        'size' => ByteSizeMarkup::create($file->getSize(), $langcode),
-      ];
-    }
-
-    return $data;
+    return $this->mediaArrayBuilder->buildVideo($media);
   }
 
   /**
    * Generate data from a document media entity.
    */
   public function generateMediaDocument(MediaInterface $media) {
-
-    $langcode = $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
-
-    $data = [];
-
-    $fid = $media->getSource()->getSourceFieldValue($media);
-    // phpcs:ignore DrupalPractice.Objects.GlobalClass.GlobalClass
-    $file = $fid ? File::load($fid) : NULL;
-    if ($file) {
-      $data = [
-        'title' => $file->getFilename(),
-        'uri' => $file->getFileUri(),
-        'type' => $file->getMimeType(),
-        'size' => ByteSizeMarkup::create($file->getSize(), $langcode),
-        'url' => $file->createFileUrl(FALSE),
-      ];
-    }
-
-    return $data;
+    return $this->mediaArrayBuilder->buildDocument($media);
   }
 
   /**
    * Generate data from an SVG media entity.
    */
   public function generateMediaSvg(MediaInterface $media) {
-
-    $images = [];
-
-    $fid = $media->getSource()->getSourceFieldValue($media);
-    // phpcs:ignore DrupalPractice.Objects.GlobalClass.GlobalClass
-    $file = $fid ? File::load($fid) : NULL;
-    if ($file instanceof FileInterface) {
-      $image = [
-        'src' => $file->createFileUrl(FALSE),
-        'type' => $file->getMimeType(),
-        'alt' => $media->getSource()->getMetadata($media, 'thumbnail_alt_value'),
-      ];
-
-      // Get SVG dimensions via SimpleXML instead of
-      // $media->getSource()->getMetadata() which delegates
-      // to ImageMagick's `identify` command. ImageMagick v6
-      // security policy blocks the MVG coder required for
-      // SVG processing, causing: "attempt to perform an
-      // operation not allowed by the security policy 'MVG'".
-      $dimensions = $this->getSvgViewBoxDimensions($file->getFileUri());
-      if ($dimensions) {
-        $image['width'] = $dimensions['width'];
-        $image['height'] = $dimensions['height'];
-      }
-
-      $images[] = $image;
-    }
-
-    return $images;
+    return $this->mediaArrayBuilder->buildSvg($media);
   }
 
   /**
    * Generate src from Media Lottie.
    */
   public function generateMediaLottie(MediaInterface $media) {
-
-    $image = [];
-
-    $fid = $media->getSource()->getSourceFieldValue($media);
-    // phpcs:ignore DrupalPractice.Objects.GlobalClass.GlobalClass
-    $file = $fid ? File::load($fid) : NULL;
-    if ($file instanceof FileInterface) {
-      $image = [
-        'src' => $file->createFileUrl(FALSE),
-        'type' => $file->getMimeType(),
-      ];
-
-      // If file not exists we cannot check width/height.
-      if (\file_exists($file->getFileUri())) {
-        $image['width'] = $media->getSource()->getMetadata($media, 'width');
-        $image['height'] = $media->getSource()->getMetadata($media, 'height');
-      }
-    }
-
-    return $image;
+    return $this->mediaArrayBuilder->buildLottie($media);
   }
 
   /**
    * Generate src from Media Image.
    */
   public function generateMediaImage(MediaInterface $media, $image_style = '') {
-
-    $images = [];
-
-    $fid = $media->getSource()->getSourceFieldValue($media);
-    // phpcs:ignore DrupalPractice.Objects.GlobalClass.GlobalClass
-    $file = $fid ? File::load($fid) : NULL;
-    if ($file instanceof FileInterface) {
-      $legacy_image = [
-        'src' => $file->createFileUrl(FALSE),
-        'type' => $file->getMimeType(),
-        'alt' => $media->getSource()->getMetadata($media, 'thumbnail_alt_value'),
-      ];
-
-      // If file not exists we cannot check width/height.
-      if (\file_exists($file->getFileUri())) {
-        $legacy_image['width'] = $media->getSource()->getMetadata($media, 'width');
-        $legacy_image['height'] = $media->getSource()->getMetadata($media, 'height');
-      }
-
-      // phpcs:ignore DrupalPractice.Objects.GlobalClass.GlobalClass
-      $style_base = ImageStyle::load($image_style);
-      if ($style_base instanceof ImageStyleInterface && isset($legacy_image['width']) && isset($legacy_image['height'])) {
-        $legacy_image['src'] = $style_base->buildUrl($file->getFileUri());
-        $dimensions = [
-          'width' => $legacy_image['width'],
-          'height' => $legacy_image['height'],
-        ];
-        $style_base->transformDimensions($dimensions, $file->getFileUri());
-        $legacy_image['width'] = $dimensions['width'];
-        $legacy_image['height'] = $dimensions['height'];
-        $images[] = $legacy_image;
-      }
-      else {
-        $images[] = $legacy_image;
-        if (!empty($image_style)) {
-          $this->loggerFactory->get('custom_components')->notice(
-            'Missing image style @style',
-            ['@style' => $image_style]
-          );
-        }
-      }
-    }
-
-    // Reverse array as browser uses order as priority.
-    $images = array_reverse($images);
-
-    return $images;
+    return $this->mediaArrayBuilder->buildImage($media, $image_style);
   }
 
   /**
    * Generate src and srcset attributes from image and image style id.
    */
   public function generateFileImage($file, $image_style = '', $params = []) {
-
-    $images = [];
-
-    if ($file instanceof FileInterface) {
-      $legacy_image = [
-        'src' => $file->createFileUrl(FALSE),
-        'type' => $file->getMimeType(),
-        'alt' => $params['alt'] ?? '',
-        'title' => $params['title'] ?? NULL,
-      ];
-
-      // If file not exists we cannot check width/height.
-      if (\file_exists($file->getFileUri())) {
-        $image_factory = $this->imageFactory->get($file->getFileUri());
-        if ($image_factory->isValid()) {
-          $legacy_image['width'] = $image_factory->getWidth();
-          $legacy_image['height'] = $image_factory->getHeight();
-        }
-      }
-
-      // phpcs:ignore DrupalPractice.Objects.GlobalClass.GlobalClass
-      $style_base = ImageStyle::load($image_style);
-      if ($style_base instanceof ImageStyleInterface) {
-        $legacy_image['src'] = $style_base->buildUrl($file->getFileUri());
-        $images[] = $legacy_image;
-      }
-      else {
-        $images[] = $legacy_image;
-        if (!empty($image_style)) {
-          $this->loggerFactory->get('custom_components')->notice(
-            'Missing image style @style',
-            ['@style' => $image_style]
-          );
-        }
-      }
-    }
-
-    // Reverse array as browser uses order as priority.
-    $images = array_reverse($images);
-
-    return $images;
+    return $this->mediaArrayBuilder->buildFileImage($file, $image_style, $params);
   }
 
   /**
    * Generate url from Media Image.
    */
   public function generateMediaImageLink($image, $image_style = '') {
-
-    if ($image instanceof MediaInterface) {
-      $fid = $image->getSource()->getSourceFieldValue($image);
-      // phpcs:ignore DrupalPractice.Objects.GlobalClass.GlobalClass
-      $file = $fid ? File::load($fid) : NULL;
-      if ($file instanceof FileInterface) {
-        $url = $file ? $file->createFileUrl(FALSE) : NULL;
-        $uri = $file->getFileUri();
-
-        // phpcs:ignore DrupalPractice.Objects.GlobalClass.GlobalClass
-        $style_base = ImageStyle::load($image_style);
-        return ($style_base instanceof ImageStyleInterface) ? $style_base->buildUrl($uri) : $url;
-      }
-    }
+    return $this->mediaArrayBuilder->buildImageLink($image, $image_style);
   }
 
   /**
    * Generate src and srcset attributes from image and image style id.
    */
   public function generateFileImageLink($file, $image_style = '') {
-
-    if ($file instanceof FileInterface) {
-      $url = $file->createFileUrl(FALSE);
-      $uri = $file->getFileUri();
-
-      // phpcs:ignore DrupalPractice.Objects.GlobalClass.GlobalClass
-      $style_base = ImageStyle::load($image_style);
-      return ($style_base instanceof ImageStyleInterface) ? $style_base->buildUrl($uri) : $url;
-    }
+    return $this->mediaArrayBuilder->buildFileImageLink($file, $image_style);
   }
 
   /**
@@ -1878,62 +1679,7 @@ class EntityHelper {
    * Get SVG image dimensions from viewBox.
    */
   public function getSvgViewBoxDimensions($uri) {
-
-    $cid = 'custom_components:entity:svg:' . md5($uri);
-    $cache = $this->cache->get($cid);
-
-    if ($cache) {
-      return $cache->data;
-    }
-
-    $file_path = $this->fileUrlGenerator->generateAbsoluteString($uri);
-    $xmlget = @file_get_contents($file_path);
-    if ($xmlget === FALSE) {
-      return NULL;
-    }
-    if (mb_check_encoding($xmlget) == 1) {
-      $xmlget_str = @simplexml_load_string($xmlget);
-      if ($xmlget_str === FALSE) {
-        return NULL;
-      }
-      $xmlattributes = $xmlget_str->attributes();
-      $width = $xmlattributes->width;
-      $height = $xmlattributes->height;
-
-      // If there is no $width attribute, we take it from viewBox.
-      if (empty($width)) {
-        if (!isset($xmlattributes->viewBox) || empty($xmlattributes->viewBox)) {
-          return NULL;
-        }
-        $viewBox = preg_split('/[\s,]+/', $xmlattributes->viewBox);
-        if (count($viewBox) < 4) {
-          return NULL;
-        }
-        $viewBoxWidth = (float) ($viewBox[2] ?? 0);
-        $viewBoxHeight = (float) ($viewBox[3] ?? 0);
-
-        // Getting width from viewBox.
-        $width = round($viewBoxWidth);
-
-        // Getting height from viewBox.
-        $height = round($viewBoxHeight);
-      }
-
-      // Validate that width and height are positive numbers.
-      if ((float) $width <= 0 || (float) $height <= 0) {
-        return NULL;
-      }
-
-      $dimensions = [
-        'width' => (int) $width,
-        'height' => (int) $height,
-      ];
-
-      $this->cache->set($cid, $dimensions, Cache::PERMANENT);
-
-      return $dimensions;
-    }
-    return NULL;
+    return $this->mediaArrayBuilder->getSvgViewBoxDimensions($uri);
   }
 
 }
