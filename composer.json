@@ -24,7 +24,8 @@
         "drupal/core-dev": "^11",
         "composer/installers": "^2.0",
         "drupal/image_effects": "^4.0",
-        "drupal/focal_point": "^2.0"
+        "drupal/focal_point": "^2.0",
+        "drupal/file_mdm": "^3.0"
     },
     "autoload": {
         "psr-4": {

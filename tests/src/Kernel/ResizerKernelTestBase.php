@@ -28,6 +28,7 @@ abstract class ResizerKernelTestBase extends KernelTestBase {
     'file',
     'image',
     'media',
+    'file_mdm',
     'image_effects',
   ];
 
