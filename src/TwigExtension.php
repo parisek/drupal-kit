@@ -7,6 +7,7 @@ use Twig\Environment;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 use Drupal\Core\Locale\CountryManager;
+use Drupal\custom_components\Services\Resizer;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
@@ -314,9 +315,13 @@ class TwigExtension extends AbstractExtension {
 
   /**
    * Generate resizer formats.
+   *
+   * Direct static call — Resizer is a static utility (no instance state,
+   * no constructor deps). The `custom_components.resizer` service entry
+   * was removed in v1.4.0 (#44).
    */
   public static function getResizer($image, ...$variants) {
-    return \Drupal::service('custom_components.resizer')->resizer($image, $variants);
+    return Resizer::resizer($image, $variants);
   }
 
   /**

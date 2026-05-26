@@ -57,8 +57,9 @@ services:
       - "@logger.factory"
       - "@cache.default"
       - "@file_url_generator"
-  custom_components.resizer:
-    class: Drupal\custom_components\Services\Resizer
+  # custom_components.resizer was removed in v1.4.0 (#44). Resizer is
+  # a static utility — call \Drupal\custom_components\Services\Resizer::resizer()
+  # directly. TwigExtension::getResizer does this.
   custom_components.menu_active_trail_resolver:
     class: Drupal\custom_components\Services\MenuActiveTrailResolver
     arguments:
