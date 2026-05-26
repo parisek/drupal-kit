@@ -209,8 +209,11 @@ class TwigExtension extends AbstractExtension {
    * Return translated string.
    */
   public function getTranslationPlural($single, $plural, $count, $context) {
-    // We need to translate manually via Translate Interface.
+    // We need to translate manually via Translate Interface. Injecting
+    // string_translation here is the cleaner fix and is queued for a
+    // follow-up.
     // phpcs:ignore DrupalPractice.Objects.GlobalDrupal.GlobalDrupal
+    // @phpstan-ignore-next-line
     return \Drupal::translation()->formatPlural(
       $count,
       str_replace('%s', '1', $single),

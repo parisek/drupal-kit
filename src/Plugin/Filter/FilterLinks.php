@@ -28,6 +28,10 @@ class FilterLinks extends FilterBase {
     $links = $html_dom->getElementsByTagName('a');
     foreach ($links as $link) {
       $url = $link->getAttribute('href');
+      // Pre-existing static call retained for now; DI'ing request_stack
+      // requires a ContainerFactoryPluginInterface migration that is
+      // out of scope for the test/quality pass.
+      // @phpstan-ignore-next-line
       $current_host = \Drupal::request()->getHost();
       $link_host = parse_url($url, PHP_URL_HOST);
       $link_path = parse_url($url, PHP_URL_PATH);

@@ -776,11 +776,11 @@ class EntityHelper {
     else {
       $video['iframe'] = $url;
     }
-    if ($media->hasField('field_media_image') && !$media->field_media_image->isEmpty()) {/** @phpstan-ignore property.notFound */
+    if ($media->hasField('field_media_image') && !$media->field_media_image->isEmpty()) {
       $video['image'] = $this->getImageField($media, 'media_image');
     }
-    elseif ($media->thumbnail->entity) {/** @phpstan-ignore property.notFound */
-      $video['image'] = $this->generateFileImage($media->thumbnail->entity); /** @phpstan-ignore property.notFound */
+    elseif ($media->thumbnail->entity) {
+      $video['image'] = $this->generateFileImage($media->thumbnail->entity);
     }
 
     return $video;
@@ -1100,7 +1100,6 @@ class EntityHelper {
           $file = $item->entity;
           if ($file instanceof FileInterface) {
             // Pass alt and title as params; saved per field.
-            // @phpstan-ignore-next-line
             $item_array = $item->toArray();
             $items[] = $this->generateFileImage(
               $file,
@@ -1186,14 +1185,14 @@ class EntityHelper {
     if ($field instanceof FieldItemListInterface) {
       foreach ($field as $item) {
         if ($item instanceof LinkItemInterface) {
-          $scheme = parse_url($item->uri, PHP_URL_SCHEME); /** @phpstan-ignore property.notFound */
-          $url = Url::fromUri($item->uri); /** @phpstan-ignore property.notFound */
+          $scheme = parse_url($item->uri, PHP_URL_SCHEME);
+          $url = Url::fromUri($item->uri);
           $title = '';
           if (!empty($item->title)) {
             $title = $item->title;
           }
           elseif ($scheme === 'entity') {
-            [$entity_type, $entity_id] = explode('/', substr($item->uri, 7), 2); /** @phpstan-ignore property.notFound */
+            [$entity_type, $entity_id] = explode('/', substr($item->uri, 7), 2);
             if ($entity_type == 'node') {
               $node = $this->entityTypeManager->getStorage('node')->load($entity_id);
               if ($node instanceof NodeInterface) {
@@ -2069,7 +2068,7 @@ class EntityHelper {
     $field_name = $this->normalizeFieldName($field_name);
     $configName = 'field.storage.' . $entity_type . '.' . $field_name;
     $originalConfig = $this->configFactory->get($configName);
-    $translatedConfig = $this->languageManager->getLanguageConfigOverride($langcode, $configName); /** @phpstan-ignore method.notFound */
+    $translatedConfig = $this->languageManager->getLanguageConfigOverride($langcode, $configName);
     $config = array_replace_recursive($originalConfig->get(), $translatedConfig->get());
     $config = $originalConfig->get();
 
