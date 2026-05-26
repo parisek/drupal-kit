@@ -19,6 +19,7 @@ class EntityHelperTaxonomyTest extends EntityHelperKernelTestBase {
    */
   protected static $modules = [
     'custom_components',
+    'user',
     'taxonomy',
     'text',
   ];
@@ -28,8 +29,10 @@ class EntityHelperTaxonomyTest extends EntityHelperKernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->installEntitySchema('taxonomy_term');
+    // Order matters: taxonomy_term has a revision_user field that
+    // references the user entity type, so user must be installed first.
     $this->installEntitySchema('user');
+    $this->installEntitySchema('taxonomy_term');
     $this->installConfig(['taxonomy']);
   }
 

@@ -20,6 +20,7 @@ class EntityHelperMenuTest extends EntityHelperKernelTestBase {
   protected static $modules = [
     'custom_components',
     'system',
+    'user',
     'menu_link_content',
     'link',
   ];
@@ -29,8 +30,10 @@ class EntityHelperMenuTest extends EntityHelperKernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->installEntitySchema('menu_link_content');
+    // Order matters: menu_link_content has a revision_user field that
+    // references the user entity type, so user must be installed first.
     $this->installEntitySchema('user');
+    $this->installEntitySchema('menu_link_content');
     $this->installConfig(['system']);
   }
 
