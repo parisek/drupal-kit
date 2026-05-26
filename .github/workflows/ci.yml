@@ -1,28 +1,40 @@
 name: CI
 on: [push, pull_request]
 jobs:
-  install:
-    name: Verify package resolves and installs
+  test:
+    name: Unit + Kernel tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # v2.37.1
         with:
           php-version: '8.3'
+          extensions: gd, pdo_sqlite
           coverage: none
+
       - run: composer validate --strict --no-check-publish
-      - run: composer config repositories.drupal composer https://packages.drupal.org/8
-      - name: Allow Composer plugins required by drupal/core-dev
-        run: |
-          composer config --no-plugins allow-plugins.composer/installers true
-          composer config --no-plugins allow-plugins.cweagans/composer-patches true
-          composer config --no-plugins allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
-          composer config --no-plugins allow-plugins.drupal/core-composer-scaffold true
-          composer config --no-plugins allow-plugins.drupal/core-project-message true
-          composer config --no-plugins allow-plugins.drupal/core-recipe-unpack true
-          composer config --no-plugins allow-plugins.drupal/core-vendor-hardening true
-          composer config --no-plugins allow-plugins.joachim-n/composer-manifest true
-          composer config --no-plugins allow-plugins.phpstan/extension-installer true
-          composer config --no-plugins allow-plugins.php-http/discovery true
-          composer config --no-plugins allow-plugins.tbachert/spi true
+
       - run: composer install --no-progress
+
+      - name: Bridge web/autoload.php to vendor/autoload.php
+        run: |
+          mkdir -p web
+          cat > web/autoload.php <<'PHP'
+          <?php
+          return require __DIR__ . '/../vendor/autoload.php';
+          PHP
+
+      - name: Ensure Drupal extension-discovery dirs exist
+        run: mkdir -p web/profiles web/sites web/themes web/libraries web/modules/contrib
+
+      - name: Symlink module into Drupal extension discovery path
+        run: |
+          target="web/modules/contrib/custom_components"
+          mkdir -p "$target"
+          for f in src tests templates custom_components.info.yml custom_components.module custom_components.services.yml composer.json; do
+            rm -rf "$target/$f"
+            ln -s "$PWD/$f" "$target/$f"
+          done
+
+      - run: vendor/bin/phpunit

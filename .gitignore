@@ -1,4 +1,6 @@
 /vendor/
+/web/
 composer.lock
 .phpunit.result.cache
+.phpunit.cache/
 .DS_Store

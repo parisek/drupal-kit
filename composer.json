@@ -18,10 +18,11 @@
         "drupal/office_hours": "Enables office_hours field rendering in EntityHelper."
     },
     "require-dev": {
-        "phpunit/phpunit": "^10",
+        "phpunit/phpunit": "^10 || ^11",
         "phpstan/phpstan": "^1.8",
         "mglaman/phpstan-drupal": "^1.3",
-        "drupal/core-dev": "^11"
+        "drupal/core-dev": "^11",
+        "composer/installers": "^2.0"
     },
     "autoload": {
         "psr-4": {
@@ -29,7 +30,18 @@
         }
     },
     "extra": {
-        "installer-name": "custom_components"
+        "installer-name": "custom_components",
+        "installer-paths": {
+            "web/core": ["type:drupal-core"],
+            "web/modules/contrib/{$name}": ["type:drupal-module"],
+            "web/themes/contrib/{$name}": ["type:drupal-theme"],
+            "web/libraries/{$name}": ["type:drupal-library"]
+        },
+        "drupal-scaffold": {
+            "locations": {
+                "web-root": "web/"
+            }
+        }
     },
     "repositories": [{
         "name": "drupal",
@@ -38,9 +50,17 @@
     }],
     "config": {
         "allow-plugins": {
-            "drupal/core-composer-scaffold": false,
-            "phpstan/extension-installer": false,
-            "dealerdirect/phpcodesniffer-composer-installer": false
+            "composer/installers": true,
+            "drupal/core-composer-scaffold": true,
+            "drupal/core-project-message": true,
+            "drupal/core-recipe-unpack": true,
+            "drupal/core-vendor-hardening": true,
+            "cweagans/composer-patches": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "joachim-n/composer-manifest": true,
+            "phpstan/extension-installer": true,
+            "php-http/discovery": true,
+            "tbachert/spi": true
         }
     }
 }
