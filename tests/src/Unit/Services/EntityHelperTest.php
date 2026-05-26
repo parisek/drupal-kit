@@ -3,7 +3,9 @@
 namespace Drupal\Tests\custom_components\Unit\Services;
 
 use Drupal\custom_components\Services\EntityHelper;
+use Drupal\custom_components\Services\TaxonomyTreeBuilder;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -93,6 +95,7 @@ class EntityHelperTest extends TestCase {
       $this->createMock(ImageFactory::class),
       $this->createMock(RequestStack::class),
       $this->createMock(MenuActiveTrailResolver::class),
+      $this->createMock(TaxonomyTreeBuilder::class),
     );
 
     // Set up container (still needed for optional breadcrumb service).
@@ -157,6 +160,7 @@ class EntityHelperTest extends TestCase {
       $overrides['image_factory'] ?? $this->createMock(ImageFactory::class),
       $overrides['request_stack'] ?? $this->createMock(RequestStack::class),
       $overrides['menu_active_trail_resolver'] ?? $this->createMock(MenuActiveTrailResolver::class),
+      $overrides['taxonomy_tree_builder'] ?? $this->createMock(TaxonomyTreeBuilder::class),
     );
   }
 
@@ -527,6 +531,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getLinkField'])
       ->getMock();
@@ -579,6 +584,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getMediaField'])
       ->getMock();
@@ -619,6 +625,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getTermField'])
       ->getMock();
@@ -659,6 +666,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getEntityReferenceField'])
       ->getMock();
@@ -699,6 +707,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getEntityReferenceField'])
       ->getMock();
@@ -776,6 +785,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods(['getWebformField'])
       ->getMock();
@@ -960,6 +970,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(ImageFactory::class),
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
+        $this->createMock(TaxonomyTreeBuilder::class),
       ])
       ->onlyMethods($methods)
       ->getMock();
@@ -2008,11 +2019,17 @@ class EntityHelperTest extends TestCase {
   }
 
   // ---------------------------------------------------------------
-  // getTaxonomy tests
+  // getTaxonomy tests — delegated to TaxonomyTreeBuilder.
+  // Builder-level coverage lives in TaxonomyTreeBuilderTest; the test
+  // here asserts the EntityHelper facade contract: delegate to the
+  // builder and bubble its cache metadata into the EntityHelper
+  // collector.
   // ---------------------------------------------------------------
 
   /**
    * Set up the language manager to return a fixed langcode.
+   *
+   * Retained because the menu tests below still use it.
    */
   protected function stubCurrentLanguage(string $langcode = 'en'): void {
     $language = $this->createMock(LanguageInterface::class);
@@ -2021,16 +2038,50 @@ class EntityHelperTest extends TestCase {
   }
 
   /**
+   * @covers ::getTaxonomy
+   */
+  public function testGetTaxonomyReturnsBuilderResultAndBubblesMetadata(): void {
+    $expected_items = [
+      ['id' => 1, 'title' => 'Alpha', 'url' => '/taxonomy/term/1'],
+      ['id' => 2, 'title' => 'Beta', 'url' => '/taxonomy/term/2'],
+    ];
+
+    $builder_metadata = (new CacheableMetadata())
+      ->addCacheTags(['taxonomy_term:1', 'taxonomy_term_list:cats']);
+
+    $builder = $this->createMock(TaxonomyTreeBuilder::class);
+    $builder->expects($this->once())
+      ->method('build')
+      ->with('cats', ['nested' => FALSE])
+      ->willReturn($expected_items);
+    $builder->expects($this->once())
+      ->method('collectCacheMetadata')
+      ->willReturn($builder_metadata);
+
+    $helper = $this->createHelperWithOverrides([
+      'taxonomy_tree_builder' => $builder,
+    ]);
+
+    $items = $helper->getTaxonomy('cats', ['nested' => FALSE]);
+    $this->assertSame($expected_items, $items);
+
+    // EntityHelper's own collector must contain what the builder
+    // bubbled up.
+    $tags = $helper->collectCacheMetadata()->getCacheTags();
+    $this->assertContains('taxonomy_term:1', $tags);
+    $this->assertContains('taxonomy_term_list:cats', $tags);
+  }
+
+  // ---------------------------------------------------------------
+  // (former in-EntityHelperTest taxonomy fixtures retained below
+  // only because Resizer/term helpers cross-reference them — left
+  // for the next builder extractions to clean up.)
+  // ---------------------------------------------------------------
+
+  /**
    * Build a stub taxonomy_term storage that returns the given term tree.
-   *
-   * @param \Drupal\taxonomy\TermInterface[] $terms
-   *   The terms to return from loadTree().
-   * @param string $entity_type_id
-   *   The entity type id string returned by getEntityTypeId().
    */
   protected function stubTaxonomyTermStorage(array $terms, string $entity_type_id = 'taxonomy_term'): void {
-    // Must mock TermStorageInterface (not EntityStorageInterface) because
-    // loadTree() is declared there, not on the generic storage interface.
     $storage = $this->createMock(TermStorageInterface::class);
     $storage->method('loadTree')->willReturn($terms);
     $storage->method('getEntityTypeId')->willReturn($entity_type_id);
@@ -2041,7 +2092,7 @@ class EntityHelperTest extends TestCase {
   }
 
   /**
-   * Build a mock term with the minimum API used by getTaxonomy().
+   * Build a mock term with the minimum API used by the builder.
    */
   protected function makeTerm(int $tid, string $label, bool $published = TRUE): TermInterface {
     $term = $this->createMock(TermInterface::class);
@@ -2062,92 +2113,6 @@ class EntityHelperTest extends TestCase {
     $parent_list->method('getValue')->willReturn([]);
     $term->method('get')->with('parent')->willReturn($parent_list);
     return $term;
-  }
-
-  /**
-   * @covers ::getTaxonomy
-   */
-  public function testGetTaxonomyBubblesTermCacheTagsIntoMetadata(): void {
-    $this->stubCurrentLanguage('en');
-    $this->stubTaxonomyTermStorage([
-      $this->makeTerm(1, 'Alpha'),
-      $this->makeTerm(2, 'Beta'),
-    ]);
-
-    $items = $this->entityHelper->getTaxonomy('support_category');
-
-    $this->assertCount(2, $items);
-    $this->assertSame('Alpha', $items[0]['title']);
-    $this->assertSame('Beta', $items[1]['title']);
-
-    // Every loaded term must contribute its cache tag to the collector.
-    $cache = $this->entityHelper->collectCacheMetadata();
-    $tags = $cache->getCacheTags();
-    $this->assertContains('taxonomy_term:1', $tags);
-    $this->assertContains('taxonomy_term:2', $tags);
-  }
-
-  /**
-   * @covers ::getTaxonomy
-   */
-  public function testGetTaxonomyAddsBundleListCacheTag(): void {
-    $this->stubCurrentLanguage('en');
-    $this->stubTaxonomyTermStorage([
-      $this->makeTerm(1, 'Alpha'),
-    ]);
-
-    $this->entityHelper->getTaxonomy('support_category');
-    $tags = $this->entityHelper->collectCacheMetadata()->getCacheTags();
-
-    // Drupal core format for "any term in this vocabulary":
-    // {entity_type_id}_list:{bundle}. This is what Term save/delete
-    // invalidates via EntityBase::getListCacheTagsToInvalidate().
-    $this->assertContains('taxonomy_term_list:support_category', $tags);
-  }
-
-  /**
-   * @covers ::getTaxonomy
-   */
-  public function testGetTaxonomySkipsUnpublishedTermsButStillCollectsTags(): void {
-    $this->stubCurrentLanguage('en');
-    $this->stubTaxonomyTermStorage([
-      $this->makeTerm(1, 'Published', TRUE),
-      $this->makeTerm(2, 'Unpublished', FALSE),
-    ]);
-
-    $items = $this->entityHelper->getTaxonomy('support_category');
-
-    // Unpublished term is filtered out of the returned items.
-    $this->assertCount(1, $items);
-    $this->assertSame('Published', $items[0]['title']);
-
-    // Unpublished term must NOT leak its tag — it was skipped before
-    // addCacheableDependency was called. This documents intentional
-    // behaviour: if an editor publishes the term later, the consumer
-    // will be invalidated by the taxonomy_term_list:{vocab} tag.
-    $tags = $this->entityHelper->collectCacheMetadata()->getCacheTags();
-    $this->assertContains('taxonomy_term:1', $tags);
-    $this->assertNotContains('taxonomy_term:2', $tags);
-    $this->assertContains('taxonomy_term_list:support_category', $tags);
-  }
-
-  /**
-   * @covers ::getTaxonomy
-   */
-  public function testGetTaxonomyCacheMetadataResetsBetweenCalls(): void {
-    $this->stubCurrentLanguage('en');
-    $this->stubTaxonomyTermStorage([
-      $this->makeTerm(1, 'Alpha'),
-    ]);
-
-    $this->entityHelper->getTaxonomy('support_category');
-    $first = $this->entityHelper->collectCacheMetadata()->getCacheTags();
-    $this->assertContains('taxonomy_term:1', $first);
-
-    // Second collect (without another getTaxonomy call) must be empty —
-    // collectCacheMetadata() resets the internal collector.
-    $second = $this->entityHelper->collectCacheMetadata()->getCacheTags();
-    $this->assertEmpty($second);
   }
 
   // ---------------------------------------------------------------

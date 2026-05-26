@@ -150,6 +150,11 @@ class EntityHelper {
   protected MenuActiveTrailResolver $menuActiveTrailResolver;
 
   /**
+   * Builds taxonomy term arrays (delegated from getTaxonomy()).
+   */
+  protected TaxonomyTreeBuilder $taxonomyTreeBuilder;
+
+  /**
    * Accumulated cacheable metadata from entity-loading methods.
    *
    * @var \Drupal\Core\Cache\CacheableMetadata
@@ -175,6 +180,7 @@ class EntityHelper {
     ImageFactory $image_factory,
     RequestStack $request_stack,
     MenuActiveTrailResolver $menu_active_trail_resolver,
+    TaxonomyTreeBuilder $taxonomy_tree_builder,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->routeMatch = $route_match;
@@ -191,6 +197,7 @@ class EntityHelper {
     $this->imageFactory = $image_factory;
     $this->requestStack = $request_stack;
     $this->menuActiveTrailResolver = $menu_active_trail_resolver;
+    $this->taxonomyTreeBuilder = $taxonomy_tree_builder;
     $this->cacheMetadata = new CacheableMetadata();
   }
 
@@ -1950,112 +1957,18 @@ class EntityHelper {
    *   Array of term items, optionally nested with 'children' key.
    */
   public function getTaxonomy($vocabulary, $custom_parameters = []) {
-
-    $items = [];
-    $nested = !empty($custom_parameters['nested']);
-
-    $langcode = $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
-    $term_storage = $this->entityTypeManager->getStorage('taxonomy_term');
-
-    $terms = $term_storage->loadTree($vocabulary, 0, NULL, TRUE);
-
-    // Build a map of term ID to term data and track parent relationships.
-    $term_map = [];
-    $children_map = [];
-
-    foreach ($terms as $term) {
-      if (!$term->isPublished()) {
-        continue;
-      }
-
-      $term_data = NULL;
-      $tid = (int) $term->id();
-
-      if (isset($custom_parameters['disable_translation']) && $custom_parameters['disable_translation'] === TRUE) {
-        $term_data = [
-          'id' => $tid,
-          'title' => $term->label(),
-          'url' => $term->toUrl()->toString(),
-        ];
-      }
-      else {
-        if ($term->hasTranslation($langcode)) {
-          $translated_term = $term->getTranslation($langcode);
-          if (!$translated_term->isPublished()) {
-            continue;
-          }
-          $term_data = [
-            'id' => $tid,
-            'title' => $translated_term->label(),
-            'url' => $translated_term->toUrl()->toString(),
-          ];
-        }
-      }
-
-      if ($term_data) {
-        if ($nested) {
-          // Get parent term ID.
-          $parents = $term->get('parent')->getValue();
-          $parent_id = !empty($parents[0]['target_id']) ? (int) $parents[0]['target_id'] : 0;
-          $term_map[$tid] = $term_data;
-
-          // Track children for each parent.
-          if (!isset($children_map[$parent_id])) {
-            $children_map[$parent_id] = [];
-          }
-          $children_map[$parent_id][] = $tid;
-        }
-        else {
-          $items[] = $term_data;
-        }
-      }
-
-      $this->cacheMetadata->addCacheableDependency($term);
+    try {
+      $items = $this->taxonomyTreeBuilder->build($vocabulary, $custom_parameters);
     }
-
-    // Build nested tree structure recursively.
-    if ($nested) {
-      $items = $this->buildTermTree($term_map, $children_map, 0);
+    finally {
+      // Drain the builder's accumulator even on exception so a partial
+      // run does not leak its tags into the next getTaxonomy() call
+      // (the builder is a shared service).
+      $this->cacheMetadata->addCacheableDependency(
+        $this->taxonomyTreeBuilder->collectCacheMetadata(),
+      );
     }
-
-    // Vocabulary list cache tag so new/deleted terms invalidate consumers.
-    $this->cacheMetadata->addCacheTags([
-      $term_storage->getEntityTypeId() . '_list:' . $vocabulary,
-    ]);
-
     return $items;
-  }
-
-  /**
-   * Build a nested tree structure from flat term data.
-   *
-   * @param array $term_map
-   *   Associative array of term ID => term data.
-   * @param array $children_map
-   *   Associative array of parent ID => array of child term IDs.
-   * @param int $parent_id
-   *   The parent ID to build children for (0 for root).
-   *
-   * @return array
-   *   Nested array of terms with 'children' key.
-   */
-  protected function buildTermTree(array $term_map, array $children_map, int $parent_id): array {
-    $tree = [];
-
-    if (!isset($children_map[$parent_id])) {
-      return $tree;
-    }
-
-    foreach ($children_map[$parent_id] as $tid) {
-      if (!isset($term_map[$tid])) {
-        continue;
-      }
-      $item = $term_map[$tid];
-      $item['children'] = $this->buildTermTree($term_map, $children_map, $tid);
-      $tree[] = $item;
-    }
-
-    return $tree;
   }
 
   /**
