@@ -229,4 +229,135 @@ class TwigExtensionTest extends TestCase {
     $this->assertStringContainsString('Page', $result);
   }
 
+  /**
+   * @covers ::getName
+   */
+  public function testGetNameIsTheServiceId(): void {
+    $this->assertSame('custom_components.twig_extension', $this->twigExtension->getName());
+  }
+
+  /**
+   * @covers ::getFilters
+   */
+  public function testGetFiltersRegistersExpectedFilters(): void {
+    $names = array_map(
+      static fn ($filter) => $filter->getName(),
+      $this->twigExtension->getFilters(),
+    );
+
+    $this->assertContains('option_label', $names);
+    $this->assertContains('country_name', $names);
+    $this->assertContains('resizer', $names);
+    $this->assertContains('date', $names);
+  }
+
+  /**
+   * @covers ::getFunctions
+   */
+  public function testGetFunctionsRegistersExpectedFunctions(): void {
+    $names = array_map(
+      static fn ($fn) => $fn->getName(),
+      $this->twigExtension->getFunctions(),
+    );
+
+    $this->assertContains('uniqueId', $names);
+    $this->assertContains('__', $names);
+    $this->assertContains('_n', $names);
+    $this->assertContains('_x', $names);
+    $this->assertContains('_nx', $names);
+    $this->assertContains('component_*', $names);
+    $this->assertContains('page_*', $names);
+    $this->assertContains('template_exists', $names);
+    $this->assertContains('merge_resizer', $names);
+  }
+
+  /**
+   * @covers ::templateExists
+   */
+  public function testTemplateExistsReturnsTrueWhenTemplatePresent(): void {
+    $env = $this->createTwigEnv([
+      '@component/hello/hello.twig' => 'hi',
+    ]);
+
+    $this->assertTrue(
+      $this->twigExtension->templateExists($env, [], '@component/hello/hello.twig'),
+    );
+  }
+
+  /**
+   * @covers ::templateExists
+   */
+  public function testTemplateExistsReturnsFalseWhenMissing(): void {
+    $env = $this->createTwigEnv([]);
+
+    $this->assertFalse(
+      $this->twigExtension->templateExists($env, [], '@component/nope/nope.twig'),
+    );
+  }
+
+  /**
+   * @covers ::mergeResizer
+   */
+  public function testMergeResizerKeepsAllItemsFromLastGroup(): void {
+    $group_a = [['media' => 'a1.jpg'], ['no_media' => TRUE]];
+    $group_b = [['media' => 'b1.jpg'], ['fallback' => TRUE]];
+
+    $merged = TwigExtension::mergeResizer($group_a, $group_b);
+
+    // From earlier groups: only items with 'media' key survive.
+    // From the LAST group: everything survives.
+    $this->assertCount(3, $merged);
+    $this->assertSame('a1.jpg', $merged[0]['media']);
+    $this->assertSame('b1.jpg', $merged[1]['media']);
+    $this->assertTrue($merged[2]['fallback']);
+  }
+
+  /**
+   * @covers ::mergeResizer
+   */
+  public function testMergeResizerDropsMediaLessItemsFromNonLastGroups(): void {
+    $group_a = [['fallback' => TRUE]];
+    $group_b = [['media' => 'b.jpg']];
+
+    $merged = TwigExtension::mergeResizer($group_a, $group_b);
+
+    // 'fallback' item from group_a has no 'media' key and is not the
+    // last group → dropped.
+    $this->assertCount(1, $merged);
+    $this->assertSame('b.jpg', $merged[0]['media']);
+  }
+
+  /**
+   * @covers ::mergeResizer
+   */
+  public function testMergeResizerWithSingleGroupKeepsAll(): void {
+    $only = [['media' => 'x.jpg'], ['no_media' => TRUE]];
+
+    $merged = TwigExtension::mergeResizer($only);
+
+    $this->assertCount(2, $merged);
+  }
+
+  /**
+   * @covers ::formatDate
+   *
+   * String-formatted dates that strtotime() understands are converted to
+   * a Unix timestamp before being passed to the date formatter.
+   */
+  public function testFormatDateStrtotimeFallback(): void {
+    $this->dateFormatter->expects($this->once())
+      ->method('format')
+      ->with(
+        $this->logicalAnd($this->isType('int'), $this->greaterThan(0)),
+        'custom',
+        'Y-m-d',
+        NULL,
+        'cs',
+      )
+      ->willReturn('2024-03-14');
+
+    $result = $this->twigExtension->formatDate('14 March 2024', 'Y-m-d');
+    $this->assertSame('2024-03-14', $result);
+  }
+
 }

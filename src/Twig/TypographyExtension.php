@@ -18,7 +18,7 @@ use Twig\TwigFilter;
  * theme, and delegates filtering to a cached upstream extension instance.
  * Also pass-through Drupal render arrays without processing.
  */
-final class TypographyExtension extends AbstractExtension {
+class TypographyExtension extends AbstractExtension {
 
   /**
    * Per-theme cache of upstream extensions. Keyed by theme machine name.
