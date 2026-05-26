@@ -155,6 +155,11 @@ class EntityHelper {
   protected TaxonomyTreeBuilder $taxonomyTreeBuilder;
 
   /**
+   * Builds menu trees (delegated from getMenu()).
+   */
+  protected MenuTreeBuilder $menuTreeBuilder;
+
+  /**
    * Accumulated cacheable metadata from entity-loading methods.
    *
    * @var \Drupal\Core\Cache\CacheableMetadata
@@ -181,6 +186,7 @@ class EntityHelper {
     RequestStack $request_stack,
     MenuActiveTrailResolver $menu_active_trail_resolver,
     TaxonomyTreeBuilder $taxonomy_tree_builder,
+    MenuTreeBuilder $menu_tree_builder,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->routeMatch = $route_match;
@@ -198,6 +204,7 @@ class EntityHelper {
     $this->requestStack = $request_stack;
     $this->menuActiveTrailResolver = $menu_active_trail_resolver;
     $this->taxonomyTreeBuilder = $taxonomy_tree_builder;
+    $this->menuTreeBuilder = $menu_tree_builder;
     $this->cacheMetadata = new CacheableMetadata();
   }
 
@@ -1795,148 +1802,21 @@ class EntityHelper {
    * Get Menu Links.
    */
   public function getMenu($menu_name, $custom_parameters = []) {
-
-    $menu_tree = $this->menuLinkTree;
-
-    // Build the typical default set of menu tree parameters.
-    $parameters = $menu_tree->getCurrentRouteMenuTreeParameters($menu_name);
-    $parameters->setMinDepth(1);
-
-    if (isset($custom_parameters['root'])) {
-      $parameters->setRoot($custom_parameters['root']);
+    try {
+      $items = $this->menuTreeBuilder->build(
+        $menu_name,
+        $custom_parameters,
+        [$this, 'formatField'],
+      );
     }
-
-    // Clear expanded parents array to always display a dropdown.
-    $parameters->expandedParents = [];
-
-    // Override the active trail: Drupal's native MenuActiveTrail returns
-    // an empty trail for routes with no menu link (e.g. deep accessory
-    // pages). The resolver walks the breadcrumb to find the deepest
-    // ancestor that IS in the menu and uses that as the active link, so
-    // only one top-level item lights up. Bubble breadcrumb cacheability
-    // so the menu invalidates when the breadcrumb does.
-    $parameters->setActiveTrail(
-      $this->menuActiveTrailResolver->getActiveTrailIds($menu_name, $this->cacheMetadata)
-    );
-
-    // Load the tree based on this set of parameters.
-    $tree = $menu_tree->load($menu_name, $parameters);
-
-    $manipulators = [
-      // Only show links accessible to the current user.
-      ['callable' => 'menu.default_tree_manipulators:checkAccess'],
-      // Use default sorting.
-      ['callable' => 'menu.default_tree_manipulators:generateIndexAndSort'],
-      // Filter by the Current Language added via core patch.
-      // @see https://www.drupal.org/project/drupal/issues/2466553
-      ['callable' => 'menu.language_tree_manipulator:filterLanguage'],
-    ];
-
-    $tree = $menu_tree->transform($tree, $manipulators);
-    $menu = $menu_tree->build($tree);
-
-    // Bubble cache metadata from the built menu tree into the collector.
-    // Access checks on menu links add contexts (user.permissions) and tags
-    // (e.g. node:X for route-bound links) via AccessResult; MenuLinkTree
-    // bubbles them into $menu['#cache']. Without this, callers that only
-    // consume the returned items lose that metadata and can cache the
-    // block against the wrong user/role.
-    $this->cacheMetadata->addCacheableDependency(
-      CacheableMetadata::createFromRenderArray($menu)
-    );
-
-    $items = [];
-    if (isset($menu['#items']) && !empty($menu['#items'])) {
-      $items = $this->getMenuLinks($menu['#items']);
+    finally {
+      // Drain even on exception so partial state never leaks into the
+      // next getMenu() call on this shared builder.
+      $this->cacheMetadata->addCacheableDependency(
+        $this->menuTreeBuilder->collectCacheMetadata(),
+      );
     }
-
     return $items;
-  }
-
-  /**
-   * List menu links.
-   */
-  private function getMenuLinks($items) {
-
-    $langcode = $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
-    $storage = $this->entityTypeManager->getStorage('menu_link_content');
-    $current_path = $this->requestStack->getCurrentRequest()?->getRequestUri() ?? '';
-
-    $links = [];
-    foreach ($items as $key => $item) {
-
-      // Check content_translation_status to skip disabled
-      // menu items; isPublished() is not working correctly.
-      $entity = NULL;
-      if (!empty($item['original_link']->getPluginDefinition()['metadata']['entity_id'])) {
-        $entity_id = $item['original_link']->getPluginDefinition()['metadata']['entity_id'];
-        $entity = $storage->load($entity_id);
-        if ($entity->hasTranslation($langcode)) {
-          $entity = $entity->getTranslation($langcode);
-          if (isset($entity->content_translation_status)) {
-            $translation_status = (bool) $entity->content_translation_status->value;
-            if ($translation_status === FALSE) {
-              continue;
-            }
-          }
-        }
-      }
-
-      $attributes = [];
-      if ($item['url']->getOption('attributes')) {
-        $attributes = $item['url']->getOption('attributes');
-      }
-      // Convert any array attributes to space-separated strings.
-      foreach ($attributes as $key => $value) {
-        if (is_array($value)) {
-          $attributes[$key] = implode(' ', $value);
-        }
-      }
-
-      $is_active = FALSE;
-      if ($item['url']->toString() == $current_path) {
-        $is_active = TRUE;
-      }
-
-      // Drupal's MenuLinkTree sets in_active_trail on each item based on
-      // the trail we injected via MenuTreeParameters::setActiveTrail() —
-      // see getMenu(). Just read it.
-      $in_active_trail = !empty($item['in_active_trail']);
-
-      $below = [];
-      if ($item['below']) {
-        $below = $this->getMenuLinks($item['below']);
-      }
-
-      // Build base link data.
-      $link_data = [
-        'id' => $key,
-        'title' => $item['title'],
-        'description' => $entity ? $entity->getDescription() : '',
-        'url' => $item['url']->toString(),
-        'attributes' => $attributes,
-        'is_active' => $is_active,
-        'in_active_trail' => $in_active_trail,
-        'below' => $below,
-      ];
-
-      // Add all Menu Item Extras fields if entity exists.
-      if ($entity) {
-        $field_definitions = $entity->getFieldDefinitions();
-        foreach ($field_definitions as $field_name => $field_definition) {
-          if (strpos($field_name, 'field_') === 0
-            && $entity->hasField($field_name)
-            && !$entity->get($field_name)->isEmpty()) {
-            $key = substr($field_name, 6);
-            $link_data[$key] = $this->formatField($entity, $field_name);
-          }
-        }
-      }
-
-      $links[] = $link_data;
-    }
-
-    return $links;
   }
 
   /**

@@ -3,6 +3,7 @@
 namespace Drupal\Tests\custom_components\Unit\Services;
 
 use Drupal\custom_components\Services\EntityHelper;
+use Drupal\custom_components\Services\MenuTreeBuilder;
 use Drupal\custom_components\Services\TaxonomyTreeBuilder;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableMetadata;
@@ -96,6 +97,7 @@ class EntityHelperTest extends TestCase {
       $this->createMock(RequestStack::class),
       $this->createMock(MenuActiveTrailResolver::class),
       $this->createMock(TaxonomyTreeBuilder::class),
+      $this->createMock(MenuTreeBuilder::class),
     );
 
     // Set up container (still needed for optional breadcrumb service).
@@ -161,6 +163,7 @@ class EntityHelperTest extends TestCase {
       $overrides['request_stack'] ?? $this->createMock(RequestStack::class),
       $overrides['menu_active_trail_resolver'] ?? $this->createMock(MenuActiveTrailResolver::class),
       $overrides['taxonomy_tree_builder'] ?? $this->createMock(TaxonomyTreeBuilder::class),
+      $overrides['menu_tree_builder'] ?? $this->createMock(MenuTreeBuilder::class),
     );
   }
 
@@ -532,6 +535,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
+        $this->createMock(MenuTreeBuilder::class),
       ])
       ->onlyMethods(['getLinkField'])
       ->getMock();
@@ -585,6 +589,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
+        $this->createMock(MenuTreeBuilder::class),
       ])
       ->onlyMethods(['getMediaField'])
       ->getMock();
@@ -626,6 +631,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
+        $this->createMock(MenuTreeBuilder::class),
       ])
       ->onlyMethods(['getTermField'])
       ->getMock();
@@ -667,6 +673,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
+        $this->createMock(MenuTreeBuilder::class),
       ])
       ->onlyMethods(['getEntityReferenceField'])
       ->getMock();
@@ -708,6 +715,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
+        $this->createMock(MenuTreeBuilder::class),
       ])
       ->onlyMethods(['getEntityReferenceField'])
       ->getMock();
@@ -786,6 +794,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
+        $this->createMock(MenuTreeBuilder::class),
       ])
       ->onlyMethods(['getWebformField'])
       ->getMock();
@@ -971,6 +980,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(RequestStack::class),
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
+        $this->createMock(MenuTreeBuilder::class),
       ])
       ->onlyMethods($methods)
       ->getMock();
@@ -2116,87 +2126,51 @@ class EntityHelperTest extends TestCase {
   }
 
   // ---------------------------------------------------------------
-  // getMenu tests
+  // getMenu tests — delegated to MenuTreeBuilder.
+  // Builder-level coverage lives in MenuTreeBuilderTest; here we
+  // assert only the facade contract: delegate to the builder, pass
+  // the formatField callback for menu-link-extras enrichment, and
+  // bubble the builder's cache metadata into the EntityHelper
+  // collector.
   // ---------------------------------------------------------------
 
   /**
-   * Cache metadata bubbled by MenuLinkTree::build() reaches the collector.
-   *
-   * MenuLinkTree::build() returns a render array whose '#cache' key
-   * contains metadata bubbled from access checks on each menu link
-   * (user.permissions context added via AccessResult, tags for
-   * route-bound entities). getMenu() must forward that metadata into
-   * the collector so callers (MenuBlock, HamburgerMenuBlock) render
-   * cache-correct markup per role.
-   *
    * @covers ::getMenu
    */
-  public function testGetMenuBubblesTreeCacheMetadataIntoCollector(): void {
-    $menu_link_tree = $this->createMock(MenuLinkTreeInterface::class);
-    $menu_link_tree->method('getCurrentRouteMenuTreeParameters')
-      ->willReturn(new MenuTreeParameters());
-    $menu_link_tree->method('load')->willReturn([]);
-    $menu_link_tree->method('transform')->willReturn([]);
-    // Empty '#items' keeps getMenuLinks() out of scope — we only
-    // exercise the cache-bubbling path here.
-    $menu_link_tree->method('build')->willReturn([
-      '#items' => [],
-      '#cache' => [
-        'contexts' => ['user.permissions'],
-        'tags' => ['node:42'],
-        'max-age' => Cache::PERMANENT,
-      ],
-    ]);
+  public function testGetMenuReturnsBuilderResultAndBubblesMetadata(): void {
+    $expected_items = [
+      ['id' => 1, 'title' => 'Home', 'url' => '/', 'below' => []],
+    ];
+
+    $builder_metadata = (new CacheableMetadata())
+      ->addCacheTags(['node:42'])
+      ->addCacheContexts(['user.permissions']);
+
+    $builder = $this->createMock(MenuTreeBuilder::class);
+    $builder->expects($this->once())
+      ->method('build')
+      ->willReturnCallback(function ($menu_name, $params, $formatter) use ($expected_items) {
+        $this->assertSame('main', $menu_name);
+        $this->assertSame([], $params);
+        // formatField is wired as the enrichment callback so menu link
+        // extras fields render.
+        $this->assertIsCallable($formatter);
+        return $expected_items;
+      });
+    $builder->expects($this->once())
+      ->method('collectCacheMetadata')
+      ->willReturn($builder_metadata);
 
     $helper = $this->createHelperWithOverrides([
-      'menu_link_tree' => $menu_link_tree,
+      'menu_tree_builder' => $builder,
     ]);
 
     $items = $helper->getMenu('main');
-    $this->assertSame([], $items);
+    $this->assertSame($expected_items, $items);
 
     $cache = $helper->collectCacheMetadata();
-    $this->assertContains(
-      'user.permissions',
-      $cache->getCacheContexts(),
-      'user.permissions must bubble into the collector so blocks do not cache across roles',
-    );
-    $this->assertContains(
-      'node:42',
-      $cache->getCacheTags(),
-      'Tags from access checks on route-bound links must bubble',
-    );
-  }
-
-  /**
-   * @covers ::getMenu
-   */
-  public function testGetMenuCacheMetadataResetsBetweenCalls(): void {
-    $menu_link_tree = $this->createMock(MenuLinkTreeInterface::class);
-    $menu_link_tree->method('getCurrentRouteMenuTreeParameters')
-      ->willReturn(new MenuTreeParameters());
-    $menu_link_tree->method('load')->willReturn([]);
-    $menu_link_tree->method('transform')->willReturn([]);
-    $menu_link_tree->method('build')->willReturn([
-      '#items' => [],
-      '#cache' => [
-        'contexts' => ['user.permissions'],
-        'tags' => ['node:1'],
-      ],
-    ]);
-
-    $helper = $this->createHelperWithOverrides([
-      'menu_link_tree' => $menu_link_tree,
-    ]);
-
-    $helper->getMenu('main');
-    $first = $helper->collectCacheMetadata();
-    $this->assertContains('node:1', $first->getCacheTags());
-
-    // Second collect must be empty — collectCacheMetadata resets state.
-    $second = $helper->collectCacheMetadata();
-    $this->assertEmpty($second->getCacheTags());
-    $this->assertEmpty($second->getCacheContexts());
+    $this->assertContains('node:42', $cache->getCacheTags());
+    $this->assertContains('user.permissions', $cache->getCacheContexts());
   }
 
   // ---------------------------------------------------------------
