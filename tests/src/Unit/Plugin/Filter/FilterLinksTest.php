@@ -32,6 +32,18 @@ class FilterLinksTest extends TestCase {
   }
 
   /**
+   * {@inheritdoc}
+   */
+  protected function tearDown(): void {
+    // Drop the container to clean state to avoid leaking the
+    // request_stack into tests that run after this one.
+    if (\Drupal::hasContainer()) {
+      \Drupal::unsetContainer();
+    }
+    parent::tearDown();
+  }
+
+  /**
    * @covers ::process
    */
   public function testReturnsFilterProcessResult(): void {
