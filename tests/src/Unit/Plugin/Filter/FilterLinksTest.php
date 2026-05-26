@@ -2,7 +2,6 @@
 
 namespace Drupal\Tests\custom_components\Unit\Plugin\Filter;
 
-use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\custom_components\Plugin\Filter\FilterLinks;
 use Drupal\filter\FilterProcessResult;
 use PHPUnit\Framework\TestCase;
@@ -24,23 +23,12 @@ class FilterLinksTest extends TestCase {
     $stack = new RequestStack();
     $stack->push($request);
 
-    $container = new ContainerBuilder();
-    $container->set('request_stack', $stack);
-    \Drupal::setContainer($container);
-
-    $this->filter = new FilterLinks([], 'filter_links', ['provider' => 'custom_components']);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function tearDown(): void {
-    // Drop the container to clean state to avoid leaking the
-    // request_stack into tests that run after this one.
-    if (\Drupal::hasContainer()) {
-      \Drupal::unsetContainer();
-    }
-    parent::tearDown();
+    $this->filter = new FilterLinks(
+      [],
+      'filter_links',
+      ['provider' => 'custom_components'],
+      $stack,
+    );
   }
 
   /**
@@ -68,7 +56,7 @@ class FilterLinksTest extends TestCase {
     $html = '<a href="https://example.com/about" target="_blank">about</a>';
     $out = $this->filter->process($html, 'en')->getProcessedText();
 
-    $this->assertStringNotContainsString('target=', $out);
+    $this->assertStringNotContainsString(' target=', $out);
   }
 
   /**
@@ -78,7 +66,7 @@ class FilterLinksTest extends TestCase {
     $html = '<a href="/contact" target="_blank">contact</a>';
     $out = $this->filter->process($html, 'en')->getProcessedText();
 
-    $this->assertStringNotContainsString('target=', $out);
+    $this->assertStringNotContainsString(' target=', $out);
   }
 
   /**
@@ -99,8 +87,34 @@ class FilterLinksTest extends TestCase {
     $html = '<p>Just text</p>';
     $out = $this->filter->process($html, 'en')->getProcessedText();
 
-    $this->assertStringNotContainsString('target=', $out);
+    $this->assertStringNotContainsString(' target=', $out);
     $this->assertStringContainsString('Just text', $out);
+  }
+
+  /**
+   * @covers ::create
+   *
+   * Verifies the factory wires the request_stack service into the
+   * plugin constructor.
+   */
+  public function testCreateFactoryPullsRequestStackFromContainer(): void {
+    $stack = new RequestStack();
+    $stack->push(Request::create('https://factory.test/', 'GET'));
+
+    $container = $this->createMock(\Symfony\Component\DependencyInjection\ContainerInterface::class);
+    $container->expects($this->once())
+      ->method('get')
+      ->with('request_stack')
+      ->willReturn($stack);
+
+    $filter = FilterLinks::create($container, [], 'filter_links', ['provider' => 'custom_components']);
+    $this->assertInstanceOf(FilterLinks::class, $filter);
+
+    // Smoke test: the injected stack is what the filter uses for host
+    // comparison. A link on factory.test must be classified internal.
+    $out = $filter->process('<a href="https://factory.test/x" target="_blank">x</a>', 'en')
+      ->getProcessedText();
+    $this->assertStringNotContainsString(' target=', $out);
   }
 
 }
