@@ -62,7 +62,7 @@ class EntityHelperTaxonomyTest extends EntityHelperKernelTestBase {
       ['id', 'title', 'url'],
       array_keys($items[0]),
     );
-    $this->assertSame($published->id(), $items[0]['id']);
+    $this->assertSame((int) $published->id(), $items[0]['id']);
   }
 
   /**
