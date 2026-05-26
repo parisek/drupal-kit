@@ -71,7 +71,13 @@ When unsure, write a unit test first with mocks. If the mocks balloon beyond ~3 
 
 ## Coverage threshold
 
-CI enforces a minimum **line coverage** threshold (currently 30% — ratcheting up as more kernel tests land). Drop the threshold only with a clear reason in the commit; raise it whenever you can. See `.github/workflows/ci.yml` for the current floor.
+CI enforces a minimum **line coverage** threshold. The floor only goes up — never down. Raise it whenever you add a batch of tests that pushes the observed % comfortably above it. See `.github/workflows/ci.yml` for the current value.
+
+Historical ratchet:
+- v1.1.0 baseline (mocked units only): **32.31%** — floor 30
+- v1.2.0 #18 media kernel tests: **40.76%**
+- v1.2.0 #19 field-getter kernel tests: **45.88%** — floor 45
+- v1.3.0 target (Resizer + remaining getters + contrib-gated): **70%+** aspirational
 
 ## PHPStan
 

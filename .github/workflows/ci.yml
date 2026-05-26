@@ -25,14 +25,18 @@ jobs:
       - run: vendor/bin/phpstan analyse
 
       - name: Enforce line-coverage threshold
-        # Ratchet floor — set just below current to catch silent
-        # regressions, raise as kernel/media tests in follow-up PRs
-        # add coverage. Initial state: 32.31% (461/1427) after the #4
-        # safety-net subset. 80% (the v1.1.0 aspiration) requires the
-        # deferred media kernel tests + ~25 untouched field-getter
-        # methods on EntityHelper.
+        # Ratchet floor — raised as each batch of kernel tests lands.
+        # History:
+        #   v1.1.0 baseline (mocked units only): 32.31% — floor at 30
+        #   v1.2.0 #18 (media kernel tests):     40.76% — interim
+        #   v1.2.0 #19 (field-getter kernel):    45.88% — floor at 45
+        # 80% (v1.1.0 aspirational target) needs the deferred
+        # Resizer kernel coverage, getImageField/getFileField/
+        # getMediaField, getOfficeHoursField + other contrib-gated
+        # getters, and DisplayBase / ComponentBase paths — tracked
+        # for v1.3.0 as a focused follow-up.
         env:
-          MIN_COVERAGE: '30'
+          MIN_COVERAGE: '45'
         run: |
           php -r '
             $min = (int) getenv("MIN_COVERAGE");
