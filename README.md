@@ -66,34 +66,51 @@ Drupal core patches (apply via [`cweagans/composer-patches`](https://github.com/
 
 - [drupal.org#2466553](https://www.drupal.org/project/drupal/issues/2466553) — adds `menu.language_tree_manipulator` to Drupal core. When applied, `EntityHelper::getMenu()` filters menu links by the current content language. When absent, the filter step is silently skipped and menu items for all languages appear.
 
-## Tests
+## Local development
 
-Tests are self-contained — the package's CI scaffolds Drupal via Composer and runs [PHPUnit](https://phpunit.de/) against `web/core/tests/bootstrap.php` with sqlite in-memory.
-
-To run locally:
+Local environment is [DDEV](https://ddev.com/) — pinned to PHP 8.3 in `.ddev/config.yaml` so it matches the production deploy target and CI. The database container is omitted; kernel tests use sqlite in-memory.
 
 ```bash
-composer install
-scripts/dev-link-module.sh   # symlink module into web/modules/contrib + bridge web/autoload.php
-vendor/bin/phpunit
+ddev start
+ddev composer install
+ddev exec scripts/dev-link-module.sh   # symlink module into web/modules/contrib + bridge web/autoload.php
+ddev exec vendor/bin/phpunit
 ```
 
-The script is what CI runs too, so following it locally produces the same layout.
+`scripts/dev-link-module.sh` resolves paths relative to where it runs, so it must be invoked inside the container — otherwise the symlinks point to host paths the container can't see.
 
-Run a specific suite:
+### Tests
+
+Tests are self-contained — Composer scaffolds Drupal via [`installer-paths`](https://github.com/composer/installers); PHPUnit bootstraps from `web/core/tests/bootstrap.php`.
 
 ```bash
-vendor/bin/phpunit --testsuite unit
-vendor/bin/phpunit --testsuite kernel
+ddev exec vendor/bin/phpunit --testsuite unit
+ddev exec vendor/bin/phpunit --testsuite kernel
 ```
 
-Run with coverage (requires [Xdebug](https://xdebug.org/) locally; CI passes `--coverage-clover coverage.xml --coverage-text` automatically):
+### Coverage
+
+`ddev coverage` is a custom command (defined in `.ddev/commands/web/coverage`) that runs PHPUnit with `xdebug.mode=coverage` and emits both clover XML and a textual summary:
 
 ```bash
-vendor/bin/phpunit --coverage-text
+ddev coverage
+ddev coverage --filter ResizerTest   # any phpunit args pass through
+```
+
+CI uses the same flags so local + CI numbers stay aligned.
+
+### Step-debugging
+
+```bash
+ddev xdebug on    # loads xdebug in debug mode; listen on host port 9003
+ddev xdebug off   # debug mode is a heavy perf hit; keep it off by default
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add tests and the unit-vs-kernel decision tree.
+
+### Without DDEV
+
+DDEV is the canonical local environment, but the repo doesn't hard-depend on it — CI runs vanilla `composer install` + `vendor/bin/phpunit` against PHP 8.3 from the [shivammathur/setup-php](https://github.com/shivammathur/setup-php) GitHub Action. If you prefer host-PHP, ensure you're on PHP 8.3 (matching CI / production) to avoid composer.lock drift.
 
 ## Related projects
 

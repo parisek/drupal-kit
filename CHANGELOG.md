@@ -4,6 +4,47 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-05-26
+
+Quality + forward-compat release. No new features and no behavioural changes for callers — focus is hardening of the v1.3.0 surface, static-analysis ratcheting, closing the deferred test gaps the v1.3.0 retrospective enumerated, and making local development reproducible against the same PHP version CI and production use.
+
+### Added
+- **DDEV as the canonical local environment** (#48) — `.ddev/config.yaml` pins PHP 8.3 (matches CI + production), omits the database container (kernel tests use sqlite::memory:), and ships a `ddev coverage` custom command that runs PHPUnit with `xdebug.mode=coverage` correctly (bypassing DDEV's default `debug,develop` mode which is the wrong driver for coverage collection and is significantly slower). The README's "Local development" section documents the canonical flow (`ddev start && ddev composer install && ddev exec vendor/bin/phpunit`). DDEV itself isn't a hard dependency — vanilla host-PHP 8.3 still works the same way CI does — but the pinned environment removes a class of "works on host, fails on CI" drift (composer.lock pinning to PHP-8.4-only versions when resolved against PHP 8.5, etc.). Local symlink wiring via `scripts/dev-link-module.sh` works from either environment provided you run the script inside the same environment whose path the symlinks should target.
+- **Deferred kernel test coverage from v1.3.0** (#47) — four new files closing the gaps the v1.3.0 retrospective enumerated. `MediaArrayBuilderRemoteVideoTest` exercises `buildRemoteVideo`'s URL extraction (YouTube watch / short / passthrough) plus the `image_field_resolver` callback path, without touching the real `media_oembed` YouTube provider. `MediaArrayBuilderLottieTest` covers `buildLottie` happy + missing-file paths via the generic `file` source plugin. `DisplayBaseKernelTest` covers `__call` delegation, `$methodAliases` routing (`getEmailField` / `getPhoneField` → `getTextField`), and `BadMethodCallException` for unknown methods. `EntityHelperContribGatedFieldsKernelTest` covers the five contrib-gated getters (price / address / office_hours / geofield / webform) behind `markTestSkipped` guards — CI stays green on minimal stacks; the path automatically activates the moment a consumer installs the contrib module.
+
+### Changed
+- **PHPStan: 1.x → 2.x, level 1 → 5** (#45) — adds `mglaman/phpstan-drupal ^2.0` for Drupal-aware analysis (entity field magic-property access, service container types, hook signatures). `treatPhpDocTypesAsCertain: false` so PHPDoc type promises don't suppress legitimate findings. Pre-existing errors captured in a hand-curated identifier-grouped `phpstan-baseline.neon` so the gate is clean today without rewriting unrelated legacy paths. CI runs `phpstan analyse --memory-limit=2G`. Three real findings fixed in-flight (deprecated `(boolean)` cast in `EntityHelper`, stale Resizer baseline entries from the static refactor, MenuTreeBuilderTest container leak).
+- **`menu.language_tree_manipulator` is now optional** (#43) — the service was a hard dependency on a contrib-or-patched core service that not every Drupal install ships. `MenuTreeBuilder` now accepts an optional 6th constructor argument (`?object $languageTreeManipulator`); the manipulator is added to the chain only when present. Service definition uses Drupal's `@?service.id` optional-reference syntax. README documents the upstream patch (drupal.org#2466553) for consumers who want the language-aware behaviour.
+- **`Resizer` is fully static** (#44) — removed the `custom_components.resizer` service registration; the class has no instance state. `Resizer::resizer($images, $variants)` is now called directly from `TwigExtension`. Argument hardened with `array_is_list()`-aware defensive coercion so consumers passing a single-image associative array vs a list of image arrays both work without round-tripping through `end()`. README documents the static-utility status.
+- **Test debt cleanup** (#46) — removed `testDispatchTaxonomyReference` and `testGetEntityReferenceFieldReturnsReferencedEntityData`; the polymorphic walker assertions were brittle and tested dispatch wiring that's already covered by `testGetTermFieldReturnsLabels` + `getMediaField` kernel coverage from #32.
+
+### Documentation
+- **README polish** (#50) — six-badge row (Packagist version, PHP version, Drupal compatibility, PHPStan level, License, CI status). PORTA spelt in caps consistently. Drupal references hyperlinked to drupal.org. Notes added for the language-tree-manipulator patch (#43) and Resizer's static-utility status (#44).
+
+### Quality
+- **#47 code-review follow-ups baked in before release**: dynamic-property deprecation in `MediaArrayBuilderRemoteVideoTest` resolved by mocking the concrete `Media` class (so `ContentEntityBase::__get` is stubbable via `willReturnCallback` rather than dynamic assignment); webform empty-signal assertion broadened to `assertEmpty()`; `enableModule()` install failures now convert to `markTestSkipped` instead of test errors.
+
+### Coverage
+Measured under PHP 8.3 (DDEV) with xdebug coverage driver: **53.71%** line coverage (789 / 1469 statements). The MIN_COVERAGE floor in `.github/workflows/ci.yml` remains at 53 — v1.4.0 is a hardening release, not a coverage push; the contrib-gated tests are skipped on the minimal CI stack by design. Per-class hotspots for v1.5.0 planning (lowest first):
+
+| Class | Lines | Notes |
+|-------|------:|-------|
+| `Services\Resizer` | 33.15% | static refactor (#44) reshaped the surface; revisit |
+| `Services\MenuTreeBuilder` | 33.33% | `renderLinks` deep paths still untested |
+| `Services\EntityHelper` | 41.96% | the bulk; contrib-gated tests would lift this when run |
+| `Services\MenuActiveTrailResolver` | 50.00% | known gap |
+| `Twig\TypographyExtension` | 52.63% | `applyTypography` variants |
+| `Services\TaxonomyTreeBuilder` | 57.89% | mostly covered |
+| `Services\MediaArrayBuilder` | 81.21% | strong |
+| `TwigExtension` | 91.87% | strongest |
+
+### Deferred to v1.5.0+
+- `Resizer` coverage gap (33% — surprising given the v1.3.0 #31 suite; the static refactor may have orphaned some dispatch paths).
+- `MenuActiveTrailResolver` remaining 50% uncovered paths.
+- `TypographyExtension::applyTypography` variants.
+- `MenuTreeBuilder::renderLinks` deep paths (menu link content + custom field formatter).
+- Real contrib-module coverage of the five getters (requires composer add of drupal/commerce, drupal/address, drupal/office_hours, drupal/geofield, drupal/webform — currently skipped on the minimal CI stack).
+
 ## [1.3.0] — 2026-05-26
 
 ### Added

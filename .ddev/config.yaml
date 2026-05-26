@@ -1,0 +1,27 @@
+# DDEV dev affordance for parisek/custom-components.
+#
+# This is a Drupal *module* repo, not a Drupal site — kernel tests
+# scaffold their own Drupal under web/ via composer + sqlite in-memory.
+# So:
+#   - type: php (not drupal11) — avoids settings.php injection and
+#     other site-only opinions DDEV applies to drupal* project types.
+#   - omit_containers: [db] — no MariaDB container; tests run on
+#     sqlite::memory:.
+#   - xdebug_enabled: false — toggled per-session via `ddev xdebug on`
+#     when you need coverage measurement or step-debugging.
+#
+# Usage:
+#   ddev start
+#   ddev composer install
+#   ddev exec vendor/bin/phpunit
+#   ddev xdebug on && ddev exec vendor/bin/phpunit --coverage-html cov/
+name: custom-components
+type: php
+docroot: web
+php_version: "8.3"
+webserver_type: nginx-fpm
+omit_containers: [db]
+xdebug_enabled: false
+composer_version: "2"
+# Module repo — no user-uploaded files. Silences mutagen upload_dirs warning.
+disable_upload_dirs_warning: true

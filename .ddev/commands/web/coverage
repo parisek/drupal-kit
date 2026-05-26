@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+## Description: Run the PHPUnit suite with code coverage
+## Usage: coverage [phpunit_args]
+## Example: "ddev coverage" or "ddev coverage --filter ResizerTest"
+
+# DDEV's `ddev xdebug on` sets xdebug.mode=debug,develop, which is the
+# wrong mode for coverage collection (and slow). We override the mode
+# via -d for this invocation only, so the rest of the dev session
+# keeps debug behaviour if you happen to have it on.
+php -d xdebug.mode=coverage \
+    vendor/bin/phpunit \
+    --coverage-clover coverage.xml \
+    --coverage-text \
+    "$@"
