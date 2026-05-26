@@ -34,6 +34,7 @@ services:
         "@custom_components.menu_active_trail_resolver",
         "@custom_components.taxonomy_tree_builder",
         "@custom_components.menu_tree_builder",
+        "@custom_components.media_array_builder",
       ]
   custom_components.taxonomy_tree_builder:
     class: Drupal\custom_components\Services\TaxonomyTreeBuilder
@@ -48,6 +49,14 @@ services:
       - "@language_manager"
       - "@entity_type.manager"
       - "@request_stack"
+  custom_components.media_array_builder:
+    class: Drupal\custom_components\Services\MediaArrayBuilder
+    arguments:
+      - "@language_manager"
+      - "@image.factory"
+      - "@logger.factory"
+      - "@cache.default"
+      - "@file_url_generator"
   custom_components.resizer:
     class: Drupal\custom_components\Services\Resizer
   custom_components.menu_active_trail_resolver:

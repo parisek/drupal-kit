@@ -3,6 +3,7 @@
 namespace Drupal\Tests\custom_components\Unit\Services;
 
 use Drupal\custom_components\Services\EntityHelper;
+use Drupal\custom_components\Services\MediaArrayBuilder;
 use Drupal\custom_components\Services\MenuTreeBuilder;
 use Drupal\custom_components\Services\TaxonomyTreeBuilder;
 use Drupal\Core\Cache\Cache;
@@ -98,6 +99,7 @@ class EntityHelperTest extends TestCase {
       $this->createMock(MenuActiveTrailResolver::class),
       $this->createMock(TaxonomyTreeBuilder::class),
       $this->createMock(MenuTreeBuilder::class),
+      $this->createMock(MediaArrayBuilder::class),
     );
 
     // Set up container (still needed for optional breadcrumb service).
@@ -164,6 +166,7 @@ class EntityHelperTest extends TestCase {
       $overrides['menu_active_trail_resolver'] ?? $this->createMock(MenuActiveTrailResolver::class),
       $overrides['taxonomy_tree_builder'] ?? $this->createMock(TaxonomyTreeBuilder::class),
       $overrides['menu_tree_builder'] ?? $this->createMock(MenuTreeBuilder::class),
+      $overrides['media_array_builder'] ?? $this->createMock(MediaArrayBuilder::class),
     );
   }
 
@@ -536,6 +539,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
         $this->createMock(MenuTreeBuilder::class),
+        $this->createMock(MediaArrayBuilder::class),
       ])
       ->onlyMethods(['getLinkField'])
       ->getMock();
@@ -590,6 +594,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
         $this->createMock(MenuTreeBuilder::class),
+        $this->createMock(MediaArrayBuilder::class),
       ])
       ->onlyMethods(['getMediaField'])
       ->getMock();
@@ -632,6 +637,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
         $this->createMock(MenuTreeBuilder::class),
+        $this->createMock(MediaArrayBuilder::class),
       ])
       ->onlyMethods(['getTermField'])
       ->getMock();
@@ -674,6 +680,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
         $this->createMock(MenuTreeBuilder::class),
+        $this->createMock(MediaArrayBuilder::class),
       ])
       ->onlyMethods(['getEntityReferenceField'])
       ->getMock();
@@ -716,6 +723,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
         $this->createMock(MenuTreeBuilder::class),
+        $this->createMock(MediaArrayBuilder::class),
       ])
       ->onlyMethods(['getEntityReferenceField'])
       ->getMock();
@@ -795,6 +803,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
         $this->createMock(MenuTreeBuilder::class),
+        $this->createMock(MediaArrayBuilder::class),
       ])
       ->onlyMethods(['getWebformField'])
       ->getMock();
@@ -981,6 +990,7 @@ class EntityHelperTest extends TestCase {
         $this->createMock(MenuActiveTrailResolver::class),
         $this->createMock(TaxonomyTreeBuilder::class),
         $this->createMock(MenuTreeBuilder::class),
+        $this->createMock(MediaArrayBuilder::class),
       ])
       ->onlyMethods($methods)
       ->getMock();
