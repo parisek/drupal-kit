@@ -1,5 +1,7 @@
 # Custom Components
 
+[![CI](https://github.com/parisek/custom-components/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/parisek/custom-components/actions/workflows/ci.yml)
+
 Base library module for Drupal sites built on the Porta component pattern. Provides shared infrastructure (services, base classes, Twig extensions, image resizer) reused across projects.
 
 ## Installation
@@ -44,11 +46,38 @@ Drupal core (enable via `drush en …`):
 
 ## Tests
 
-Tests run from a host Drupal site that has this package installed. The package does not ship its own PHPUnit configuration or dev dependencies — use the host project's `phpunit.xml.dist` and `vendor/bin/phpunit`:
+Tests are self-contained — the package's CI scaffolds Drupal via Composer and runs PHPUnit against `web/core/tests/bootstrap.php` with sqlite in-memory.
+
+To run locally:
 
 ```bash
-vendor/bin/phpunit --testsuite unit web/modules/custom/custom_components/tests
+composer install
+# Bridge web/autoload.php to vendor/autoload.php (composer scaffold creates web/ itself):
+printf '<?php\nreturn require __DIR__ . "/../vendor/autoload.php";\n' > web/autoload.php
+# Make Drupal's Extension Discovery see this module:
+mkdir -p web/modules/contrib/custom_components
+for f in src tests templates *.info.yml *.module *.services.yml composer.json; do
+  rm -rf "web/modules/contrib/custom_components/$f"
+  ln -s "$PWD/$f" "web/modules/contrib/custom_components/$f"
+done
+
+vendor/bin/phpunit
 ```
+
+Run a specific suite:
+
+```bash
+vendor/bin/phpunit --testsuite unit
+vendor/bin/phpunit --testsuite kernel
+```
+
+Run with coverage (requires Xdebug locally; CI runs it always):
+
+```bash
+vendor/bin/phpunit --coverage-text
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add tests and the unit-vs-kernel decision tree.
 
 ## License
 
