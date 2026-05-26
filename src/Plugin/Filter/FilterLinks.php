@@ -3,8 +3,11 @@
 namespace Drupal\custom_components\Plugin\Filter;
 
 use Drupal\Component\Utility\Html;
+use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Provides a filter to manage link targets.
@@ -16,7 +19,28 @@ use Drupal\filter\Plugin\FilterBase;
  *   type = Drupal\filter\Plugin\FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
  * )
  */
-class FilterLinks extends FilterBase {
+class FilterLinks extends FilterBase implements ContainerFactoryPluginInterface {
+
+  public function __construct(
+    array $configuration,
+    $plugin_id,
+    $plugin_definition,
+    private readonly RequestStack $requestStack,
+  ) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): self {
+    return new self(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $container->get('request_stack'),
+    );
+  }
 
   /**
    * Process filter.
@@ -26,13 +50,10 @@ class FilterLinks extends FilterBase {
 
     $html_dom = Html::load($text);
     $links = $html_dom->getElementsByTagName('a');
+    // Hoist host lookup outside the loop — same value for every link.
+    $current_host = $this->requestStack->getCurrentRequest()?->getHost() ?? '';
     foreach ($links as $link) {
       $url = $link->getAttribute('href');
-      // Pre-existing static call retained for now; DI'ing request_stack
-      // requires a ContainerFactoryPluginInterface migration that is
-      // out of scope for the test/quality pass.
-      // @phpstan-ignore-next-line
-      $current_host = \Drupal::request()->getHost();
       $link_host = parse_url($url, PHP_URL_HOST);
       $link_path = parse_url($url, PHP_URL_PATH);
 
