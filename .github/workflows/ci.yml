@@ -37,7 +37,9 @@ jobs:
             ln -s "$PWD/$f" "$target/$f"
           done
 
-      - run: vendor/bin/phpunit
+      - run: vendor/bin/phpunit --coverage-clover coverage.xml --coverage-text
+
+      - run: vendor/bin/phpstan analyse
 
       - name: Enforce line-coverage threshold
         # Ratchet floor — set just below current to catch silent
@@ -51,7 +53,15 @@ jobs:
         run: |
           php -r '
             $min = (int) getenv("MIN_COVERAGE");
+            if (!file_exists("coverage.xml")) {
+              fwrite(STDERR, "coverage.xml not found — Xdebug driver missing?\n");
+              exit(1);
+            }
             $xml = simplexml_load_file("coverage.xml");
+            if ($xml === false) {
+              fwrite(STDERR, "coverage.xml could not be parsed\n");
+              exit(1);
+            }
             $metrics = $xml->project->metrics;
             $statements = (int) $metrics["statements"];
             $covered = (int) $metrics["coveredstatements"];
@@ -59,5 +69,3 @@ jobs:
             printf("Line coverage: %.2f%% (%d / %d), threshold %d%%\n", $pct, $covered, $statements, $min);
             exit($pct >= $min ? 0 : 1);
           '
-
-      - run: vendor/bin/phpstan analyse

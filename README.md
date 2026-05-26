@@ -71,7 +71,7 @@ vendor/bin/phpunit --testsuite unit
 vendor/bin/phpunit --testsuite kernel
 ```
 
-Run with coverage (requires Xdebug locally; CI runs it always):
+Run with coverage (requires Xdebug locally; CI passes `--coverage-clover coverage.xml --coverage-text` automatically):
 
 ```bash
 vendor/bin/phpunit --coverage-text
