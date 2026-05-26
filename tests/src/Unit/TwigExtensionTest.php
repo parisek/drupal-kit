@@ -6,6 +6,7 @@ use Drupal\custom_components\TwigExtension;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Twig\Environment;
 use Twig\Loader\ArrayLoader;
 use PHPUnit\Framework\TestCase;
@@ -34,6 +35,11 @@ class TwigExtensionTest extends TestCase {
   protected LanguageManagerInterface $languageManager;
 
   /**
+   * Mock translation service.
+   */
+  protected TranslationInterface $stringTranslation;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -41,12 +47,17 @@ class TwigExtensionTest extends TestCase {
 
     $this->dateFormatter = $this->createMock(DateFormatterInterface::class);
     $this->languageManager = $this->createMock(LanguageManagerInterface::class);
+    $this->stringTranslation = $this->createMock(TranslationInterface::class);
 
     $language = $this->createMock(LanguageInterface::class);
     $language->method('getId')->willReturn('cs');
     $this->languageManager->method('getCurrentLanguage')->willReturn($language);
 
-    $this->twigExtension = new TwigExtension($this->dateFormatter, $this->languageManager);
+    $this->twigExtension = new TwigExtension(
+      $this->dateFormatter,
+      $this->languageManager,
+      $this->stringTranslation,
+    );
   }
 
   /**
@@ -336,6 +347,33 @@ class TwigExtensionTest extends TestCase {
     $merged = TwigExtension::mergeResizer($only);
 
     $this->assertCount(2, $merged);
+  }
+
+  /**
+   * @covers ::getTranslationPlural
+   *
+   * Verifies the new injected stringTranslation service is called with
+   * the same shape the old \\Drupal::translation() chain produced.
+   */
+  public function testGetTranslationPluralDelegatesToStringTranslation(): void {
+    $this->stringTranslation->expects($this->once())
+      ->method('formatPlural')
+      ->with(
+        3,
+        '1 item',
+        '@count items',
+        [],
+        ['context' => 'cart'],
+      )
+      ->willReturn('3 items');
+
+    $result = $this->twigExtension->getTranslationPlural(
+      '%s item',
+      '%s items',
+      3,
+      'cart',
+    );
+    $this->assertSame('3 items', (string) $result);
   }
 
   /**

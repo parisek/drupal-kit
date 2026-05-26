@@ -10,6 +10,7 @@ use Drupal\Core\Locale\CountryManager;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\StringTranslation\TranslationInterface;
 
 /**
  * Twig extension with some useful functions and filters.
@@ -38,16 +39,30 @@ class TwigExtension extends AbstractExtension {
   protected $languageManager;
 
   /**
+   * The translation service.
+   *
+   * @var \Drupal\Core\StringTranslation\TranslationInterface
+   */
+  protected TranslationInterface $stringTranslation;
+
+  /**
    * Constructs a TwigExtension object.
    *
    * @param \Drupal\Core\Datetime\DateFormatterInterface $date_formatter
    *   The date formatter service.
    * @param \Drupal\Core\Language\LanguageManagerInterface $language_manager
    *   The language manager.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The translation service.
    */
-  public function __construct(DateFormatterInterface $date_formatter, LanguageManagerInterface $language_manager) {
+  public function __construct(
+    DateFormatterInterface $date_formatter,
+    LanguageManagerInterface $language_manager,
+    TranslationInterface $string_translation,
+  ) {
     $this->dateFormatter = $date_formatter;
     $this->languageManager = $language_manager;
+    $this->stringTranslation = $string_translation;
   }
 
   /**
@@ -209,17 +224,12 @@ class TwigExtension extends AbstractExtension {
    * Return translated string.
    */
   public function getTranslationPlural($single, $plural, $count, $context) {
-    // We need to translate manually via Translate Interface. Injecting
-    // string_translation here is the cleaner fix and is queued for a
-    // follow-up.
-    // phpcs:ignore DrupalPractice.Objects.GlobalDrupal.GlobalDrupal
-    // @phpstan-ignore-next-line
-    return \Drupal::translation()->formatPlural(
+    return $this->stringTranslation->formatPlural(
       $count,
       str_replace('%s', '1', $single),
       str_replace('%s', '@count', $plural),
       [],
-      ['context' => $context]
+      ['context' => $context],
     );
   }
 

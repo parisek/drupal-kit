@@ -4,7 +4,7 @@ services:
     tags:
       - { name: event_subscriber }
   custom_components.twig_extension:
-    arguments: ["@date.formatter", "@language_manager"]
+    arguments: ["@date.formatter", "@language_manager", "@string_translation"]
     class: Drupal\custom_components\TwigExtension
     tags:
       - { name: twig.extension }
