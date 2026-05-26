@@ -34,7 +34,23 @@ class EntityHelperMenuTest extends EntityHelperKernelTestBase {
     // references the user entity type, so user must be installed first.
     $this->installEntitySchema('user');
     $this->installEntitySchema('menu_link_content');
-    $this->installConfig(['system']);
+
+    // EntityHelper::getMenu() includes `menu.language_tree_manipulator`
+    // in its manipulator stack — that service comes from a Drupal core
+    // patch (https://www.drupal.org/project/drupal/issues/2466553) that
+    // htdvere has applied but a vanilla kernel-test container does not.
+    // Register a no-op stub so the manipulator chain resolves and we can
+    // assert on the rest of the pipeline.
+    $this->container->set(
+      'menu.language_tree_manipulator',
+      new class() {
+
+        public function filterLanguage(array $tree): array {
+          return $tree;
+        }
+
+      },
+    );
   }
 
   /**

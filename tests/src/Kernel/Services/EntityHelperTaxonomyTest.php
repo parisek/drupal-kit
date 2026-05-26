@@ -19,6 +19,7 @@ class EntityHelperTaxonomyTest extends EntityHelperKernelTestBase {
    */
   protected static $modules = [
     'custom_components',
+    'system',
     'user',
     'taxonomy',
     'text',
@@ -33,7 +34,10 @@ class EntityHelperTaxonomyTest extends EntityHelperKernelTestBase {
     // references the user entity type, so user must be installed first.
     $this->installEntitySchema('user');
     $this->installEntitySchema('taxonomy_term');
-    $this->installConfig(['taxonomy']);
+    // Skip installConfig(['taxonomy']) — it ships a system.action.*
+    // config whose schema lives in system module's config schema, and
+    // strict kernel mode complains. We only need the entity schema +
+    // bare vocabularies created in the tests themselves.
   }
 
   /**
