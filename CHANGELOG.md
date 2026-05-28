@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file. The format foll
 ## [Unreleased]
 
 ### Added
+- **`Resizer` focal_point branch + format-detection coverage** — new `ResizerFocalPointKernelTest` enables `crop` + `focal_point` (already in `require-dev`) and pulls in the previously-uncovered branches in `addCropEffect`'s focal_point path and `getFocalPointHash`. Plus a tiny annotation fix on the existing `testLocalFileProducesVariantsViaImageStyle` to credit `getOutputFormat` + `getFocalPointHash` to the test that actually triggers the one-time format detection (subsequent tests hit the static-cache early-return, so they can't be credited). `Resizer` coverage jumps 80 % → 90 %. Static-state reset via reflection in setUp so the toolkit-detection body in `getOutputFormat` runs fresh inside this test class.
 - **Small-wins coverage round (ComponentBase / FilterTypography / FilterLinks / TypographyExtension)** — four class-level metric fixes:
   - `ComponentBase::create()` factory coverage via a new minimal `ComponentBaseStub` concrete subclass (the existing kernel tests instantiated an anonymous class so the factory body never ran). 76.6 % → 100 %.
   - `FilterTypography::create()` coverage via a new unit test that mocks the container and asserts `custom_components.typography_twig_extension` is requested. 63 % → 100 %.

@@ -217,9 +217,17 @@ class ResizerTest extends ResizerKernelTestBase {
 
   /**
    * @covers ::resizer
+   * @covers ::getOutputFormat
+   * @covers ::getFocalPointHash
    *
    * Files that exist in public:// AND match the /sites/default/files/
-   * URL prefix go through the full image-style derivative path.
+   * URL prefix go through the full image-style derivative path. As the
+   * first variant-producing test in the suite, this is also the call
+   * that triggers the one-time toolkit-feature-detection inside
+   * getOutputFormat (subsequent tests hit the static-cache early-return);
+   * crediting it here ensures the detection body is counted. Same logic
+   * for getFocalPointHash — its module-exists guard runs on every
+   * variant pass.
    */
   public function testLocalFileProducesVariantsViaImageStyle(): void {
     $file = $this->createTestPngFile('local.png');
