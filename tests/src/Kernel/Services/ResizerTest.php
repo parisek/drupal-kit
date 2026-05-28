@@ -188,11 +188,13 @@ class ResizerTest extends ResizerKernelTestBase {
   public function testCanvasVariantBuildsScaleAndCanvasEffects(): void {
     $this->createTestPngFile('canvas.png');
 
+    // Non-square source dimensions (1×2) — see comment on the
+    // dimension assertion below for why this matters.
     $image = [[
       'src' => '/sites/default/files/canvas.png',
       'type' => 'image/png',
       'width' => 1,
-      'height' => 1,
+      'height' => 2,
     ]];
 
     $result = Resizer::resizer($image, [[100, 100, 768, 'canvas']]);
@@ -200,10 +202,15 @@ class ResizerTest extends ResizerKernelTestBase {
     $this->assertGreaterThanOrEqual(2, count($result), 'Expected variant + fallback — canvas effect-builder branch may have been skipped.');
     $fallback = end($result);
     $this->assertSame('/sites/default/files/canvas.png', $fallback['src']);
-    // Branch-specific observable: addCanvasEffect appends
-    // `image_effects_set_canvas` with exact size 100×100, which forces
-    // the post-transform dimensions to the canvas dimensions regardless
-    // of the input. Default branch would leave the variant at 1×1.
+    // Branch-specific observable: addCanvasEffect's chain is
+    // `image_scale` (upscale=TRUE, fit-within) + `image_effects_set_canvas`
+    // (exact size, letterboxes). With a non-square 1×2 input scaled to
+    // fit within 100×100 we get an intermediate 50×100; the canvas
+    // effect THEN forces the final dimensions to exactly 100×100.
+    // Without the canvas effect (or any non-canvas branch), the output
+    // would stay 50×100 (or 1×2 in the default branch, which has no
+    // upscale). The 100×100 assertion fails the moment the canvas
+    // effect is removed from the chain.
     $this->assertSame(100, $result[0]['width']);
     $this->assertSame(100, $result[0]['height']);
   }
