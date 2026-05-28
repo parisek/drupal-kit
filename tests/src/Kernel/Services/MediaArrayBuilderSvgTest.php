@@ -34,7 +34,7 @@ class MediaArrayBuilderSvgTest extends MediaArrayBuilderKernelTestBase {
     $this->assertArrayHasKey('src', $image);
     $this->assertStringContainsString('logo.svg', $image['src']);
     $this->assertSame('image/svg+xml', $image['type']);
-    $this->assertArrayHasKey('alt', $image);
+    $this->assertSame('Logo alt', $image['alt']);
     $this->assertSame(32, $image['width']);
     $this->assertSame(32, $image['height']);
   }
@@ -80,7 +80,9 @@ class MediaArrayBuilderSvgTest extends MediaArrayBuilderKernelTestBase {
 
     $this->assertCount(1, $data);
     $image = $data[0];
-    $this->assertArrayHasKey('src', $image);
+    $this->assertStringContainsString('broken.svg', $image['src']);
+    $this->assertSame('image/svg+xml', $image['type']);
+    $this->assertSame('', $image['alt']);
     $this->assertArrayNotHasKey('width', $image);
     $this->assertArrayNotHasKey('height', $image);
   }
