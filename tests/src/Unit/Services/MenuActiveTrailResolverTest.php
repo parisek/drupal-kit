@@ -130,6 +130,8 @@ class MenuActiveTrailResolverTest extends TestCase {
    * Empty native trail + matching breadcrumb ancestor = trail from that link.
    *
    * @covers ::getActiveTrailIds
+   * @covers ::pickShallowest
+   * @covers ::buildTrailFromLink
    */
   public function testFallbackUsesDeepestBreadcrumbMatch(): void {
     $this->menuActiveTrail
@@ -210,6 +212,8 @@ class MenuActiveTrailResolverTest extends TestCase {
    * When breadcrumb match has parents in the menu, full trail is built.
    *
    * @covers ::getActiveTrailIds
+   * @covers ::pickShallowest
+   * @covers ::buildTrailFromLink
    */
   public function testTrailIncludesMenuParents(): void {
     $this->menuActiveTrail
@@ -334,6 +338,8 @@ class MenuActiveTrailResolverTest extends TestCase {
    * a nested SEO duplicate could highlight the wrong top-level section.
    *
    * @covers ::getActiveTrailIds
+   * @covers ::pickShallowest
+   * @covers ::buildTrailFromLink
    */
   public function testPrefersShallowestMatchAmongDuplicates(): void {
     $this->menuActiveTrail
@@ -411,6 +417,8 @@ class MenuActiveTrailResolverTest extends TestCase {
 
   /**
    * @covers ::getActiveTrailIds
+   * @covers ::pickShallowest
+   * @covers ::buildTrailFromLink
    *
    * Unrouted breadcrumb crumbs (`!$url->isRouted()` — e.g. external
    * URLs surfaced by a custom breadcrumb builder) are skipped without
