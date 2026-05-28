@@ -33,6 +33,7 @@ class EntityHelperFormatFieldKernelTest extends EntityHelperFieldsKernelTestBase
     'datetime',
     'datetime_range',
     'link',
+    'telephone',
   ];
 
   /**
@@ -52,6 +53,20 @@ class EntityHelperFormatFieldKernelTest extends EntityHelperFieldsKernelTestBase
     ]);
     $this->attachField('flag', 'boolean');
     $this->attachField('rating', 'float');
+
+    // Additional field types — each maps to a distinct case in
+    // EntityHelper::dispatchByFieldType. Attaching them ensures the
+    // dispatch switch is fully exercised by the per-type tests below.
+    $this->attachField('summary_long', 'string_long');
+    $this->attachField('contact_email', 'email');
+    $this->attachField('contact_phone', 'telephone');
+    $this->attachField('quantity', 'integer');
+    $this->attachField('price_decimal', 'decimal', [], ['precision' => 10, 'scale' => 2]);
+    $this->attachField('intro_text', 'text');
+    $this->attachField('long_text_summary', 'text_with_summary');
+    $this->attachField('priority', 'list_integer', [
+      'allowed_values' => [1 => 'Low', 2 => 'Medium', 3 => 'High'],
+    ]);
   }
 
   /**
@@ -133,6 +148,103 @@ class EntityHelperFormatFieldKernelTest extends EntityHelperFieldsKernelTestBase
     $result = $this->entityHelper->formatField($node, 'rating');
     $value = is_array($result) ? (float) reset($result) : (float) $result;
     $this->assertEqualsWithDelta(4.5, $value, 0.0001);
+  }
+
+  /**
+   * @covers ::formatField
+   * @covers ::dispatchByFieldType
+   *
+   * `string_long` shares the getTextField dispatch with `string`,
+   * `email`, `telephone`, `integer`, `decimal`. Each case in the
+   * switch needs an executed line to credit the dispatcher branch.
+   */
+  public function testDispatchStringLong(): void {
+    $node = $this->createTestNode(['field_summary_long' => 'Long single-line summary that exceeds 255 chars-style use case.']);
+    $this->assertStringContainsString('Long single-line', (string) $this->entityHelper->formatField($node, 'summary_long'));
+  }
+
+  /**
+   * @covers ::formatField
+   * @covers ::dispatchByFieldType
+   */
+  public function testDispatchEmail(): void {
+    $node = $this->createTestNode(['field_contact_email' => 'hello@example.test']);
+    $this->assertSame('hello@example.test', $this->entityHelper->formatField($node, 'contact_email'));
+  }
+
+  /**
+   * @covers ::formatField
+   * @covers ::dispatchByFieldType
+   */
+  public function testDispatchTelephone(): void {
+    $node = $this->createTestNode(['field_contact_phone' => '+420 555 123 456']);
+    $this->assertSame('+420 555 123 456', $this->entityHelper->formatField($node, 'contact_phone'));
+  }
+
+  /**
+   * @covers ::formatField
+   * @covers ::dispatchByFieldType
+   */
+  public function testDispatchInteger(): void {
+    $node = $this->createTestNode(['field_quantity' => 42]);
+    $result = $this->entityHelper->formatField($node, 'quantity');
+    $value = is_array($result) ? (int) reset($result) : (int) $result;
+    $this->assertSame(42, $value);
+  }
+
+  /**
+   * @covers ::formatField
+   * @covers ::dispatchByFieldType
+   */
+  public function testDispatchDecimal(): void {
+    $node = $this->createTestNode(['field_price_decimal' => '19.95']);
+    $result = $this->entityHelper->formatField($node, 'price_decimal');
+    $value = is_array($result) ? (string) reset($result) : (string) $result;
+    $this->assertSame('19.95', $value);
+  }
+
+  /**
+   * @covers ::formatField
+   * @covers ::dispatchByFieldType
+   *
+   * `text`, `text_long`, `text_with_summary` all route to
+   * getTextareaField. text_long is already covered by
+   * testDispatchTextLong above; this pins `text` separately.
+   */
+  public function testDispatchText(): void {
+    $node = $this->createTestNode(['field_intro_text' => [
+      'value' => 'Intro paragraph',
+      'format' => 'plain_text',
+    ]]);
+    $result = $this->entityHelper->formatField($node, 'intro_text');
+    $this->assertStringContainsString('Intro paragraph', (string) $result);
+  }
+
+  /**
+   * @covers ::formatField
+   * @covers ::dispatchByFieldType
+   */
+  public function testDispatchTextWithSummary(): void {
+    $node = $this->createTestNode(['field_long_text_summary' => [
+      'value' => 'Body with a separate summary.',
+      'summary' => 'Short summary.',
+      'format' => 'plain_text',
+    ]]);
+    $result = $this->entityHelper->formatField($node, 'long_text_summary');
+    $this->assertStringContainsString('Body with a separate summary.', (string) $result);
+  }
+
+  /**
+   * @covers ::formatField
+   * @covers ::dispatchByFieldType
+   *
+   * `list_integer` shares the getSelectField dispatch with
+   * `list_string`.
+   */
+  public function testDispatchListInteger(): void {
+    $node = $this->createTestNode(['field_priority' => 2]);
+    $result = $this->entityHelper->formatField($node, 'priority');
+    $this->assertSame(2, (int) $result);
   }
 
   /**
