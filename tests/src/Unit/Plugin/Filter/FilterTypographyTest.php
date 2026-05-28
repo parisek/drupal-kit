@@ -104,4 +104,24 @@ class FilterTypographyTest extends TestCase {
     $this->assertStringNotContainsString('blockquote', $out);
   }
 
+  /**
+   * @covers ::create
+   * @covers ::__construct
+   *
+   * The container factory pulls the typography_twig_extension service
+   * and forwards the plugin args to the constructor.
+   */
+  public function testCreatePullsTypographyServiceFromContainer(): void {
+    $typography = $this->createMock(TypographyExtension::class);
+    $container = $this->createMock(\Symfony\Component\DependencyInjection\ContainerInterface::class);
+    $container->expects($this->once())
+      ->method('get')
+      ->with('custom_components.typography_twig_extension')
+      ->willReturn($typography);
+
+    $instance = FilterTypography::create($container, [], 'filter_typography_plugin', ['provider' => 'custom_components']);
+
+    $this->assertInstanceOf(FilterTypography::class, $instance);
+  }
+
 }

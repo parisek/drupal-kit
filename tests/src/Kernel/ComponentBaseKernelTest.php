@@ -99,6 +99,39 @@ class ComponentBaseKernelTest extends KernelTestBase {
   }
 
   /**
+   * @covers ::create
+   * @covers ::__construct
+   *
+   * The container factory wires six services into the plugin
+   * constructor: entity type manager, current route match, language
+   * manager, entity repository, config factory, and the custom_components
+   * entity helper. We assert on the resulting instance shape (and on
+   * subsequent buildConfigurationForm working) rather than peeking at
+   * the private props directly — that keeps the test resilient to
+   * future ctor reorderings.
+   */
+  public function testCreateFactoryPullsServicesFromContainer(): void {
+    // Use the named ComponentBaseStub concrete subclass so
+    // `new static(...)` inside ComponentBase::create() resolves to a
+    // class assertions can name. An anonymous subclass (like
+    // newComponent() uses elsewhere in this file) can't be the target
+    // of an external factory call from this scope.
+    $instance = ComponentBaseStub::create(
+      $this->container,
+      [],
+      'kernel_stub_create',
+      ['provider' => 'custom_components', 'admin_label' => 'Stub'],
+    );
+
+    $this->assertInstanceOf(ComponentBaseStub::class, $instance);
+    // Subsequent form-build call confirms the wired services actually
+    // work — if any of the six lookups failed, the form-build would
+    // throw on first service touch.
+    $form = $instance->buildConfigurationForm([], new FormState());
+    $this->assertArrayHasKey('advanced', $form);
+  }
+
+  /**
    * @covers ::baseConfigurationDefaults
    */
   public function testBaseConfigurationDefaultsExposesWrapperKeys(): void {

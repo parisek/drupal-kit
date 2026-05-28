@@ -93,6 +93,7 @@ class FilterLinksTest extends TestCase {
 
   /**
    * @covers ::create
+   * @covers ::__construct
    *
    * Verifies the factory wires the request_stack service into the
    * plugin constructor.
