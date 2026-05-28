@@ -85,15 +85,22 @@ class EntityHelperGenerateDispatchTest extends TestCase {
    * @covers ::generateMediaRemoteVideo
    *
    * The remote-video delegate passes EntityHelper's own getImageField
-   * as the image_field_resolver callable — verify the callable shape.
+   * as the image_field_resolver — verify the callable is bound to the
+   * exact helper instance + method, not just any callable.
    */
-  public function testGenerateMediaRemoteVideoForwardsMediaPlusResolverCallable(): void {
+  public function testGenerateMediaRemoteVideoForwardsMediaPlusOwnGetImageFieldCallable(): void {
     $media = $this->createMock(MediaInterface::class);
     $expected = ['iframe' => 'https://example.test/embed/abc'];
+
     $this->builder->expects($this->once())
       ->method('buildRemoteVideo')
-      ->with($media, $this->isType('callable'))
-      ->willReturn($expected);
+      ->willReturnCallback(function (MediaInterface $arg_media, $arg_callable) use ($media, $expected) {
+        $this->assertSame($media, $arg_media);
+        $this->assertIsArray($arg_callable, 'Resolver should be an [object, method] array callable.');
+        $this->assertSame($this->helper, $arg_callable[0]);
+        $this->assertSame('getImageField', $arg_callable[1]);
+        return $expected;
+      });
 
     $this->assertSame($expected, $this->helper->generateMediaRemoteVideo($media));
   }
@@ -157,22 +164,32 @@ class EntityHelperGenerateDispatchTest extends TestCase {
   /**
    * @covers ::generateMediaImage
    *
-   * Image-style argument flows through unchanged (default '' when omitted
-   * — covered by the second assertion).
+   * Default `image_style` arg is the empty string ('').
    */
-  public function testGenerateMediaImageForwardsMediaAndStyle(): void {
+  public function testGenerateMediaImageForwardsDefaultEmptyStyle(): void {
     $media = $this->createMock(MediaInterface::class);
     $expected = [['src' => '/files/photo.jpg']];
-
-    $this->builder->expects($this->exactly(2))
+    $this->builder->expects($this->once())
       ->method('buildImage')
-      ->willReturnCallback(function (MediaInterface $arg_media, string $arg_style) use ($media, $expected) {
-        $this->assertSame($media, $arg_media);
-        $this->assertContains($arg_style, ['', 'thumbnail']);
-        return $expected;
-      });
+      ->with($media, '')
+      ->willReturn($expected);
 
     $this->assertSame($expected, $this->helper->generateMediaImage($media));
+  }
+
+  /**
+   * @covers ::generateMediaImage
+   *
+   * Explicit `image_style` flows through unchanged.
+   */
+  public function testGenerateMediaImageForwardsNamedStyle(): void {
+    $media = $this->createMock(MediaInterface::class);
+    $expected = [['src' => '/files/photo.jpg']];
+    $this->builder->expects($this->once())
+      ->method('buildImage')
+      ->with($media, 'thumbnail')
+      ->willReturn($expected);
+
     $this->assertSame($expected, $this->helper->generateMediaImage($media, 'thumbnail'));
   }
 
