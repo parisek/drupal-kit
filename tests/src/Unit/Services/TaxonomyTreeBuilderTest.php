@@ -127,6 +127,64 @@ class TaxonomyTreeBuilderTest extends TestCase {
   }
 
   /**
+   * @covers ::build
+   * @covers ::buildTermTree
+   *
+   * Nested mode (`params['nested'] === TRUE`) routes through the
+   * recursive buildTermTree helper. Each item carries a `children`
+   * key holding child terms with the same shape; leaves get an empty
+   * `children` array.
+   */
+  public function testNestedTreeReturnsHierarchicalStructure(): void {
+    // Tree: root1 → child1a (leaf) + child1b (with grandchild1ba); root2 (leaf).
+    $this->stubStorage([
+      $this->makeTerm(1, 'Root 1', TRUE, 0),
+      $this->makeTerm(11, 'Child 1a', TRUE, 1),
+      $this->makeTerm(12, 'Child 1b', TRUE, 1),
+      $this->makeTerm(121, 'Grandchild 1ba', TRUE, 12),
+      $this->makeTerm(2, 'Root 2', TRUE, 0),
+    ]);
+
+    $tree = $this->builder->build('section', ['nested' => TRUE]);
+
+    $this->assertCount(2, $tree, 'Two roots at the top level.');
+    $this->assertSame('Root 1', $tree[0]['title']);
+    $this->assertSame('Root 2', $tree[1]['title']);
+
+    // Root 1 has two children.
+    $this->assertCount(2, $tree[0]['children']);
+    $this->assertSame('Child 1a', $tree[0]['children'][0]['title']);
+    $this->assertSame('Child 1b', $tree[0]['children'][1]['title']);
+    // Child 1a is a leaf.
+    $this->assertSame([], $tree[0]['children'][0]['children']);
+    // Child 1b has a grandchild.
+    $this->assertCount(1, $tree[0]['children'][1]['children']);
+    $this->assertSame('Grandchild 1ba', $tree[0]['children'][1]['children'][0]['title']);
+    // Root 2 is a leaf.
+    $this->assertSame([], $tree[1]['children']);
+  }
+
+  /**
+   * @covers ::buildTermTree
+   *
+   * buildTermTree returns an empty array when a parent_id has no
+   * children registered in the children_map — exercises the
+   * `!isset($children_map[$parent_id])` early return that bounds the
+   * recursion at the leaves.
+   */
+  public function testNestedTreeReturnsEmptyChildrenForLeaf(): void {
+    $this->stubStorage([
+      $this->makeTerm(1, 'Solo Root', TRUE, 0),
+    ]);
+
+    $tree = $this->builder->build('section', ['nested' => TRUE]);
+
+    $this->assertCount(1, $tree);
+    $this->assertArrayHasKey('children', $tree[0]);
+    $this->assertSame([], $tree[0]['children']);
+  }
+
+  /**
    * Build a stub term storage returning the given term tree.
    */
   protected function stubStorage(array $terms, string $entity_type_id = 'taxonomy_term'): void {
@@ -141,8 +199,13 @@ class TaxonomyTreeBuilderTest extends TestCase {
 
   /**
    * Mock a term with the minimum API the builder consumes.
+   *
+   * @param int $parent
+   *   Parent term id, or 0 for a root term. Nested-mode tests
+   *   (`build(…, ['nested' => TRUE])`) read this via
+   *   `$term->get('parent')->getValue()[0]['target_id']`.
    */
-  protected function makeTerm(int $tid, string $label, bool $published = TRUE): TermInterface {
+  protected function makeTerm(int $tid, string $label, bool $published = TRUE, int $parent = 0): TermInterface {
     $term = $this->createMock(TermInterface::class);
     $term->method('id')->willReturn((string) $tid);
     $term->method('isPublished')->willReturn($published);
@@ -156,10 +219,10 @@ class TaxonomyTreeBuilderTest extends TestCase {
     $term->method('getCacheContexts')->willReturn([]);
     $term->method('getCacheMaxAge')->willReturn(Cache::PERMANENT);
 
-    // Parent field defaults to empty (root) so non-nested calls aren't
-    // affected; nested-mode tests can override this.
     $parent_list = $this->createMock(FieldItemListInterface::class);
-    $parent_list->method('getValue')->willReturn([]);
+    $parent_list->method('getValue')->willReturn(
+      $parent === 0 ? [] : [['target_id' => $parent]],
+    );
     $term->method('get')->with('parent')->willReturn($parent_list);
 
     return $term;

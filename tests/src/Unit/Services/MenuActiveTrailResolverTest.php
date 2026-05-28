@@ -410,6 +410,58 @@ class MenuActiveTrailResolverTest extends TestCase {
   }
 
   /**
+   * @covers ::getActiveTrailIds
+   *
+   * Unrouted breadcrumb crumbs (`!$url->isRouted()` — e.g. external
+   * URLs surfaced by a custom breadcrumb builder) are skipped without
+   * touching the menu link manager; iteration continues to the next
+   * deeper crumb.
+   */
+  public function testSkipsUnroutedBreadcrumbCrumbs(): void {
+    $this->menuActiveTrail
+      ->method('getActiveTrailIds')
+      ->willReturn(['' => '']);
+
+    // Unrouted URL — e.g. an external href surfaced by a custom
+    // breadcrumb builder.
+    $unrouted_url = $this->getMockBuilder(Url::class)
+      ->disableOriginalConstructor()
+      ->getMock();
+    $unrouted_url->method('isRouted')->willReturn(FALSE);
+
+    // The resolver iterates `array_reverse($breadcrumb->getLinks())`,
+    // so the DEEPEST (last-original-position) crumb is inspected first.
+    // To exercise the unrouted-skip branch the unrouted crumb must sit
+    // AFTER the matching Parent — reversed walk hits unrouted first,
+    // skips it, then matches Parent on the next iteration.
+    $breadcrumb = new Breadcrumb();
+    $breadcrumb->setLinks([
+      $this->makeLink('<front>', []),
+      Link::fromTextAndUrl('Parent', $this->makeRoutedUrl('entity.node.canonical', ['node' => '10'])),
+      new Link('External', $unrouted_url),
+    ]);
+    $this->breadcrumbBuilder->method('build')->willReturn($breadcrumb);
+
+    // Hard guarantee: the menu link manager must NEVER be asked about
+    // the unrouted crumb (the resolver short-circuits before reaching
+    // it). Only Parent's route should be looked up.
+    $this->menuLinkManager
+      ->expects($this->once())
+      ->method('loadLinksByRoute')
+      ->with('entity.node.canonical', ['node' => '10'], 'main')
+      ->willReturn(['menu_link_content:parent' => $this->makeMenuLink('menu_link_content:parent', '')]);
+
+    $result = $this->resolver->getActiveTrailIds('main');
+
+    // The unrouted crumb was skipped; iteration continued to Parent and
+    // returned its trail.
+    $this->assertSame([
+      '' => '',
+      'menu_link_content:parent' => 'menu_link_content:parent',
+    ], $result);
+  }
+
+  /**
    * Helper: create a Link with a routed Url.
    */
   private function makeLink(string $route_name, array $params): Link {
