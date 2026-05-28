@@ -16,17 +16,25 @@ class RouteSubscriberTest extends TestCase {
 
   /**
    * @covers ::alterRoutes
+   *
+   * The taxonomy_term canonical controller override was removed in
+   * #65 — Drupal core's default route already does what the override
+   * did (renders the term in `full` view mode via `_entity_view`).
+   * Assert the alter is now a no-op for that route so we don't
+   * regress.
    */
-  public function testTaxonomyTermCanonicalControllerIsOverridden(): void {
+  public function testTaxonomyTermCanonicalRouteIsLeftUntouched(): void {
     $collection = new RouteCollection();
-    $collection->add('entity.taxonomy_term.canonical', new Route('/taxonomy/term/{taxonomy_term}'));
+    $route = new Route('/taxonomy/term/{taxonomy_term}');
+    $route->setDefault('_entity_view', 'taxonomy_term.full');
+    $collection->add('entity.taxonomy_term.canonical', $route);
 
     (new RouteSubscriber())->alterRoutes($collection);
 
-    $this->assertSame(
-      '\Drupal\custom_components\Controller\TaxonomyTermController::view',
-      $collection->get('entity.taxonomy_term.canonical')->getDefault('_controller'),
-    );
+    $altered = $collection->get('entity.taxonomy_term.canonical');
+    // Core default preserved; no _controller injected on top.
+    $this->assertSame('taxonomy_term.full', $altered->getDefault('_entity_view'));
+    $this->assertNull($altered->getDefault('_controller'));
   }
 
   /**

@@ -15,9 +15,6 @@ class RouteSubscriber extends RouteSubscriberBase {
    * {@inheritdoc}
    */
   public function alterRoutes(RouteCollection $collection) {
-    if ($route = $collection->get('entity.taxonomy_term.canonical')) {
-      $route->setDefault('_controller', '\Drupal\custom_components\Controller\TaxonomyTermController::view');
-    }
     if ($route = $collection->get('entity.feeds_feed.canonical')) {
       $route->setOption('_admin_route', TRUE);
     }
