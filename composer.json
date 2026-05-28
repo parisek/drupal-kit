@@ -14,7 +14,8 @@
         "parisek/twig-typography": "^1.2"
     },
     "suggest": {
-        "drupal/commerce": "Enables commerce_product entity rendering in EntityHelper.",
+        "drupal/commerce": "Enables commerce_price field rendering (via the commerce_price submodule) and commerce_product entity references in EntityHelper.",
+        "drupal/address": "Enables address field rendering in EntityHelper::getAddressField.",
         "drupal/office_hours": "Enables office_hours field rendering in EntityHelper."
     },
     "require-dev": {
@@ -25,7 +26,10 @@
         "composer/installers": "^2.0",
         "drupal/image_effects": "^4.0",
         "drupal/focal_point": "^2.0",
-        "drupal/file_mdm": "^3.0"
+        "drupal/file_mdm": "^3.0",
+        "drupal/commerce": "^3.0",
+        "drupal/inline_entity_form": "^3.0@RC",
+        "drupal/address": "^2.0"
     },
     "autoload": {
         "psr-4": {
