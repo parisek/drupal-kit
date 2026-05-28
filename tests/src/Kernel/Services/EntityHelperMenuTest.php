@@ -3,6 +3,8 @@
 namespace Drupal\Tests\custom_components\Kernel\Services;
 
 use Drupal\Tests\custom_components\Kernel\EntityHelperKernelTestBase;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\system\Entity\Menu;
 
@@ -23,6 +25,15 @@ class EntityHelperMenuTest extends EntityHelperKernelTestBase {
     'user',
     'menu_link_content',
     'link',
+    // Needed for the field_formatter / menu_item_extras enrichment test.
+    'field',
+    // Aligns with the convention of other field-using kernel tests in
+    // this repo (EntityHelperFormatFieldKernelTest). The `string` field
+    // type is provided by Drupal core, so the test technically runs
+    // without `text` — keeping `text` here for consistency and to
+    // cover any config-schema validation paths that downstream Drupal
+    // versions may route through the text module.
+    'text',
   ];
 
   /**
@@ -86,6 +97,83 @@ class EntityHelperMenuTest extends EntityHelperKernelTestBase {
   }
 
   /**
+   * @covers ::getMenu
+   *
+   * Nested menu links flow through MenuTreeBuilder::renderLinks's
+   * recursive branch — parent link's `below` array carries the child
+   * with the same shape.
+   */
+  public function testNestedMenuLinksRecurseIntoBelow(): void {
+    $this->createMenu('with_nested');
+    $parent = $this->createMenuLink('with_nested', 'Parent', 'internal:/parent');
+    $this->createMenuLink(
+      'with_nested',
+      'Child',
+      'internal:/child',
+      FALSE,
+      'menu_link_content:' . $parent->uuid(),
+    );
+
+    $items = $this->entityHelper->getMenu('with_nested');
+
+    $this->assertNotEmpty($items, 'getMenu returns the parent.');
+    $top = reset($items);
+    $this->assertSame('Parent', $top['title']);
+    $this->assertNotEmpty($top['below'], 'Child link is nested under the parent.');
+    $child = reset($top['below']);
+    $this->assertSame('Child', $child['title']);
+    // Recursive shape must mirror the top level — `below` is an array
+    // (empty for a leaf) and `is_active` is set.
+    $this->assertIsArray($child['below']);
+    $this->assertArrayHasKey('is_active', $child);
+  }
+
+  /**
+   * @covers ::getMenu
+   *
+   * The menu_item_extras enrichment path — when the consumer passes
+   * a field_formatter (EntityHelper::getMenu wires its own formatField()),
+   * every `field_*` field on the menu_link_content entity is mapped
+   * into the link data under the field name minus the `field_` prefix.
+   */
+  public function testFieldFormatterEnrichesMenuItemWithExtras(): void {
+    // Attach a custom string field to the menu_link_content bundle.
+    // Mirrors what the contrib menu_item_extras module does: arbitrary
+    // field_* fields on menu_link_content that the consumer wants
+    // surfaced alongside the link.
+    FieldStorageConfig::create([
+      'field_name' => 'field_subtitle',
+      'entity_type' => 'menu_link_content',
+      'type' => 'string',
+    ])->save();
+    FieldConfig::create([
+      'field_name' => 'field_subtitle',
+      'entity_type' => 'menu_link_content',
+      'bundle' => 'menu_link_content',
+      'label' => 'Subtitle',
+    ])->save();
+
+    $this->createMenu('with_extras');
+    $link = MenuLinkContent::create([
+      'menu_name' => 'with_extras',
+      'title' => 'Home',
+      'link' => ['uri' => 'internal:/'],
+      'enabled' => 1,
+      'field_subtitle' => 'Welcome',
+    ]);
+    $link->save();
+
+    $items = $this->entityHelper->getMenu('with_extras');
+
+    $this->assertNotEmpty($items);
+    $first = reset($items);
+    // `field_subtitle` is surfaced under `subtitle` — the field_ prefix
+    // is stripped by the enrichment loop in renderLinks().
+    $this->assertArrayHasKey('subtitle', $first);
+    $this->assertSame('Welcome', $first['subtitle']);
+  }
+
+  /**
    * Create a custom menu.
    */
   protected function createMenu(string $id): Menu {
@@ -95,24 +183,30 @@ class EntityHelperMenuTest extends EntityHelperKernelTestBase {
   }
 
   /**
-   * Create a top-level menu link content entity.
+   * Create a menu link content entity.
    *
-   * Hierarchical (nested) menu links are intentionally not supported here —
-   * MenuLinkContent's parent format is "menu_link_content:{uuid}" and adding
-   * that wiring belongs in the PR that actually tests nested-menu output.
+   * @param string|null $parent
+   *   When non-NULL, the link is created as a child of the given
+   *   `menu_link_content:{uuid}` plugin id (testNestedMenuLinksRecurseIntoBelow
+   *   relies on this for the recursive renderLinks branch).
    */
   protected function createMenuLink(
     string $menu_name,
     string $title,
     string $uri,
     bool $hidden = FALSE,
+    ?string $parent = NULL,
   ): MenuLinkContent {
-    $link = MenuLinkContent::create([
+    $values = [
       'menu_name' => $menu_name,
       'title' => $title,
       'link' => ['uri' => $uri],
       'enabled' => $hidden ? 0 : 1,
-    ]);
+    ];
+    if ($parent !== NULL) {
+      $values['parent'] = $parent;
+    }
+    $link = MenuLinkContent::create($values);
     $link->save();
     return $link;
   }
