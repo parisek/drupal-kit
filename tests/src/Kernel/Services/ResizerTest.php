@@ -98,6 +98,125 @@ class ResizerTest extends ResizerKernelTestBase {
 
   /**
    * @covers ::resizer
+   * @covers ::addImageEffects
+   * @covers ::addCropEffect
+   * @covers ::getFocalPointHash
+   * @covers ::getOutputFormat
+   *
+   * `image_style: 'crop'` routes through addImageEffects' match into
+   * addCropEffect. focal_point isn't in the kernel module list here,
+   * so the fallback `image_scale_and_crop` effect branch is exercised.
+   * The focal_point-enabled branch is acceptable to leave uncovered —
+   * adding the module would balloon the kernel boot, and the fallback
+   * is the safer default the code is designed to handle.
+   *
+   * Crop also exercises the two cross-cutting helpers: getFocalPointHash
+   * is invoked once per local-file variant pass (line 190 in Resizer)
+   * and getOutputFormat is invoked from inside addImageEffects' format-
+   * conversion tail. Crediting them here covers all five private helpers
+   * the #62 audit identified.
+   */
+  public function testCropVariantBuildsImageScaleAndCropEffect(): void {
+    $this->createTestPngFile('crop.png');
+
+    $image = [[
+      'src' => '/sites/default/files/crop.png',
+      'type' => 'image/png',
+      'width' => 1,
+      'height' => 1,
+    ]];
+
+    $result = Resizer::resizer($image, [[100, 100, 768, 'crop']]);
+
+    // ≥ 2 entries proves the variant loop produced a derivative AND
+    // the fallback was appended. A bare-fallback (count == 1) result
+    // would mean the crop effect-builder branch was skipped without
+    // this test catching it.
+    $this->assertGreaterThanOrEqual(2, count($result), 'Expected variant + fallback — crop effect-builder branch may have been skipped.');
+    $fallback = end($result);
+    $this->assertSame('/sites/default/files/crop.png', $fallback['src']);
+    // Branch-specific observable: `image_scale_and_crop` (the fallback
+    // branch addCropEffect dispatches to when focal_point isn't
+    // available) has `upscale: TRUE`, so transformDimensions upscales
+    // the 1×1 input to the requested 100×100. The default branch
+    // (`addScaleEffect`) uses plain `image_scale` without upscale,
+    // which would leave the variant at 1×1 — this assertion fails if
+    // `crop` accidentally fell through to the default dispatch.
+    $this->assertSame(100, $result[0]['width']);
+    $this->assertSame(100, $result[0]['height']);
+  }
+
+  /**
+   * @covers ::resizer
+   * @covers ::addImageEffects
+   * @covers ::addSmartCropEffect
+   *
+   * `image_style: 'smart_crop'` routes through addSmartCropEffect,
+   * which adds the image_effects-provided
+   * `image_effects_scale_and_smart_crop` effect (entropy algorithm).
+   */
+  public function testSmartCropVariantBuildsEntropyEffect(): void {
+    $this->createTestPngFile('smart.png');
+
+    $image = [[
+      'src' => '/sites/default/files/smart.png',
+      'type' => 'image/png',
+      'width' => 1,
+      'height' => 1,
+    ]];
+
+    $result = Resizer::resizer($image, [[100, 100, 768, 'smart_crop']]);
+
+    $this->assertGreaterThanOrEqual(2, count($result), 'Expected variant + fallback — smart_crop effect-builder branch may have been skipped.');
+    $fallback = end($result);
+    $this->assertSame('/sites/default/files/smart.png', $fallback['src']);
+    // Branch-specific observable: `image_effects_scale_and_smart_crop`
+    // has `upscale: TRUE`, so transformDimensions upscales the 1×1
+    // input to 100×100. Default branch would leave the variant at 1×1.
+    $this->assertSame(100, $result[0]['width']);
+    $this->assertSame(100, $result[0]['height']);
+  }
+
+  /**
+   * @covers ::resizer
+   * @covers ::addImageEffects
+   * @covers ::addCanvasEffect
+   *
+   * `image_style: 'canvas'` adds image_scale + image_effects_set_canvas
+   * for exact-size letterboxed output.
+   */
+  public function testCanvasVariantBuildsScaleAndCanvasEffects(): void {
+    $this->createTestPngFile('canvas.png');
+
+    // Non-square source dimensions (1×2) — see comment on the
+    // dimension assertion below for why this matters.
+    $image = [[
+      'src' => '/sites/default/files/canvas.png',
+      'type' => 'image/png',
+      'width' => 1,
+      'height' => 2,
+    ]];
+
+    $result = Resizer::resizer($image, [[100, 100, 768, 'canvas']]);
+
+    $this->assertGreaterThanOrEqual(2, count($result), 'Expected variant + fallback — canvas effect-builder branch may have been skipped.');
+    $fallback = end($result);
+    $this->assertSame('/sites/default/files/canvas.png', $fallback['src']);
+    // Branch-specific observable: addCanvasEffect's chain is
+    // `image_scale` (upscale=TRUE, fit-within) + `image_effects_set_canvas`
+    // (exact size, letterboxes). With a non-square 1×2 input scaled to
+    // fit within 100×100 we get an intermediate 50×100; the canvas
+    // effect THEN forces the final dimensions to exactly 100×100.
+    // Without the canvas effect (or any non-canvas branch), the output
+    // would stay 50×100 (or 1×2 in the default branch, which has no
+    // upscale). The 100×100 assertion fails the moment the canvas
+    // effect is removed from the chain.
+    $this->assertSame(100, $result[0]['width']);
+    $this->assertSame(100, $result[0]['height']);
+  }
+
+  /**
+   * @covers ::resizer
    *
    * Files that exist in public:// AND match the /sites/default/files/
    * URL prefix go through the full image-style derivative path.
