@@ -62,10 +62,11 @@ class TwigExtensionTest extends TestCase {
     );
 
     // `t()` (used by getTranslation + CountryManager::getStandardList)
-    // builds TranslatableMarkup objects. Construction itself doesn't
-    // call into \Drupal::translation(), but install a container stub
-    // anyway so any incidental ->render() during assertions stays
-    // hermetic.
+    // builds TranslatableMarkup objects, which reach for the global
+    // \Drupal::translation() service when no explicit translator is
+    // injected — install a container stub so these tests don't fail
+    // with ServiceNotFoundException. Do not remove without rewiring
+    // the affected tests to inject a translator directly.
     $container = new ContainerBuilder();
     $container->set('string_translation', $this->stringTranslation);
     \Drupal::setContainer($container);
