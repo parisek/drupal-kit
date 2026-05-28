@@ -56,7 +56,7 @@ Measured under PHP 8.3 (DDEV) with xdebug coverage driver: **78.42 %** line cove
 | `Services\EntityHelper` | 62.48 % |
 | `DisplayBase` | 13.33 % |
 
-Test count moved from **282 → 326** (+44 tests). Five contrib-gated tests still `markTestSkipped` for office_hours / geofield / webform (the modules aren't in `require-dev` — see *Deferred* below).
+Test count moved from **282 → 336** (+54 tests). Three contrib-gated tests still `markTestSkipped` for office_hours / geofield / webform (the modules aren't in `require-dev` — see *Deferred* below; commerce + address skips were activated in #64).
 
 Two recurring metric-artefact patterns were documented in `AGENTS.md` during the push and applied repeatedly across the 19 PRs:
 1. **Facade-as-default-class** — when a builder is exercised end-to-end through a facade (e.g. `MenuTreeBuilder` via `EntityHelper::getMenu`), PHPUnit credits the lines to the facade's `@coversDefaultClass` and the builder reports artificially low. Fix: dedicated test file with `@coversDefaultClass` on the builder itself.
