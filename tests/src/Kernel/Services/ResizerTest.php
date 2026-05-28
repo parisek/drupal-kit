@@ -120,10 +120,16 @@ class ResizerTest extends ResizerKernelTestBase {
 
     $result = Resizer::resizer($image, [[100, 100, 768, 'crop']]);
 
-    // Variant + fallback. Fallback is always last.
-    $this->assertGreaterThanOrEqual(1, count($result));
+    // ≥ 2 entries proves the variant loop produced a derivative AND
+    // the fallback was appended. A bare-fallback (count == 1) result
+    // would mean the crop effect-builder branch was skipped without
+    // this test catching it.
+    $this->assertGreaterThanOrEqual(2, count($result), 'Expected variant + fallback — crop effect-builder branch may have been skipped.');
     $fallback = end($result);
     $this->assertSame('/sites/default/files/crop.png', $fallback['src']);
+    // Variant carries a media-query attribute the fallback never does;
+    // locks the variant-vs-fallback distinction.
+    $this->assertArrayHasKey('media', $result[0]);
   }
 
   /**
@@ -147,9 +153,10 @@ class ResizerTest extends ResizerKernelTestBase {
 
     $result = Resizer::resizer($image, [[100, 100, 768, 'smart_crop']]);
 
-    $this->assertGreaterThanOrEqual(1, count($result));
+    $this->assertGreaterThanOrEqual(2, count($result), 'Expected variant + fallback — smart_crop effect-builder branch may have been skipped.');
     $fallback = end($result);
     $this->assertSame('/sites/default/files/smart.png', $fallback['src']);
+    $this->assertArrayHasKey('media', $result[0]);
   }
 
   /**
@@ -172,9 +179,10 @@ class ResizerTest extends ResizerKernelTestBase {
 
     $result = Resizer::resizer($image, [[100, 100, 768, 'canvas']]);
 
-    $this->assertGreaterThanOrEqual(1, count($result));
+    $this->assertGreaterThanOrEqual(2, count($result), 'Expected variant + fallback — canvas effect-builder branch may have been skipped.');
     $fallback = end($result);
     $this->assertSame('/sites/default/files/canvas.png', $fallback['src']);
+    $this->assertArrayHasKey('media', $result[0]);
   }
 
   /**
