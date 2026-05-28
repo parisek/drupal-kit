@@ -15,7 +15,6 @@ PACKAGE_NAME: "parisek/custom-components"
 PHP_REQUIRES: ">=8.3"
 DRUPAL_REQUIRES: "^10 || ^11"
 TESTS_DIR: "tests"
-PACKAGIST_URL: "https://packagist.org/packages/parisek/custom-components"
 ```
 
 ## Development Commands

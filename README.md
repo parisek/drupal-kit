@@ -8,13 +8,6 @@
 
 Base library module for [Drupal](https://www.drupal.org) sites built on the **PORTA** component pattern. Provides shared infrastructure (services, base classes, [Twig](https://twig.symfony.com/) extensions, image resizer) reused across projects.
 
-## Installation
-
-```bash
-composer require parisek/custom-components
-drush en custom_components
-```
-
 Requires [PHP 8.3+](https://www.php.net/releases/8.3/) and [Drupal](https://www.drupal.org/about/10) 10 or 11.
 
 ## What this module provides
