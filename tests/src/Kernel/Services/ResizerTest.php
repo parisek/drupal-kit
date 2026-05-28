@@ -127,9 +127,15 @@ class ResizerTest extends ResizerKernelTestBase {
     $this->assertGreaterThanOrEqual(2, count($result), 'Expected variant + fallback — crop effect-builder branch may have been skipped.');
     $fallback = end($result);
     $this->assertSame('/sites/default/files/crop.png', $fallback['src']);
-    // Variant carries a media-query attribute the fallback never does;
-    // locks the variant-vs-fallback distinction.
-    $this->assertArrayHasKey('media', $result[0]);
+    // Branch-specific observable: `image_scale_and_crop` (the fallback
+    // branch addCropEffect dispatches to when focal_point isn't
+    // available) has `upscale: TRUE`, so transformDimensions upscales
+    // the 1×1 input to the requested 100×100. The default branch
+    // (`addScaleEffect`) uses plain `image_scale` without upscale,
+    // which would leave the variant at 1×1 — this assertion fails if
+    // `crop` accidentally fell through to the default dispatch.
+    $this->assertSame(100, $result[0]['width']);
+    $this->assertSame(100, $result[0]['height']);
   }
 
   /**
@@ -156,7 +162,11 @@ class ResizerTest extends ResizerKernelTestBase {
     $this->assertGreaterThanOrEqual(2, count($result), 'Expected variant + fallback — smart_crop effect-builder branch may have been skipped.');
     $fallback = end($result);
     $this->assertSame('/sites/default/files/smart.png', $fallback['src']);
-    $this->assertArrayHasKey('media', $result[0]);
+    // Branch-specific observable: `image_effects_scale_and_smart_crop`
+    // has `upscale: TRUE`, so transformDimensions upscales the 1×1
+    // input to 100×100. Default branch would leave the variant at 1×1.
+    $this->assertSame(100, $result[0]['width']);
+    $this->assertSame(100, $result[0]['height']);
   }
 
   /**
@@ -182,7 +192,12 @@ class ResizerTest extends ResizerKernelTestBase {
     $this->assertGreaterThanOrEqual(2, count($result), 'Expected variant + fallback — canvas effect-builder branch may have been skipped.');
     $fallback = end($result);
     $this->assertSame('/sites/default/files/canvas.png', $fallback['src']);
-    $this->assertArrayHasKey('media', $result[0]);
+    // Branch-specific observable: addCanvasEffect appends
+    // `image_effects_set_canvas` with exact size 100×100, which forces
+    // the post-transform dimensions to the canvas dimensions regardless
+    // of the input. Default branch would leave the variant at 1×1.
+    $this->assertSame(100, $result[0]['width']);
+    $this->assertSame(100, $result[0]['height']);
   }
 
   /**
