@@ -108,6 +108,7 @@ class TypographyExtensionTest extends TestCase {
 
   /**
    * @covers ::applyTypography
+   * @covers ::upstreamForActiveTheme
    *
    * With no YAML file present, the upstream defaults still apply
    * (PHP_Typography Settings(true)), so smart quotes happen.
@@ -124,6 +125,7 @@ class TypographyExtensionTest extends TestCase {
 
   /**
    * @covers ::applyTypography
+   * @covers ::upstreamForActiveTheme
    *
    * YAML config from the theme must reach the upstream PHP_Typography
    * Settings object. We verify by disabling smart_quotes and asserting
@@ -144,6 +146,7 @@ class TypographyExtensionTest extends TestCase {
 
   /**
    * @covers ::applyTypography
+   * @covers ::upstreamForActiveTheme
    *
    * Per-theme cache: the YAML must only be parsed once per theme even
    * across multiple filter calls. We verify by mocking that
@@ -167,6 +170,7 @@ class TypographyExtensionTest extends TestCase {
 
   /**
    * @covers ::applyTypography
+   * @covers ::upstreamForActiveTheme
    *
    * Per-theme cache must key on theme machine name: two different active
    * themes within the same request must produce two separate path lookups.
