@@ -111,9 +111,11 @@ class ComponentBaseKernelTest extends KernelTestBase {
    * future ctor reorderings.
    */
   public function testCreateFactoryPullsServicesFromContainer(): void {
-    // Use an anonymous concrete subclass so `new static(...)` in
-    // ComponentBase::create() succeeds. The subclass mirrors the one
-    // used elsewhere in this file; only the class-name target is new.
+    // Use the named ComponentBaseStub concrete subclass so
+    // `new static(...)` inside ComponentBase::create() resolves to a
+    // class assertions can name. An anonymous subclass (like
+    // newComponent() uses elsewhere in this file) can't be the target
+    // of an external factory call from this scope.
     $instance = ComponentBaseStub::create(
       $this->container,
       [],
