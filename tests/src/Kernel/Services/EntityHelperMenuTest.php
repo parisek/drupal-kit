@@ -27,6 +27,13 @@ class EntityHelperMenuTest extends EntityHelperKernelTestBase {
     'link',
     // Needed for the field_formatter / menu_item_extras enrichment test.
     'field',
+    // Aligns with the convention of other field-using kernel tests in
+    // this repo (EntityHelperFormatFieldKernelTest). The `string` field
+    // type is provided by Drupal core, so the test technically runs
+    // without `text` — keeping `text` here for consistency and to
+    // cover any config-schema validation paths that downstream Drupal
+    // versions may route through the text module.
+    'text',
   ];
 
   /**
