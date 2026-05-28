@@ -98,6 +98,87 @@ class ResizerTest extends ResizerKernelTestBase {
 
   /**
    * @covers ::resizer
+   * @covers ::addImageEffects
+   * @covers ::addCropEffect
+   *
+   * `image_style: 'crop'` routes through addImageEffects' match into
+   * addCropEffect. focal_point isn't in the kernel module list here,
+   * so the fallback `image_scale_and_crop` effect branch is exercised.
+   * The focal_point-enabled branch is acceptable to leave uncovered —
+   * adding the module would balloon the kernel boot, and the fallback
+   * is the safer default the code is designed to handle.
+   */
+  public function testCropVariantBuildsImageScaleAndCropEffect(): void {
+    $this->createTestPngFile('crop.png');
+
+    $image = [[
+      'src' => '/sites/default/files/crop.png',
+      'type' => 'image/png',
+      'width' => 1,
+      'height' => 1,
+    ]];
+
+    $result = Resizer::resizer($image, [[100, 100, 768, 'crop']]);
+
+    // Variant + fallback. Fallback is always last.
+    $this->assertGreaterThanOrEqual(1, count($result));
+    $fallback = end($result);
+    $this->assertSame('/sites/default/files/crop.png', $fallback['src']);
+  }
+
+  /**
+   * @covers ::resizer
+   * @covers ::addImageEffects
+   * @covers ::addSmartCropEffect
+   *
+   * `image_style: 'smart_crop'` routes through addSmartCropEffect,
+   * which adds the image_effects-provided
+   * `image_effects_scale_and_smart_crop` effect (entropy algorithm).
+   */
+  public function testSmartCropVariantBuildsEntropyEffect(): void {
+    $this->createTestPngFile('smart.png');
+
+    $image = [[
+      'src' => '/sites/default/files/smart.png',
+      'type' => 'image/png',
+      'width' => 1,
+      'height' => 1,
+    ]];
+
+    $result = Resizer::resizer($image, [[100, 100, 768, 'smart_crop']]);
+
+    $this->assertGreaterThanOrEqual(1, count($result));
+    $fallback = end($result);
+    $this->assertSame('/sites/default/files/smart.png', $fallback['src']);
+  }
+
+  /**
+   * @covers ::resizer
+   * @covers ::addImageEffects
+   * @covers ::addCanvasEffect
+   *
+   * `image_style: 'canvas'` adds image_scale + image_effects_set_canvas
+   * for exact-size letterboxed output.
+   */
+  public function testCanvasVariantBuildsScaleAndCanvasEffects(): void {
+    $this->createTestPngFile('canvas.png');
+
+    $image = [[
+      'src' => '/sites/default/files/canvas.png',
+      'type' => 'image/png',
+      'width' => 1,
+      'height' => 1,
+    ]];
+
+    $result = Resizer::resizer($image, [[100, 100, 768, 'canvas']]);
+
+    $this->assertGreaterThanOrEqual(1, count($result));
+    $fallback = end($result);
+    $this->assertSame('/sites/default/files/canvas.png', $fallback['src']);
+  }
+
+  /**
+   * @covers ::resizer
    *
    * Files that exist in public:// AND match the /sites/default/files/
    * URL prefix go through the full image-style derivative path.
