@@ -38,8 +38,13 @@ class EntityHelperSelectFieldOptionsKernelTest extends EntityHelperFieldsKernelT
   /**
    * @covers ::getSelectFieldOptions
    *
-   * `list_string` storage uses the `key => label` map shape (the schema
-   * in options.schema.yml).
+   * Drupal's options-field config schema canonicalizes
+   * `allowed_values` to a sequence of `{value, label}` mappings on
+   * save. The fixture writes the compact `key => label` form (which
+   * FieldStorageConfig accepts as input); the read-back via
+   * configFactory returns the canonical sequence form, which
+   * getSelectFieldOptions then converts back to the consumer-facing
+   * `key => label` map.
    */
   public function testReturnsAllowedValuesMapForListStringField(): void {
     $this->attachField('size', 'list_string', [

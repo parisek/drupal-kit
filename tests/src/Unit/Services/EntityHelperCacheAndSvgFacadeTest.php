@@ -49,7 +49,7 @@ class EntityHelperCacheAndSvgFacadeTest extends TestCase {
   /**
    * Mocked MediaArrayBuilder for the SVG facade test.
    *
-   * @var \Drupal\custom_components\Services\MediaArrayBuilder&\PHPUnit\Framework\MockObject\MockObject
+   * @var MediaArrayBuilder&MockObject
    */
   protected MockObject $builder;
 
