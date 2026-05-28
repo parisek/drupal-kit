@@ -99,21 +99,26 @@ class ResizerFocalPointKernelTest extends ResizerKernelTestBase {
    * @covers ::resizer
    * @covers ::getFocalPointHash
    *
-   * getFocalPointHash's module-exists guard now returns FALSE on the
-   * `moduleHandler()->moduleExists('focal_point')` check (the early
-   * `return ''` path), and proceeds to the storage lookup. Without an
-   * explicit focal_point set on the file, getCropEntity returns NULL
-   * → method falls through to the final `return ''`. Both branches
-   * past the module-exists guard are covered.
+   * With focal_point enabled, getFocalPointHash's `moduleExists`
+   * guard returns TRUE — the method proceeds past the early-`return ''`
+   * branch into the file-storage lookup and the focal_point manager
+   * call. Because this test never creates a crop entity, getCropEntity
+   * returns NULL and the method falls through to the FINAL `return ''`.
+   * The branches covered here are therefore:
    *
-   * Verified observably via the `crop` image_style_id suffix: when
-   * the hash is non-empty it is appended after `-crop` in the
-   * generated derivative URL; when empty it is omitted. We exercise
-   * the empty-hash path (no focal_point set) here — the non-empty
-   * hash path is covered indirectly through the same test (every
-   * invocation of getFocalPointHash with focal_point enabled passes
-   * through the module-exists + storage-lookup + early-return on
-   * missing crop entity branches).
+   * - moduleExists-TRUE pass-through (the early-return path is
+   *   covered in the existing ResizerTest where focal_point is NOT
+   *   enabled in the base modules list).
+   * - file-storage lookup + reset().
+   * - getCropEntity returns NULL → final return ''.
+   *
+   * The non-empty-hash branch (lines that build the `substr(md5(...))`
+   * suffix from a real focal-point position) is NOT covered here —
+   * that needs a saved crop entity with a position. Left as a follow-up.
+   *
+   * Verified observably via the `crop` image_style_id suffix: an
+   * empty hash leaves the derivative URL at `100-100-crop` (no
+   * `-{hash}` suffix appended).
    */
   public function testGetFocalPointHashHandlesFileWithoutFocalPoint(): void {
     $this->createTestPngFile('no-fp.png');

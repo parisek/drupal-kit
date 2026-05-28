@@ -150,6 +150,8 @@ class ResizerTest extends ResizerKernelTestBase {
    * @covers ::resizer
    * @covers ::addImageEffects
    * @covers ::addSmartCropEffect
+   * @covers ::getOutputFormat
+   * @covers ::getFocalPointHash
    *
    * `image_style: 'smart_crop'` routes through addSmartCropEffect,
    * which adds the image_effects-provided
@@ -181,6 +183,8 @@ class ResizerTest extends ResizerKernelTestBase {
    * @covers ::resizer
    * @covers ::addImageEffects
    * @covers ::addCanvasEffect
+   * @covers ::getOutputFormat
+   * @covers ::getFocalPointHash
    *
    * `image_style: 'canvas'` adds image_scale + image_effects_set_canvas
    * for exact-size letterboxed output.
@@ -221,13 +225,13 @@ class ResizerTest extends ResizerKernelTestBase {
    * @covers ::getFocalPointHash
    *
    * Files that exist in public:// AND match the /sites/default/files/
-   * URL prefix go through the full image-style derivative path. As the
-   * first variant-producing test in the suite, this is also the call
-   * that triggers the one-time toolkit-feature-detection inside
-   * getOutputFormat (subsequent tests hit the static-cache early-return);
-   * crediting it here ensures the detection body is counted. Same logic
-   * for getFocalPointHash — its module-exists guard runs on every
-   * variant pass.
+   * URL prefix go through the full image-style derivative path. Every
+   * variant-producing test in this class invokes getOutputFormat and
+   * getFocalPointHash transitively; all such tests declare @covers for
+   * them so the credit lands on whichever runs first in PHPUnit's
+   * execution order (PHPUnit does not guarantee a deterministic order
+   * — and getOutputFormat's static-cache early-return means only the
+   * first caller in the process hits the full toolkit-detection body).
    */
   public function testLocalFileProducesVariantsViaImageStyle(): void {
     $file = $this->createTestPngFile('local.png');
