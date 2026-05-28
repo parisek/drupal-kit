@@ -1664,7 +1664,6 @@ class EntityHelper {
     $originalConfig = $this->configFactory->get($configName);
     $translatedConfig = $this->languageManager->getLanguageConfigOverride($langcode, $configName);
     $config = array_replace_recursive($originalConfig->get(), $translatedConfig->get());
-    $config = $originalConfig->get();
 
     if (isset($config['settings']) && isset($config['settings']['allowed_values'])) {
       foreach ($config['settings']['allowed_values'] as $option) {
