@@ -4,7 +4,8 @@
 [![Packagist Version](https://img.shields.io/packagist/v/parisek/custom-components.svg)](https://packagist.org/packages/parisek/custom-components)
 [![PHP Version](https://img.shields.io/packagist/php-v/parisek/custom-components.svg)](https://packagist.org/packages/parisek/custom-components)
 [![Drupal](https://img.shields.io/badge/Drupal-10%20%7C%2011-0678BE?logo=drupal&logoColor=white)](https://www.drupal.org)
-[![PHPStan](https://img.shields.io/badge/PHPStan-level%201-2ecc40)](https://phpstan.org/)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%205-2ecc40)](https://phpstan.org/)
+[![Coverage](https://img.shields.io/badge/Coverage-78%25-2ecc40)](.github/workflows/ci.yml)
 [![License: GPL-2.0-or-later](https://img.shields.io/badge/License-GPL--2.0--or--later-blue.svg)](https://spdx.org/licenses/GPL-2.0-or-later.html)
 
 Base library module for [Drupal](https://www.drupal.org) sites built on the **PORTA** component pattern. Provides shared infrastructure (services, base classes, [Twig](https://twig.symfony.com/) extensions, image resizer) reused across projects.

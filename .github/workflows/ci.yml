@@ -35,14 +35,17 @@ jobs:
         #   v1.2.0 #19 (field-getter kernel):    45.88% — floor at 45
         #   v1.3.0 #31 (Resizer):                47.92%
         #   v1.3.0 #32 (image/file/media):       51.67%
-        #   v1.3.0 #34 (formatField integration):51.67% (dispatch reaches existing)
+        #   v1.3.0 #34 (formatField integration):51.67%
         #   v1.3.0 #35 (ComponentBase form API): 53.03% — floor at 53
-        # 80% (v1.1.0 aspirational target) needs the deferred
-        # MediaArrayBuilder oembed + Lottie (#33), DisplayBase form
-        # API, contrib-gated getters (getOfficeHoursField + 4 more),
-        # and remaining edge cases — tracked for v1.4.0.
+        #   v1.4.0 (hardening release):          53.71% — floor stayed at 53
+        #   v1.5.0 (coverage push #55):          78.42% — floor at 78
+        # The remaining ~22 % is largely contrib-gated (office_hours,
+        # geofield, webform getter bodies behind markTestSkipped) plus
+        # DisplayBase form API. Pushing past 80 % needs either an
+        # office_hours/geofield/webform require-dev pass (CI runtime
+        # cost weighed) or DisplayBase form-API kernel tests.
         env:
-          MIN_COVERAGE: '53'
+          MIN_COVERAGE: '78'
         run: |
           php -r '
             $min = (int) getenv("MIN_COVERAGE");

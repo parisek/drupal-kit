@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-05-28
+
+Coverage push. Where v1.4.0 deliberately held line coverage at the v1.3.0 baseline (53.71 %) and focused on hardening, v1.5.0 raises it to **78.42 %** — a +24.71 pp move via 19 PRs across the three planned tiers in roadmap #55 plus a follow-up metric-artefact cleanup round. No new public-API features; every change is either new tests, a metric-attribution fix on existing tests, a tiny code-fix the new tests surfaced, or a small dependency / `suggest` adjustment to activate previously-skipped contrib-gated paths. Consumer impact is zero — the documented surface is unchanged.
+
 ### Added
 - **`EntityHelper::dispatchByFieldType` switch coverage — eight more field-type cases** — extends `EntityHelperFormatFieldKernelTest` with one test per remaining dispatcher case: `string_long`, `email`, `telephone`, `integer`, `decimal`, `text`, `text_with_summary`, `list_integer`. Each test attaches the field type to the `test_article` bundle, creates a node with a typical value, and asserts `formatField` returns the expected formatted output (so the switch case line + the chosen getter wrapper line are both credited). Adds `telephone` to the kernel module list (the only one that needs a non-core extension; the rest live in already-enabled modules). Pushed `EntityHelper` coverage past the 80 % aggregate target with no scope creep — every test maps to a distinct dispatcher branch.
 - **`Resizer` focal_point branch + format-detection coverage** — new `ResizerFocalPointKernelTest` enables `crop` + `focal_point` (already in `require-dev`) and pulls in the previously-uncovered branches in `addCropEffect`'s focal_point path and `getFocalPointHash`. Plus a tiny annotation fix on the existing `testLocalFileProducesVariantsViaImageStyle` to credit `getOutputFormat` + `getFocalPointHash` to the test that actually triggers the one-time format detection (subsequent tests hit the static-cache early-return, so they can't be credited). `Resizer` coverage jumps 80 % → 90 %. Static-state reset via reflection in setUp so the toolkit-detection body in `getOutputFormat` runs fresh inside this test class.
@@ -29,6 +33,40 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Fixed
 - **`EntityHelper::getSelectFieldOptions` honours language config overrides** (#70) — the method merged the original + translated field-storage configs on one line and then immediately overwrote the result with the original-only config on the next, so the `$langcode` argument was silently ignored. The stray reassignment is removed; `array_replace_recursive` now produces the final merged config. New `EntityHelperSelectFieldOptionsLanguageOverrideKernelTest` regression-covers the path: one test asserts a Czech override flows through (with non-overridden labels falling back to the original), the second asserts the default-langcode call against the same field is unaffected by the Czech override. This path was never exercised by tests before #59 added the default-language coverage — flagged during the Copilot review pass on PR #69.
+
+### Coverage
+Measured under PHP 8.3 (DDEV) with xdebug coverage driver: **78.42 %** line coverage (1141 / 1455 statements), up from **53.71 %** in v1.4.0 (+24.71 pp). CI `MIN_COVERAGE` floor in `.github/workflows/ci.yml` raised from 53 → 78. Per-class final state (highest first):
+
+| Class | Lines |
+|-------|------:|
+| `ComponentBase` | 100.00 % |
+| `Plugin\Filter\FilterImage` | 100.00 % |
+| `Plugin\Filter\FilterLinks` | 100.00 % |
+| `Plugin\Filter\FilterTable` | 100.00 % |
+| `Plugin\Filter\FilterTypography` | 100.00 % |
+| `Plugin\Filter\FilterYoutube` | 100.00 % |
+| `Routing\RouteSubscriber` | 100.00 % |
+| `Services\MenuActiveTrailResolver` | 97.50 % |
+| `TwigExtension` | 96.75 % |
+| `Twig\TypographyExtension` | 94.74 % |
+| `Services\Resizer` | 90.45 % |
+| `Services\MediaArrayBuilder` | 90.30 % |
+| `Services\MenuTreeBuilder` | 89.33 % |
+| `Services\TaxonomyTreeBuilder` | 85.96 % |
+| `Services\EntityHelper` | 62.48 % |
+| `DisplayBase` | 13.33 % |
+
+Test count moved from **282 → 326** (+44 tests). Five contrib-gated tests still `markTestSkipped` for office_hours / geofield / webform (the modules aren't in `require-dev` — see *Deferred* below).
+
+Two recurring metric-artefact patterns were documented in `AGENTS.md` during the push and applied repeatedly across the 19 PRs:
+1. **Facade-as-default-class** — when a builder is exercised end-to-end through a facade (e.g. `MenuTreeBuilder` via `EntityHelper::getMenu`), PHPUnit credits the lines to the facade's `@coversDefaultClass` and the builder reports artificially low. Fix: dedicated test file with `@coversDefaultClass` on the builder itself.
+2. **Strict `@covers ::publicMethod` filter** — private helpers called transitively from a covered public method run but aren't credited unless `@covers ::privateMethod` is added. Fix: add the missing annotations; no new test code required.
+
+### Deferred to v1.6.0+
+- **`DisplayBase` form-API** (13 % → ~80 %) — form rendering kernel-test setup is heavy (block plugin + form-state + render context). Best done in a focused v1.6.0 PR.
+- **`EntityHelper::getOfficeHoursField`, `getWebformField`, `getGeoField`** — 54 + 20 + 19 = ~93 uncovered lines behind the three contrib-gated `markTestSkipped` tests (#64 split). Activating any of them needs the corresponding module in `require-dev` plus the kernel-boot runtime cost; webform especially is heavy. Worth a follow-up CI matrix split (minimal vs contrib-stack) before adding all three.
+- **`EntityHelper` `mapArrayConfig` / `mapDotNotation` remaining branches** — ~60 uncovered lines across sub-object-map edge cases, dot-notation with explicit `method` keys, and the `entity_reference_revisions` paragraph branch in `mapStringConfig` (also contrib-gated).
+- **`EntityHelper` legacy non-formatField getters** (`getLinkField`, `getTermField`, `getTextareaField`, `getMenuField`, `getEntityReferenceField` internal branches) — covered for the entry-point happy paths but with deep multi-condition branches the existing fixtures don't reach. Audit + targeted tests rather than blanket fixture expansion.
 
 ## [1.4.0] — 2026-05-26
 
