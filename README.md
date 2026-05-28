@@ -1,8 +1,6 @@
 # Custom Components
 
 [![CI](https://github.com/parisek/custom-components/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/parisek/custom-components/actions/workflows/ci.yml)
-[![Packagist Version](https://img.shields.io/packagist/v/parisek/custom-components.svg)](https://packagist.org/packages/parisek/custom-components)
-[![PHP Version](https://img.shields.io/packagist/php-v/parisek/custom-components.svg)](https://packagist.org/packages/parisek/custom-components)
 [![Drupal](https://img.shields.io/badge/Drupal-10%20%7C%2011-0678BE?logo=drupal&logoColor=white)](https://www.drupal.org)
 [![PHPStan](https://img.shields.io/badge/PHPStan-level%205-2ecc40)](https://phpstan.org/)
 [![Coverage](https://img.shields.io/badge/Coverage-78%25-2ecc40)](.github/workflows/ci.yml)
