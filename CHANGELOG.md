@@ -4,6 +4,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+- **`MediaArrayBuilder::buildSvg` happy-path + null-safe coverage** (#56) — three kernel tests covering the documented return shape (`src` / `type` / `alt` / viewBox-derived `width` + `height`), the missing-file null-safe path, and the malformed-SVG path that drops dimensions but preserves the rest of the shape. Part of v1.5.0 Tier 1 (#55).
+
 ## [1.4.0] — 2026-05-26
 
 Quality + forward-compat release. No new features and no behavioural changes for callers — focus is hardening of the v1.3.0 surface, static-analysis ratcheting, closing the deferred test gaps the v1.3.0 retrospective enumerated, and making local development reproducible against the same PHP version CI and production use.
