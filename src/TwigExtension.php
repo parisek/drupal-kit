@@ -137,6 +137,33 @@ class TwigExtension extends AbstractExtension {
         'merge_resizer',
         [$this, 'mergeResizer']
       ),
+      // Typography-aware translation helpers: translate, then pipe the result
+      // through the `typography` filter. One-character opt-in over the plain
+      // `_x`/`__`/`_n`/`_nx` functions above. Signatures match the WordPress
+      // originals 1:1 (parisek/styleguide, parisek/timber-kit) so the same
+      // templates render cross-CMS. `is_safe: html` mirrors the typography
+      // filter's own safety flag and prevents double-escaping the markup it
+      // returns.
+      new TwigFunction(
+        '_xt',
+        [$this, 'getTranslationContextTypography'],
+        ['needs_environment' => TRUE, 'is_safe' => ['html']]
+      ),
+      new TwigFunction(
+        '__t',
+        [$this, 'getTranslationTypography'],
+        ['needs_environment' => TRUE, 'is_safe' => ['html']]
+      ),
+      new TwigFunction(
+        '_nt',
+        [$this, 'getTranslationPluralTypography'],
+        ['needs_environment' => TRUE, 'is_safe' => ['html']]
+      ),
+      new TwigFunction(
+        '_nxt',
+        [$this, 'getTranslationPluralContextTypography'],
+        ['needs_environment' => TRUE, 'is_safe' => ['html']]
+      ),
     ];
   }
 
@@ -232,6 +259,66 @@ class TwigExtension extends AbstractExtension {
       [],
       ['context' => $context],
     );
+  }
+
+  /**
+   * Translate (with context) and apply the `typography` filter.
+   *
+   * Backs the `_xt` Twig function — the typography-aware twin of `_x`.
+   * Mirrors WordPress `_x($text, $context, $domain)`. `$domain` has no Drupal
+   * equivalent (Drupal keys translations by langcode, not text domain) so it
+   * is accepted for cross-CMS signature parity and otherwise ignored.
+   */
+  public function getTranslationContextTypography(Environment $env, $value, $context, $domain = 'default') {
+    return $this->applyTypographyFilter($env, $this->getTranslation($value, $context));
+  }
+
+  /**
+   * Translate (no context) and apply the `typography` filter.
+   *
+   * Backs the `__t` Twig function — the typography-aware twin of `__`.
+   * Mirrors WordPress `__($text, $domain)`: no context, so the default
+   * (empty-context) translation is looked up.
+   */
+  public function getTranslationTypography(Environment $env, $value, $domain = 'default') {
+    return $this->applyTypographyFilter($env, $this->getTranslation($value, ''));
+  }
+
+  /**
+   * Translate a plural (no context) and apply the `typography` filter.
+   *
+   * Backs the `_nt` Twig function — the typography-aware twin of `_n`.
+   * Mirrors WordPress `_n($single, $plural, $number, $domain)`.
+   */
+  public function getTranslationPluralTypography(Environment $env, $single, $plural, $count, $domain = 'default') {
+    return $this->applyTypographyFilter($env, $this->getTranslationPlural($single, $plural, $count, ''));
+  }
+
+  /**
+   * Translate a plural (with context) and apply the `typography` filter.
+   *
+   * Backs the `_nxt` Twig function — the typography-aware twin of `_nx`.
+   * Mirrors WordPress `_nx($single, $plural, $number, $context, $domain)`.
+   */
+  public function getTranslationPluralContextTypography(Environment $env, $single, $plural, $count, $context, $domain = 'default') {
+    return $this->applyTypographyFilter($env, $this->getTranslationPlural($single, $plural, $count, $context));
+  }
+
+  /**
+   * Pipe a value through the environment's `typography` filter.
+   *
+   * The filter is registered by the sibling TypographyExtension, so it is
+   * resolved from the environment at call time rather than injected — this
+   * extension stays decoupled from it. When the filter is absent (e.g. a
+   * stripped-down environment) the value is returned untouched, so the
+   * helpers degrade to a plain translation instead of failing.
+   */
+  private function applyTypographyFilter(Environment $env, $value) {
+    $callable = $env->getFilter('typography')?->getCallable();
+    if (!is_callable($callable)) {
+      return $value;
+    }
+    return $callable($value);
   }
 
   /**

@@ -11,6 +11,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Twig\Environment;
 use Twig\Loader\ArrayLoader;
+use Twig\TwigFilter;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -302,6 +303,141 @@ class TwigExtensionTest extends TestCase {
     $this->assertContains('page_*', $names);
     $this->assertContains('template_exists', $names);
     $this->assertContains('merge_resizer', $names);
+    $this->assertContains('_xt', $names);
+    $this->assertContains('__t', $names);
+    $this->assertContains('_nt', $names);
+    $this->assertContains('_nxt', $names);
+  }
+
+  /**
+   * Builds a Twig env whose `typography` filter wraps its input as `T(…)`.
+   *
+   * The marker makes compose order observable: typography is applied to the
+   * already-translated value, so the `T(` wrapper must sit OUTSIDE the
+   * translation marker.
+   */
+  private function typographyEnv(): Environment {
+    $env = $this->createTwigEnv([]);
+    $env->addFilter(new TwigFilter(
+      'typography',
+      static fn ($value) => 'T(' . $value . ')',
+      ['is_safe' => ['html']],
+    ));
+    return $env;
+  }
+
+  /**
+   * Renders every `t()` call to a `TR[string|ctx=…]` marker.
+   *
+   * `TranslatableMarkup` is lazy — it only calls the translator on render —
+   * so the marker exposes both the source string and the forwarded context.
+   */
+  private function markTranslations(): void {
+    $this->stringTranslation->method('translateString')->willReturnCallback(
+      static fn ($markup) => 'TR[' . $markup->getUntranslatedString()
+        . '|ctx=' . $markup->getOption('context') . ']',
+    );
+  }
+
+  /**
+   * Renders every `formatPlural()` call to a `PL[chosen|ctx=…]` marker.
+   */
+  private function markPlurals(): void {
+    $this->stringTranslation->method('formatPlural')->willReturnCallback(
+      static fn ($count, $single, $plural, $args, $options) => 'PL['
+        . ($count === 1 ? $single : $plural)
+        . '|ctx=' . ($options['context'] ?? '') . ']',
+    );
+  }
+
+  /**
+   * @covers ::getTranslationContextTypography
+   */
+  public function testXtTranslatesWithContextThenAppliesTypography(): void {
+    $this->markTranslations();
+    $this->assertSame(
+      'T(TR[Hello|ctx=greeting])',
+      $this->twigExtension->getTranslationContextTypography(
+        $this->typographyEnv(), 'Hello', 'greeting', 'htdvere',
+      ),
+    );
+  }
+
+  /**
+   * @covers ::getTranslationTypography
+   */
+  public function testTtTranslatesWithoutContextThenAppliesTypography(): void {
+    $this->markTranslations();
+    // `__t` has no context (matches WP `__`): the context marker is empty.
+    $this->assertSame(
+      'T(TR[Hello|ctx=])',
+      $this->twigExtension->getTranslationTypography(
+        $this->typographyEnv(), 'Hello', 'htdvere',
+      ),
+    );
+  }
+
+  /**
+   * @covers ::getTranslationPluralTypography
+   */
+  public function testNtSelectsPluralThenAppliesTypography(): void {
+    $this->markPlurals();
+    // count=2 -> plural form, `%s` rewritten to Drupal's `@count`, no context.
+    $this->assertSame(
+      'T(PL[@count books|ctx=])',
+      $this->twigExtension->getTranslationPluralTypography(
+        $this->typographyEnv(), '%s book', '%s books', 2, 'htdvere',
+      ),
+    );
+  }
+
+  /**
+   * @covers ::getTranslationPluralContextTypography
+   */
+  public function testNxtSelectsSingularWithContextThenAppliesTypography(): void {
+    $this->markPlurals();
+    // count=1 -> singular form, `%s` rewritten to `1`, context forwarded.
+    $this->assertSame(
+      'T(PL[1 book|ctx=shelf])',
+      $this->twigExtension->getTranslationPluralContextTypography(
+        $this->typographyEnv(), '%s book', '%s books', 1, 'shelf', 'htdvere',
+      ),
+    );
+  }
+
+  /**
+   * @covers ::getTranslationContextTypography
+   */
+  public function testTypographyFilterAbsentReturnsRawTranslation(): void {
+    $this->markTranslations();
+    // No `typography` filter on this env: the helper returns the translation
+    // untouched rather than throwing.
+    $this->assertSame(
+      'TR[Hello|ctx=greeting]',
+      (string) $this->twigExtension->getTranslationContextTypography(
+        $this->createTwigEnv([]), 'Hello', 'greeting', 'htdvere',
+      ),
+    );
+  }
+
+  /**
+   * @covers ::getTranslationContextTypography
+   */
+  public function testXtRendersThroughTwigWithoutDoubleEscaping(): void {
+    $this->markTranslations();
+    $env = $this->createTwigEnv([
+      'page' => "{{ _xt('A & B', 'ctx', 'htdvere') }}",
+    ]);
+    // Typography filter returns HTML; `is_safe: html` on both the filter and
+    // `_xt` must keep `<b>` and `&` raw through a real render.
+    $env->addFilter(new TwigFilter(
+      'typography',
+      static fn ($value) => '<b>' . $value . '</b>',
+      ['is_safe' => ['html']],
+    ));
+    $env->addExtension($this->twigExtension);
+
+    $this->assertSame('<b>TR[A & B|ctx=ctx]</b>', $env->render('page'));
   }
 
   /**
