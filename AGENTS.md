@@ -56,7 +56,8 @@ After PHP changes the autoloader picks them up — no rebuild needed.
 ## PR + Review workflow
 
 - One branch per issue: `feat/<n>-<slug>`, `fix/<n>-<slug>`, `refactor/<n>-<slug>`, `chore/<slug>`.
-- Commit subject references the issue: `test(kernel): … (#N)`. Squash-merge produces `… (#N) (#PR)`.
+- Commit subjects and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/). Allowed types: `feat`, `fix`, `docs`, `chore`, `refactor`, `perf`, `test`, `ci`, `build`, `revert` — enforced on PR titles by `.github/workflows/commitlint.yml`. Scope optional (`feat(media):` and `feat:` both fine); `!` or a `BREAKING CHANGE:` footer marks a breaking change.
+- Commit subject references the issue: `test(kernel): … (#N)`. Squash-merge produces `… (#N) (#PR)` — the PR title becomes the commit subject, which is why the title is linted.
 - CHANGELOG entry lands in the same commit as the code — `[Unreleased]` → `### Added` / `### Fixed` / `### Changed`.
 - Sequential merging when multiple PRs touch CHANGELOG: rebase the next branch onto updated `main` and resolve the `Unreleased` block before merging.
 - Use `--admin` to merge when CI is green and auto-merge isn't configured. Never bypass hooks (`--no-verify`) without explicit approval.
