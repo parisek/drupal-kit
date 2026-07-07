@@ -4,8 +4,8 @@ on:
   pull_request:
   workflow_dispatch:
 jobs:
-  test:
-    name: Unit + Kernel tests
+  composer:
+    name: composer hygiene
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,21 +13,55 @@ jobs:
       - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # v2.37.1
         with:
           php-version: '8.3'
-          extensions: gd, pdo_sqlite
-          coverage: xdebug
+          coverage: none
 
       - run: composer validate --strict --no-check-publish
+
+      - run: composer install --no-progress
+
+      - name: Audit dependencies for known advisories
+        # Abandoned transitive packages (sebastian/* via phpunit) are
+        # reported but do not fail the job; security advisories do.
+        run: composer audit --abandoned=report
+
+      - name: composer.json is normalized
+        run: composer normalize --dry-run
+
+  test:
+    name: PHP ${{ matrix.php }} unit + kernel
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc  # v2.37.1
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: gd, pdo_sqlite
+          # Coverage (and its threshold gate below) runs once, on the
+          # floor version; the 8.4 leg only proves the suite passes.
+          coverage: ${{ matrix.php == '8.3' && 'xdebug' || 'none' }}
 
       - run: composer install --no-progress
 
       - name: Wire module into Drupal extension discovery
         run: scripts/dev-link-module.sh
 
-      - run: vendor/bin/phpunit --coverage-clover coverage.xml --coverage-text
+      - name: PHPUnit (with coverage)
+        if: matrix.php == '8.3'
+        run: vendor/bin/phpunit --coverage-clover coverage.xml --coverage-text
+
+      - name: PHPUnit
+        if: matrix.php != '8.3'
+        run: vendor/bin/phpunit
 
       - run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G
 
       - name: Enforce line-coverage threshold
+        if: matrix.php == '8.3'
         # Ratchet floor — raised as each batch of kernel tests lands.
         # History:
         #   v1.1.0 baseline (mocked units only): 32.31% — floor at 30

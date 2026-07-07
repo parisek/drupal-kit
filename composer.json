@@ -1,8 +1,8 @@
 {
     "name": "parisek/custom-components",
-    "type": "drupal-custom-module",
     "description": "Provides functionality for components.",
     "license": "GPL-2.0-or-later",
+    "type": "drupal-custom-module",
     "require": {
         "php": ">=8.3",
         "drupal/components": "^3.2",
@@ -13,63 +13,50 @@
         "drupal/twig_tweak": "^3.4",
         "parisek/twig-typography": "^1.2"
     },
+    "require-dev": {
+        "composer/installers": "^2.0",
+        "drupal/address": "^2.0",
+        "drupal/commerce": "^3.0",
+        "drupal/core-dev": "^11",
+        "drupal/file_mdm": "^3.0",
+        "drupal/focal_point": "^2.0",
+        "drupal/image_effects": "^4.0",
+        "drupal/inline_entity_form": "^3.0@RC",
+        "ergebnis/composer-normalize": "^2.47",
+        "mglaman/phpstan-drupal": "^2.0",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^10 || ^11"
+    },
     "suggest": {
-        "drupal/commerce": "Enables commerce_price field rendering (via the commerce_price submodule) and commerce_product entity references in EntityHelper.",
         "drupal/address": "Enables address field rendering in EntityHelper::getAddressField.",
+        "drupal/commerce": "Enables commerce_price field rendering (via the commerce_price submodule) and commerce_product entity references in EntityHelper.",
         "drupal/office_hours": "Enables office_hours field rendering in EntityHelper."
     },
-    "require-dev": {
-        "phpunit/phpunit": "^10 || ^11",
-        "phpstan/phpstan": "^2.0",
-        "mglaman/phpstan-drupal": "^2.0",
-        "drupal/core-dev": "^11",
-        "composer/installers": "^2.0",
-        "drupal/image_effects": "^4.0",
-        "drupal/focal_point": "^2.0",
-        "drupal/file_mdm": "^3.0",
-        "drupal/commerce": "^3.0",
-        "drupal/inline_entity_form": "^3.0@RC",
-        "drupal/address": "^2.0"
-    },
+    "repositories": [
+        {
+            "name": "drupal",
+            "type": "composer",
+            "url": "https://packages.drupal.org/8"
+        }
+    ],
     "autoload": {
         "psr-4": {
             "Drupal\\custom_components\\": "src/"
         }
     },
-    "extra": {
-        "installer-name": "custom_components",
-        "installer-paths": {
-            "web/core": ["type:drupal-core"],
-            "web/modules/contrib/{$name}": ["type:drupal-module"],
-            "web/themes/contrib/{$name}": ["type:drupal-theme"],
-            "web/libraries/{$name}": ["type:drupal-library"]
-        },
-        "drupal-scaffold": {
-            "locations": {
-                "web-root": "web/"
-            },
-            "file-mapping": {
-                "[project-root]/.gitattributes": false
-            }
-        }
-    },
-    "repositories": [{
-        "name": "drupal",
-        "type": "composer",
-        "url": "https://packages.drupal.org/8"
-    }],
     "config": {
         "allow-plugins": {
             "composer/installers": true,
+            "cweagans/composer-patches": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true,
             "drupal/core-composer-scaffold": true,
             "drupal/core-project-message": true,
             "drupal/core-recipe-unpack": true,
             "drupal/core-vendor-hardening": true,
-            "cweagans/composer-patches": true,
-            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "ergebnis/composer-normalize": true,
             "joachim-n/composer-manifest": true,
-            "phpstan/extension-installer": true,
             "php-http/discovery": true,
+            "phpstan/extension-installer": true,
             "symfony/runtime": true,
             "tbachert/spi": true
         },
@@ -77,10 +64,35 @@
             "php": "8.3.0"
         }
     },
+    "extra": {
+        "drupal-scaffold": {
+            "file-mapping": {
+                "[project-root]/.gitattributes": false
+            },
+            "locations": {
+                "web-root": "web/"
+            }
+        },
+        "installer-name": "custom_components",
+        "installer-paths": {
+            "web/core": [
+                "type:drupal-core"
+            ],
+            "web/modules/contrib/{$name}": [
+                "type:drupal-module"
+            ],
+            "web/themes/contrib/{$name}": [
+                "type:drupal-theme"
+            ],
+            "web/libraries/{$name}": [
+                "type:drupal-library"
+            ]
+        }
+    },
     "scripts": {
         "phpstan": "vendor/bin/phpstan analyse --no-progress --memory-limit=2G",
         "test": "vendor/bin/phpunit",
-        "test:unit": "vendor/bin/phpunit tests/src/Unit",
-        "test:kernel": "vendor/bin/phpunit tests/src/Kernel"
+        "test:kernel": "vendor/bin/phpunit tests/src/Kernel",
+        "test:unit": "vendor/bin/phpunit tests/src/Unit"
     }
 }
