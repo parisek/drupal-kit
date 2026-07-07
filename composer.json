@@ -67,6 +67,7 @@
             "joachim-n/composer-manifest": true,
             "phpstan/extension-installer": true,
             "php-http/discovery": true,
+            "symfony/runtime": true,
             "tbachert/spi": true
         }
     }
