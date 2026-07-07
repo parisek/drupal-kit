@@ -116,9 +116,9 @@ class TypographyExtensionTest extends TestCase {
   public function testMissingYamlStillProcessesWithDefaults(): void {
     $this->pointAtFakeTheme();
     // No file written to $this->tmpDir/static/typography.yml.
-
     $result = $this->extension->applyTypography('"hello"');
-    // Upstream PHP_Typography with defaults converts ASCII quotes to smart quotes.
+    // Upstream PHP_Typography with defaults converts ASCII quotes to
+    // smart quotes.
     $this->assertStringContainsString("\xe2\x80\x9c", $result, 'left double smart quote present');
     $this->assertStringContainsString("\xe2\x80\x9d", $result, 'right double smart quote present');
   }
@@ -191,6 +191,8 @@ class TypographyExtensionTest extends TestCase {
 
     $this->extension->applyTypography('first');
     $this->extension->applyTypography('second');
-    $this->extension->applyTypography('third'); // Returns to theme_a — should hit cache.
+    // Returns to theme_a — should hit cache.
+    $this->extension->applyTypography('third');
   }
+
 }

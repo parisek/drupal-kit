@@ -46,7 +46,7 @@ abstract class EntityHelperMediaFieldsKernelTestBase extends EntityHelperFieldsK
   }
 
   /**
-   * 1x1 transparent PNG written to public:// as a real File entity.
+   * Creates a 1x1 transparent PNG written to public:// as a real File entity.
    */
   protected function createTestPngFile(string $name = 'test.png'): File {
     $png = base64_decode(

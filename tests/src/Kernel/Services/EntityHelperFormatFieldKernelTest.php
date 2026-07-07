@@ -81,10 +81,12 @@ class EntityHelperFormatFieldKernelTest extends EntityHelperFieldsKernelTestBase
    * @covers ::formatField
    */
   public function testDispatchTextLong(): void {
-    $node = $this->createTestNode(['field_body_content' => [
-      'value' => 'Body text',
-      'format' => 'plain_text',
-    ]]);
+    $node = $this->createTestNode([
+      'field_body_content' => [
+        'value' => 'Body text',
+        'format' => 'plain_text',
+      ],
+    ]);
     $result = $this->entityHelper->formatField($node, 'body_content');
     $this->assertStringContainsString('Body text', (string) $result);
   }
@@ -103,10 +105,12 @@ class EntityHelperFormatFieldKernelTest extends EntityHelperFieldsKernelTestBase
    * @covers ::formatField
    */
   public function testDispatchDaterange(): void {
-    $node = $this->createTestNode(['field_event_span' => [
-      'value' => '2024-03-14T10:00:00',
-      'end_value' => '2024-03-14T18:00:00',
-    ]]);
+    $node = $this->createTestNode([
+      'field_event_span' => [
+        'value' => '2024-03-14T10:00:00',
+        'end_value' => '2024-03-14T18:00:00',
+      ],
+    ]);
     $result = $this->entityHelper->formatField($node, 'event_span');
     $this->assertNotNull($result);
   }
@@ -115,10 +119,12 @@ class EntityHelperFormatFieldKernelTest extends EntityHelperFieldsKernelTestBase
    * @covers ::formatField
    */
   public function testDispatchLink(): void {
-    $node = $this->createTestNode(['field_cta' => [
-      'uri' => 'https://example.com/',
-      'title' => 'Click',
-    ]]);
+    $node = $this->createTestNode([
+      'field_cta' => [
+        'uri' => 'https://example.com/',
+        'title' => 'Click',
+      ],
+    ]);
     $result = $this->entityHelper->formatField($node, 'cta');
     $serialized = is_array($result) ? json_encode($result) : (string) $result;
     $this->assertStringContainsString('Click', $serialized);
@@ -212,10 +218,12 @@ class EntityHelperFormatFieldKernelTest extends EntityHelperFieldsKernelTestBase
    * testDispatchTextLong above; this pins `text` separately.
    */
   public function testDispatchText(): void {
-    $node = $this->createTestNode(['field_intro_text' => [
-      'value' => 'Intro paragraph',
-      'format' => 'plain_text',
-    ]]);
+    $node = $this->createTestNode([
+      'field_intro_text' => [
+        'value' => 'Intro paragraph',
+        'format' => 'plain_text',
+      ],
+    ]);
     $result = $this->entityHelper->formatField($node, 'intro_text');
     $this->assertStringContainsString('Intro paragraph', (string) $result);
   }
@@ -225,11 +233,13 @@ class EntityHelperFormatFieldKernelTest extends EntityHelperFieldsKernelTestBase
    * @covers ::dispatchByFieldType
    */
   public function testDispatchTextWithSummary(): void {
-    $node = $this->createTestNode(['field_long_text_summary' => [
-      'value' => 'Body with a separate summary.',
-      'summary' => 'Short summary.',
-      'format' => 'plain_text',
-    ]]);
+    $node = $this->createTestNode([
+      'field_long_text_summary' => [
+        'value' => 'Body with a separate summary.',
+        'summary' => 'Short summary.',
+        'format' => 'plain_text',
+      ],
+    ]);
     $result = $this->entityHelper->formatField($node, 'long_text_summary');
     $this->assertStringContainsString('Body with a separate summary.', (string) $result);
   }

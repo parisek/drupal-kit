@@ -39,10 +39,12 @@ class EntityHelperLinkFieldsKernelTest extends EntityHelperFieldsKernelTestBase 
    * @covers ::getLinkField
    */
   public function testGetLinkFieldExternalUriReturnsTitleAndUrl(): void {
-    $node = $this->createTestNode(['field_cta' => [
-      'uri' => 'https://example.com/about',
-      'title' => 'Learn more',
-    ]]);
+    $node = $this->createTestNode([
+      'field_cta' => [
+        'uri' => 'https://example.com/about',
+        'title' => 'Learn more',
+      ],
+    ]);
 
     $value = $this->entityHelper->getLinkField($node, 'cta');
     $serialized = is_array($value) ? json_encode($value) : (string) $value;
@@ -64,10 +66,12 @@ class EntityHelperLinkFieldsKernelTest extends EntityHelperFieldsKernelTestBase 
    * @covers ::getLinkField
    */
   public function testGetLinkFieldInternalUriResolves(): void {
-    $node = $this->createTestNode(['field_cta' => [
-      'uri' => 'internal:/contact',
-      'title' => 'Contact',
-    ]]);
+    $node = $this->createTestNode([
+      'field_cta' => [
+        'uri' => 'internal:/contact',
+        'title' => 'Contact',
+      ],
+    ]);
 
     $value = $this->entityHelper->getLinkField($node, 'cta');
     $serialized = is_array($value) ? json_encode($value) : (string) $value;

@@ -159,9 +159,14 @@ class ComponentBaseKernelTest extends KernelTestBase {
       $this->container->get('config.factory'),
       $this->container->get('custom_components.entity_helper'),
     ) extends ComponentBase {
+
+      /**
+       * Stub build() — not exercised by these tests, returns an empty array.
+       */
       public function build() {
         return [];
       }
+
     };
   }
 

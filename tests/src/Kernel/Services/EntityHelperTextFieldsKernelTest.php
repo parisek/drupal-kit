@@ -36,7 +36,7 @@ class EntityHelperTextFieldsKernelTest extends EntityHelperFieldsKernelTestBase 
   protected function setUp(): void {
     parent::setUp();
 
-    // filter module's default formats (plain_text, basic_html, …)
+    // Filter module's default formats (plain_text, basic_html, …)
     // are needed by getTextareaField's renderInIsolation path.
     $this->installConfig(['filter']);
 
@@ -105,10 +105,12 @@ class EntityHelperTextFieldsKernelTest extends EntityHelperFieldsKernelTestBase 
    * @covers ::getTextareaField
    */
   public function testGetTextareaFieldReturnsValue(): void {
-    $node = $this->createTestNode(['field_content' => [
-      'value' => 'Long content here',
-      'format' => 'plain_text',
-    ]]);
+    $node = $this->createTestNode([
+      'field_content' => [
+        'value' => 'Long content here',
+        'format' => 'plain_text',
+      ],
+    ]);
     // Renderer wraps in <p>; we just want substring presence.
     $result = $this->entityHelper->getTextareaField($node, 'content');
     $this->assertStringContainsString('Long content here', (string) $result);

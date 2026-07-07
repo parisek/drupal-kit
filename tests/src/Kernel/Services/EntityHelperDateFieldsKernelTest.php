@@ -61,10 +61,12 @@ class EntityHelperDateFieldsKernelTest extends EntityHelperFieldsKernelTestBase 
    * @covers ::getDateRangeField
    */
   public function testGetDateRangeFieldReturnsBothEndpoints(): void {
-    $node = $this->createTestNode(['field_event_window' => [
-      'value' => '2024-03-14T10:00:00',
-      'end_value' => '2024-03-14T18:00:00',
-    ]]);
+    $node = $this->createTestNode([
+      'field_event_window' => [
+        'value' => '2024-03-14T10:00:00',
+        'end_value' => '2024-03-14T18:00:00',
+      ],
+    ]);
     $value = $this->entityHelper->getDateRangeField($node, 'event_window');
     $serialized = is_array($value) ? json_encode($value) : (string) $value;
     $this->assertStringContainsString('2024', $serialized);

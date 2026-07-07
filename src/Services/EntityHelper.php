@@ -2,15 +2,15 @@
 
 namespace Drupal\custom_components\Services;
 
+use Drupal\commerce_product\Entity\ProductInterface;
+use Drupal\office_hours\OfficeHoursDateHelper;
+use Drupal\comment\CommentInterface;
 use Drupal\user\UserInterface;
 use Drupal\Core\Url;
 use Drupal\node\NodeInterface;
 use Drupal\taxonomy\TermInterface;
 use Drupal\media\MediaInterface;
-use Drupal\file\Entity\File;
 use Drupal\file\FileInterface;
-use Drupal\image\Entity\ImageStyle;
-use Drupal\image\ImageStyleInterface;
 use Drupal\link\LinkItemInterface;
 use Drupal\system\MenuInterface;
 use Drupal\Core\Database\Connection;
@@ -27,7 +27,6 @@ use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\EntityReferenceFieldItemListInterface;
 use Drupal\Core\Entity\EntityPublishedInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\StringTranslation\ByteSizeMarkup;
@@ -160,8 +159,7 @@ class EntityHelper {
   protected MenuTreeBuilder $menuTreeBuilder;
 
   /**
-   * Builds Media / File render arrays (delegated from generateMedia* /
-   * generateFile* methods).
+   * Builds Media/File render arrays for generateMedia() and generateFile().
    */
   protected MediaArrayBuilder $mediaArrayBuilder;
 
@@ -381,7 +379,7 @@ class EntityHelper {
    * method overrides, and custom params. In array configs only 'field' is
    * reserved; all other keys become params merged on top of auto-cardinality.
    *
-   * Cache tags from referenced entities are accumulated in $this->cacheMetadata.
+   * Cache tags from referenced entities accumulate in $this->cacheMetadata.
    * Retrieve them via collectCacheMetadata() after calling this method.
    *
    * @param object $entity
@@ -459,7 +457,8 @@ class EntityHelper {
    * Process an array mapping config value.
    *
    * Handles four patterns:
-   * 1. Explicit method override: ['method' => 'getDoubleField', 'field' => ...].
+   * 1. Explicit method override:
+   *    ['method' => 'getDoubleField', 'field' => ...].
    * 2. Dot notation for nested child mapping: ['key' => 'ref.child_field'].
    * 3. Sub-object map: content_key doesn't resolve to a field on the entity,
    *    so each value is treated as a field name to extract into a sub-array.
@@ -1242,8 +1241,8 @@ class EntityHelper {
       'body' => NodeInterface::class,
       'description' => TermInterface::class,
     ];
-    if (interface_exists(\Drupal\comment\CommentInterface::class)) {
-      $exemptions['comment_body'] = \Drupal\comment\CommentInterface::class;
+    if (interface_exists(CommentInterface::class)) {
+      $exemptions['comment_body'] = CommentInterface::class;
     }
     $field_name = $this->normalizeFieldName($field_name, $entity, $exemptions);
 
@@ -1367,7 +1366,7 @@ class EntityHelper {
     // The office_hours module is an optional integration. When it isn't
     // installed, this method has no field type to read from and no formatter
     // available, so bail out early to avoid touching missing classes.
-    if (!class_exists(\Drupal\office_hours\OfficeHoursDateHelper::class)) {
+    if (!class_exists(OfficeHoursDateHelper::class)) {
       return FALSE;
     }
 
@@ -1419,8 +1418,8 @@ class EntityHelper {
         if ($item) {
           $item = $item->toArray();
           $days[$item['day']]['items'][] = [
-            'start' => \Drupal\office_hours\OfficeHoursDateHelper::format($item['starthours'], 'H.i'),
-            'end' => \Drupal\office_hours\OfficeHoursDateHelper::format($item['endhours'], 'H.i'),
+            'start' => OfficeHoursDateHelper::format($item['starthours'], 'H.i'),
+            'end' => OfficeHoursDateHelper::format($item['endhours'], 'H.i'),
             'comment' => $item['comment'],
           ];
         }
@@ -1566,8 +1565,8 @@ class EntityHelper {
     $items = [];
 
     $exemptions = [];
-    if (interface_exists(\Drupal\commerce_product\Entity\ProductInterface::class)) {
-      $exemptions['variations'] = \Drupal\commerce_product\Entity\ProductInterface::class;
+    if (interface_exists(ProductInterface::class)) {
+      $exemptions['variations'] = ProductInterface::class;
     }
     $field_name = $this->normalizeFieldName($field_name, $entity, $exemptions);
 

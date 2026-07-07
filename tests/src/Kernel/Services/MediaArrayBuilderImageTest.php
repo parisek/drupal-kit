@@ -56,7 +56,7 @@ class MediaArrayBuilderImageTest extends MediaArrayBuilderKernelTestBase {
     $images = $this->builder->buildImage($media, 'test_thumb');
     $image = $images[0];
 
-    // styled src goes through the image-style URL helper; it contains
+    // Styled src goes through the image-style URL helper; it contains
     // the style id as a path segment.
     $this->assertStringContainsString('test_thumb', $image['src']);
   }

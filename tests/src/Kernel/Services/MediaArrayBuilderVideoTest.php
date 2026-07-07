@@ -60,5 +60,4 @@ class MediaArrayBuilderVideoTest extends MediaArrayBuilderKernelTestBase {
   // The iframe-extraction logic is exercised end-to-end in production
   // via the htdvere consumer; the YouTube regex itself is pure PHP
   // and stable.
-
 }

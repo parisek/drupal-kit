@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\custom_components\Unit\Plugin\Filter;
 
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\custom_components\Plugin\Filter\FilterTypography;
 use Drupal\custom_components\Twig\TypographyExtension;
 use Drupal\filter\FilterProcessResult;
@@ -13,10 +14,23 @@ use PHPUnit\Framework\TestCase;
  */
 class FilterTypographyTest extends TestCase {
 
+  /**
+   * Mocked typography extension, stubbed to pass text through unchanged.
+   *
+   * @var \Drupal\custom_components\Twig\TypographyExtension
+   */
   protected TypographyExtension $typography;
 
+  /**
+   * The filter plugin instance under test.
+   *
+   * @var \Drupal\custom_components\Plugin\Filter\FilterTypography
+   */
   protected FilterTypography $filter;
 
+  /**
+   * Instantiates the filter plugin under test with a mocked typography service.
+   */
   protected function setUp(): void {
     parent::setUp();
 
@@ -113,7 +127,7 @@ class FilterTypographyTest extends TestCase {
    */
   public function testCreatePullsTypographyServiceFromContainer(): void {
     $typography = $this->createMock(TypographyExtension::class);
-    $container = $this->createMock(\Symfony\Component\DependencyInjection\ContainerInterface::class);
+    $container = $this->createMock(ContainerInterface::class);
     $container->expects($this->once())
       ->method('get')
       ->with('custom_components.typography_twig_extension')

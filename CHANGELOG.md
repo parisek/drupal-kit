@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+- **Drupal coding standards via `drupal/coder` (phpcs)** — new `phpcs.xml.dist` running the `Drupal` + `DrupalPractice` rulesets over `src/`, `tests/` and the module files; `drupal/coder` promoted to an explicit `require-dev` entry; `composer phpcs` / `composer phpcbf` aliases; CI's `composer hygiene` job gains a phpcs step. The initial sweep fixed all 172 pre-existing violations at the source — 82 via `phpcbf`, 90 by hand (property `@var` docblocks, empty/short doc comments filled with real descriptions, comment rewraps to ≤80 chars, missing `@param` definitions, three genuinely-unused variable assignments dropped while keeping their side-effectful calls) — **zero suppressions**, no `phpcs:ignore` anywhere. Full suite (347 tests) and PHPStan level 8 stay green.
 ### Changed
 - **PHPStan raised to level 8** (was 5) — the max-rigor level `parisek/timber-kit` runs. The 264 pre-existing findings are grandfathered in a regenerated `phpstan-baseline.neon` (dominant categories: missing param/return typehints ~137, missing iterable value types ~57 — routine follow-up, entry by entry); new code baselines nothing and is held to level 8. The 8 `call to undefined method object::…` findings were **fixed, not baselined** — `TaxonomyTreeBuilder` now narrows `loadTree(..., TRUE)` results with an `instanceof TermInterface` guard and `MenuActiveTrailResolver` guards `createInstance()` results with `instanceof MenuLinkInterface` — so that whole error class stays live for future typos instead of hiding in the baseline. `mglaman/phpstan-drupal` was already active via `phpstan/extension-installer` auto-discovery (no wiring change needed).
 ### Added

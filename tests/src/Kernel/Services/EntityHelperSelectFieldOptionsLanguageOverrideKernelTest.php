@@ -6,9 +6,10 @@ use Drupal\Tests\custom_components\Kernel\EntityHelperFieldsKernelTestBase;
 use Drupal\language\Entity\ConfigurableLanguage;
 
 /**
- * Regression coverage for #70 — getSelectFieldOptions must honour the
- * language config override of `allowed_values.*.label` when the caller
- * passes a non-default langcode.
+ * Regression coverage for #70 — getSelectFieldOptions() honours language.
+ *
+ * The method must respect the language config override of
+ * `allowed_values.*.label` when the caller passes a non-default langcode.
  *
  * Until the fix, the method merged the original + translated configs
  * on one line and then immediately overwrote the result with the

@@ -155,7 +155,7 @@ class DisplayBaseTest extends TestCase {
   }
 
   /**
-   * Verify getTextareaField delegates to getTextareaField (not aliased to getTextField).
+   * Verify getTextareaField delegates to getTextareaField, not getTextField.
    *
    * @covers ::__call
    */
@@ -166,7 +166,8 @@ class DisplayBaseTest extends TestCase {
       ->with($entity, 'summary')
       ->willReturn('<p>Rich text</p>');
 
-    // If this were aliased to getTextField, getTextareaField would never be called.
+    // If this were aliased to getTextField, getTextareaField would
+    // never be called.
     $result = $this->display->getTextareaField($entity, 'summary');
     $this->assertSame('<p>Rich text</p>', $result);
   }

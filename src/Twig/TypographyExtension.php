@@ -66,6 +66,9 @@ class TypographyExtension extends AbstractExtension {
     return $this->upstreamForActiveTheme()->applyTypography($string, $arguments, $useDefaults);
   }
 
+  /**
+   * Gets (and lazily builds) the upstream extension for the active theme.
+   */
   private function upstreamForActiveTheme(): UpstreamTypographyExtension {
     $themeName = $this->themeManager->getActiveTheme()->getName();
     if (!isset($this->cache[$themeName])) {
@@ -77,4 +80,5 @@ class TypographyExtension extends AbstractExtension {
     }
     return $this->cache[$themeName];
   }
+
 }

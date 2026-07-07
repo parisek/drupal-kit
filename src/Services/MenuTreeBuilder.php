@@ -36,7 +36,8 @@ class MenuTreeBuilder {
     protected EntityTypeManagerInterface $entityTypeManager,
     protected RequestStack $requestStack,
     // Optional: the `menu.language_tree_manipulator` service ships via
-    // a Drupal core patch (https://www.drupal.org/project/drupal/issues/2466553).
+    // a Drupal core patch
+    // (https://www.drupal.org/project/drupal/issues/2466553).
     // When the consumer has applied the patch, Drupal's container
     // injects the service here and getMenu() filters menu links by the
     // current content language. When not applied, NULL is injected and
@@ -108,8 +109,9 @@ class MenuTreeBuilder {
       ['callable' => 'menu.default_tree_manipulators:generateIndexAndSort'],
     ];
     if ($this->languageTreeManipulator !== NULL) {
-      // Filter by the current content language. Available only when the
-      // consumer has applied https://www.drupal.org/project/drupal/issues/2466553.
+      // Filter by the current content language. Available only when
+      // the consumer has applied
+      // https://www.drupal.org/project/drupal/issues/2466553.
       $manipulators[] = ['callable' => 'menu.language_tree_manipulator:filterLanguage'];
     }
 

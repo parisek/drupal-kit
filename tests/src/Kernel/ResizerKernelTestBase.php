@@ -3,7 +3,6 @@
 namespace Drupal\Tests\custom_components\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
-use Drupal\custom_components\Services\Resizer;
 use Drupal\file\Entity\File;
 
 /**

@@ -563,12 +563,24 @@ class TwigExtensionTest extends TestCase {
    * the field's `allowed_values` setting.
    */
   public function testGetOptionLabelResolvesAllowedValueLabel(): void {
-    $build = new class {
+    $build = new class() {
+
+      /**
+       * The stubbed field value — the selected option key to resolve.
+       *
+       * @var string
+       */
       public string $value = 'medium';
 
+      /**
+       * Stub field definition carrying the allowed_values setting.
+       */
       public function getFieldDefinition(): object {
-        return new class {
+        return new class() {
 
+          /**
+           * Returns the allowed_values setting used to resolve the label.
+           */
           public function getSetting(string $name): array {
             return $name === 'allowed_values'
               ? ['small' => 'Small', 'medium' => 'Medium', 'large' => 'Large']
@@ -577,6 +589,7 @@ class TwigExtensionTest extends TestCase {
 
         };
       }
+
     };
 
     $this->assertSame('Medium', $this->twigExtension->getOptionLabel($build));

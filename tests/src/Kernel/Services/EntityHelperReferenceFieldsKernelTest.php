@@ -81,5 +81,4 @@ class EntityHelperReferenceFieldsKernelTest extends EntityHelperFieldsKernelTest
   // low signal — the dispatch wiring it really tested is exercised by
   // testGetTermFieldReturnsLabels above and by getMediaField kernel
   // coverage in #32.
-
 }

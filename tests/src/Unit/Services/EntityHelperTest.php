@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\custom_components\Unit\Services;
 
+use Drupal\office_hours\OfficeHoursDateHelper;
 use Drupal\custom_components\Services\EntityHelper;
 use Drupal\custom_components\Services\MediaArrayBuilder;
 use Drupal\custom_components\Services\MenuTreeBuilder;
@@ -22,7 +23,6 @@ use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Cache\Context\CacheContextsManager;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
-use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
@@ -53,13 +53,45 @@ class EntityHelperTest extends TestCase {
   protected EntityHelper $entityHelper;
 
   /**
-   * Mock services.
+   * Mocked entity type manager passed to the service under test.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
   protected EntityTypeManagerInterface $entityTypeManager;
+
+  /**
+   * Mocked current route match passed to the service under test.
+   *
+   * @var \Drupal\Core\Routing\RouteMatchInterface
+   */
   protected RouteMatchInterface $routeMatch;
+
+  /**
+   * Mocked language manager passed to the service under test.
+   *
+   * @var \Drupal\Core\Language\LanguageManagerInterface
+   */
   protected LanguageManagerInterface $languageManager;
+
+  /**
+   * Mocked entity repository passed to the service under test.
+   *
+   * @var \Drupal\Core\Entity\EntityRepositoryInterface
+   */
   protected EntityRepositoryInterface $entityRepository;
+
+  /**
+   * Mocked config factory passed to the service under test.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
   protected ConfigFactoryInterface $configFactory;
+
+  /**
+   * Mocked database connection passed to the service under test.
+   *
+   * @var \Drupal\Core\Database\Connection
+   */
   protected Connection $connection;
 
   /**
@@ -170,9 +202,11 @@ class EntityHelperTest extends TestCase {
     );
   }
 
-  // ---------------------------------------------------------------
-  // getTextField tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * getTextField tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * @covers ::getTextField
@@ -261,9 +295,11 @@ class EntityHelperTest extends TestCase {
     $this->assertSame('3', $this->entityHelper->getTextField($entity, 'node_read_time'));
   }
 
-  // ---------------------------------------------------------------
-  // getTextareaField tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * getTextareaField tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * @covers ::getTextareaField
@@ -305,15 +341,18 @@ class EntityHelperTest extends TestCase {
     $this->assertStringContainsString('Summary text', (string) $this->entityHelper->getTextareaField($entity, 'summary'));
   }
 
-  // ---------------------------------------------------------------
-  // getOfficeHoursField optional-integration tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * getOfficeHoursField optional-integration tests
+   * ---------------------------------------------------------------
+   */
 
   /**
-   * Guards against regression of the early-return guard for the optional
-   * office_hours module. When OfficeHoursDateHelper is not available
-   * (module not installed), the method must return FALSE without touching
-   * the missing class — not crash with a fatal.
+   * Guards against regression of the early-return guard for office_hours.
+   *
+   * When OfficeHoursDateHelper is not available (module not installed), the
+   * method must return FALSE without touching the missing class — not
+   * crash with a fatal.
    *
    * The host project for this test suite does not have drupal/office_hours
    * installed, so this exercises the guard branch directly.
@@ -329,7 +368,7 @@ class EntityHelperTest extends TestCase {
    */
   public function testOfficeHoursReturnsFalseWhenModuleMissing(): void {
     $this->assertFalse(
-      class_exists(\Drupal\office_hours\OfficeHoursDateHelper::class),
+      class_exists(OfficeHoursDateHelper::class),
       'Test environment must NOT have office_hours installed; otherwise this test covers nothing.'
     );
 
@@ -341,9 +380,11 @@ class EntityHelperTest extends TestCase {
     $this->assertFalse($this->entityHelper->getOfficeHoursField($entity, 'opening_hours'));
   }
 
-  // ---------------------------------------------------------------
-  // getEntityReferenceField prefix tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * getEntityReferenceField prefix tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * @covers ::getEntityReferenceField
@@ -353,9 +394,11 @@ class EntityHelperTest extends TestCase {
     $this->assertFalse($this->entityHelper->getEntityReferenceField($entity, 'items'));
   }
 
-  // ---------------------------------------------------------------
-  // getBooleanField tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * getBooleanField tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * @covers ::getBooleanField
@@ -395,9 +438,11 @@ class EntityHelperTest extends TestCase {
     $this->assertFalse($this->entityHelper->getBooleanField($entity, 'active'));
   }
 
-  // ---------------------------------------------------------------
-  // getSelectField tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * getSelectField tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * @covers ::getSelectField
@@ -431,9 +476,11 @@ class EntityHelperTest extends TestCase {
     $this->assertSame('', $this->entityHelper->getSelectField($entity, 'color'));
   }
 
-  // ---------------------------------------------------------------
-  // Helper: createMockEntityWithDefinitions
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * Helper: createMockEntityWithDefinitions
+   * ---------------------------------------------------------------
+   */
 
   /**
    * Create a mock entity with field definitions for formatField tests.
@@ -467,9 +514,11 @@ class EntityHelperTest extends TestCase {
     return $entity;
   }
 
-  // ---------------------------------------------------------------
-  // formatField tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * formatField tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * @covers ::formatField
@@ -823,9 +872,11 @@ class EntityHelperTest extends TestCase {
     $this->assertSame('form', $result['#type']);
   }
 
-  // ---------------------------------------------------------------
-  // Helper: createMockEntityWithAllDefinitions
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * Helper: createMockEntityWithAllDefinitions
+   * ---------------------------------------------------------------
+   */
 
   /**
    * Create a mock entity with both singular and plural field definition mocks.
@@ -860,9 +911,11 @@ class EntityHelperTest extends TestCase {
     return $entity;
   }
 
-  // ---------------------------------------------------------------
-  // formatFields tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * formatFields tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * @covers ::formatFields
@@ -957,9 +1010,11 @@ class EntityHelperTest extends TestCase {
     $this->assertCount(2, $result['tags']);
   }
 
-  // ---------------------------------------------------------------
-  // Helper: createPartialHelper
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * Helper: createPartialHelper
+   * ---------------------------------------------------------------
+   */
 
   /**
    * Create a partial mock of EntityHelper with specific methods mocked.
@@ -1044,9 +1099,11 @@ class EntityHelperTest extends TestCase {
     return $entity;
   }
 
-  // ---------------------------------------------------------------
-  // mapFields tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * mapFields tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * @covers ::mapFields
@@ -1315,9 +1372,11 @@ class EntityHelperTest extends TestCase {
     $this->assertSame('https://example.com', $result['url']);
   }
 
-  // ---------------------------------------------------------------
-  // collectCacheMetadata tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * collectCacheMetadata tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * @covers ::mapFields
@@ -1572,7 +1631,7 @@ class EntityHelperTest extends TestCase {
   }
 
   /**
-   * Sub-object value matching field-name pattern but not on entity returns literal.
+   * A sub-object value that looks like a field but isn't returns literally.
    *
    * @covers ::mapFields
    */
@@ -1587,7 +1646,8 @@ class EntityHelperTest extends TestCase {
       ],
     );
 
-    // 'nonexistent' looks like a valid field name but doesn't exist on the entity.
+    // 'nonexistent' looks like a valid field name but doesn't exist on
+    // the entity.
     $result = $this->entityHelper->mapFields($entity, [
       'box' => [
         'heading' => 'title',
@@ -1739,9 +1799,11 @@ class EntityHelperTest extends TestCase {
     $this->assertSame('ALLCAPS', $result['links']['uppercase']);
   }
 
-  // ---------------------------------------------------------------
-  // normalizeReturnValue regression tests (default changed from '' to [])
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * normalizeReturnValue regression tests (default changed from '' to [])
+   * ---------------------------------------------------------------
+   */
 
   /**
    * @covers ::getTextField
@@ -1796,7 +1858,8 @@ class EntityHelperTest extends TestCase {
    * Structural helpers (getDoubleField) must return [] (not '') when empty.
    *
    * This catches the normalizeReturnValue default change from '' to [].
-   * Before the fix, empty structural fields returned '' which broke array consumers.
+   * Before the fix, empty structural fields returned '' which broke
+   * array consumers.
    *
    * @covers ::getDoubleField
    */
@@ -1809,9 +1872,11 @@ class EntityHelperTest extends TestCase {
     $this->assertIsArray($result);
   }
 
-  // ---------------------------------------------------------------
-  // mapFields passthrough value tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * mapFields passthrough value tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * Verify non-string passthrough values (int, bool, NULL, 0, float).
@@ -1872,14 +1937,16 @@ class EntityHelperTest extends TestCase {
     $this->assertSame('Hello', $result['title']);
   }
 
-  // ---------------------------------------------------------------
-  // collectCacheMetadata tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * collectCacheMetadata tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * Dot-notation child fields are called without auto-cardinality params.
    *
-   * mapDotNotation does not call buildFieldParams on child fields, matching
+   * MapDotNotation does not call buildFieldParams on child fields, matching
    * the formatFields() path used by mapStringConfig for
    * entity_reference_revisions. This prevents double nesting of media
    * fields (e.g. [[{src,type,alt}]] instead of [{src,type,alt}]).
@@ -2028,6 +2095,9 @@ class EntityHelperTest extends TestCase {
     $this->assertSame('/gallery.jpg', $images[0]['src']);
   }
 
+  /**
+   * @covers ::collectCacheMetadata
+   */
   public function testCollectCacheMetadataReturnsAndResets(): void {
     // Fresh helper should have empty cache metadata.
     $cache = $this->entityHelper->collectCacheMetadata();
@@ -2038,13 +2108,15 @@ class EntityHelperTest extends TestCase {
     $this->assertEmpty($cache2->getCacheTags());
   }
 
-  // ---------------------------------------------------------------
-  // getTaxonomy tests — delegated to TaxonomyTreeBuilder.
-  // Builder-level coverage lives in TaxonomyTreeBuilderTest; the test
-  // here asserts the EntityHelper facade contract: delegate to the
-  // builder and bubble its cache metadata into the EntityHelper
-  // collector.
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * getTaxonomy tests — delegated to TaxonomyTreeBuilder.
+   * Builder-level coverage lives in TaxonomyTreeBuilderTest; the test
+   * here asserts the EntityHelper facade contract: delegate to the
+   * builder and bubble its cache metadata into the EntityHelper
+   * collector.
+   * ---------------------------------------------------------------
+   */
 
   /**
    * Set up the language manager to return a fixed langcode.
@@ -2092,11 +2164,13 @@ class EntityHelperTest extends TestCase {
     $this->assertContains('taxonomy_term_list:cats', $tags);
   }
 
-  // ---------------------------------------------------------------
-  // (former in-EntityHelperTest taxonomy fixtures retained below
-  // only because Resizer/term helpers cross-reference them — left
-  // for the next builder extractions to clean up.)
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * (former in-EntityHelperTest taxonomy fixtures retained below
+   * only because Resizer/term helpers cross-reference them — left
+   * for the next builder extractions to clean up.)
+   * ---------------------------------------------------------------
+   */
 
   /**
    * Build a stub taxonomy_term storage that returns the given term tree.
@@ -2135,14 +2209,16 @@ class EntityHelperTest extends TestCase {
     return $term;
   }
 
-  // ---------------------------------------------------------------
-  // getMenu tests — delegated to MenuTreeBuilder.
-  // Builder-level coverage lives in MenuTreeBuilderTest; here we
-  // assert only the facade contract: delegate to the builder, pass
-  // the formatField callback for menu-link-extras enrichment, and
-  // bubble the builder's cache metadata into the EntityHelper
-  // collector.
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * getMenu tests — delegated to MenuTreeBuilder.
+   * Builder-level coverage lives in MenuTreeBuilderTest; here we
+   * assert only the facade contract: delegate to the builder, pass
+   * the formatField callback for menu-link-extras enrichment, and
+   * bubble the builder's cache metadata into the EntityHelper
+   * collector.
+   * ---------------------------------------------------------------
+   */
 
   /**
    * @covers ::getMenu
@@ -2183,9 +2259,11 @@ class EntityHelperTest extends TestCase {
     $this->assertContains('user.permissions', $cache->getCacheContexts());
   }
 
-  // ---------------------------------------------------------------
-  // getTextareaField cache metadata tests
-  // ---------------------------------------------------------------
+  /*
+   * ---------------------------------------------------------------
+   * getTextareaField cache metadata tests
+   * ---------------------------------------------------------------
+   */
 
   /**
    * Cache metadata from text format filters reaches the collector.

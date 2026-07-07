@@ -76,8 +76,8 @@ class EntityHelperTaxonomyTest extends EntityHelperKernelTestBase {
     $this->createVocabulary('regions');
     $europe = $this->createTerm('regions', 'Europe', TRUE);
     $czech = $this->createTerm('regions', 'Czech Republic', TRUE, (int) $europe->id());
-    $prague = $this->createTerm('regions', 'Prague', TRUE, (int) $czech->id());
-    $asia = $this->createTerm('regions', 'Asia', TRUE);
+    $this->createTerm('regions', 'Prague', TRUE, (int) $czech->id());
+    $this->createTerm('regions', 'Asia', TRUE);
 
     $items = $this->entityHelper->getTaxonomy('regions', ['nested' => TRUE]);
 

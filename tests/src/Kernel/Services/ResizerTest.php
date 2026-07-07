@@ -44,7 +44,8 @@ class ResizerTest extends ResizerKernelTestBase {
       'type' => 'image/svg+xml',
       'width' => 24,
       'height' => 24,
-    ]];
+    ],
+    ];
 
     $result = Resizer::resizer($svg, [[100, 100, 0, 'default']]);
 
@@ -65,7 +66,8 @@ class ResizerTest extends ResizerKernelTestBase {
       'type' => 'image/jpeg',
       'width' => 800,
       'height' => 600,
-    ]];
+    ],
+    ];
 
     $result = Resizer::resizer($image, [[400, 300, 0, 'default']]);
 
@@ -124,7 +126,8 @@ class ResizerTest extends ResizerKernelTestBase {
       'type' => 'image/png',
       'width' => 1,
       'height' => 1,
-    ]];
+    ],
+    ];
 
     $result = Resizer::resizer($image, [[100, 100, 768, 'crop']]);
 
@@ -165,7 +168,8 @@ class ResizerTest extends ResizerKernelTestBase {
       'type' => 'image/png',
       'width' => 1,
       'height' => 1,
-    ]];
+    ],
+    ];
 
     $result = Resizer::resizer($image, [[100, 100, 768, 'smart_crop']]);
 
@@ -199,7 +203,8 @@ class ResizerTest extends ResizerKernelTestBase {
       'type' => 'image/png',
       'width' => 1,
       'height' => 2,
-    ]];
+    ],
+    ];
 
     $result = Resizer::resizer($image, [[100, 100, 768, 'canvas']]);
 
@@ -234,14 +239,15 @@ class ResizerTest extends ResizerKernelTestBase {
    * caller in the process hits the full toolkit-detection body).
    */
   public function testLocalFileProducesVariantsViaImageStyle(): void {
-    $file = $this->createTestPngFile('local.png');
+    $this->createTestPngFile('local.png');
 
     $image = [[
       'src' => '/sites/default/files/local.png',
       'type' => 'image/png',
       'width' => 1,
       'height' => 1,
-    ]];
+    ],
+    ];
 
     $result = Resizer::resizer($image, [[100, 100, 768, 'default']]);
 

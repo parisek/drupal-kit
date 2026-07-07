@@ -26,12 +26,30 @@ use PHPUnit\Framework\TestCase;
  */
 class TaxonomyTreeBuilderTest extends TestCase {
 
+  /**
+   * Mocked entity type manager passed to the builder under test.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
   protected EntityTypeManagerInterface $entityTypeManager;
 
+  /**
+   * Mocked language manager, stubbed to report English as current.
+   *
+   * @var \Drupal\Core\Language\LanguageManagerInterface
+   */
   protected LanguageManagerInterface $languageManager;
 
+  /**
+   * The TaxonomyTreeBuilder under test.
+   *
+   * @var \Drupal\custom_components\Services\TaxonomyTreeBuilder
+   */
   protected TaxonomyTreeBuilder $builder;
 
+  /**
+   * Instantiates the builder under test with mocked dependencies.
+   */
   protected function setUp(): void {
     parent::setUp();
 
@@ -136,7 +154,8 @@ class TaxonomyTreeBuilderTest extends TestCase {
    * `children` array.
    */
   public function testNestedTreeReturnsHierarchicalStructure(): void {
-    // Tree: root1 → child1a (leaf) + child1b (with grandchild1ba); root2 (leaf).
+    // Tree: root1 → child1a (leaf) + child1b (with grandchild1ba);
+    // root2 (leaf).
     $this->stubStorage([
       $this->makeTerm(1, 'Root 1', TRUE, 0),
       $this->makeTerm(11, 'Child 1a', TRUE, 1),
@@ -200,6 +219,12 @@ class TaxonomyTreeBuilderTest extends TestCase {
   /**
    * Mock a term with the minimum API the builder consumes.
    *
+   * @param int $tid
+   *   The term id.
+   * @param string $label
+   *   The term name/label.
+   * @param bool $published
+   *   Whether the term is published (default: TRUE).
    * @param int $parent
    *   Parent term id, or 0 for a root term. Nested-mode tests
    *   (`build(…, ['nested' => TRUE])`) read this via

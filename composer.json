@@ -16,6 +16,7 @@
     "require-dev": {
         "composer/installers": "^2.0",
         "drupal/address": "^2.0",
+        "drupal/coder": "^8.3",
         "drupal/commerce": "^3.0",
         "drupal/core-dev": "^11",
         "drupal/file_mdm": "^3.0",
@@ -90,6 +91,8 @@
         }
     },
     "scripts": {
+        "phpcbf": "vendor/bin/phpcbf",
+        "phpcs": "vendor/bin/phpcs",
         "phpstan": "vendor/bin/phpstan analyse --no-progress --memory-limit=2G",
         "test": "vendor/bin/phpunit",
         "test:kernel": "vendor/bin/phpunit tests/src/Kernel",

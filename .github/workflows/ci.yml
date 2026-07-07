@@ -27,6 +27,9 @@ jobs:
       - name: composer.json is normalized
         run: composer normalize --dry-run
 
+      - name: Drupal coding standards (phpcs)
+        run: composer phpcs
+
   test:
     name: PHP ${{ matrix.php }} unit + kernel
     runs-on: ubuntu-latest

@@ -7,10 +7,10 @@ use Drupal\taxonomy\Entity\Term;
 use Drupal\taxonomy\Entity\Vocabulary;
 
 /**
- * Kernel coverage for EntityHelper's mapFields private dispatch +
- * mapping helpers — the largest single coverage gap in #55 Tier 2.
+ * Kernel coverage for EntityHelper's mapFields private dispatch.
  *
- * Reaches through the public mapFields entry point into the private
+ * Covers the mapping helpers — the largest single coverage gap in
+ * #55 Tier 2. Reaches through the public mapFields entry point into the private
  * mapStringConfig / mapArrayConfig / mapDotNotation / buildFieldParams
  * branches that EntityHelperFormatFieldKernelTest's string-mapping
  * tests don't cross.

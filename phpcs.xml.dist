@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="custom_components">
+  <description>Drupal coding standards for parisek/custom-components.</description>
+
+  <file>src</file>
+  <file>tests</file>
+  <file>custom_components.install</file>
+  <file>custom_components.module</file>
+
+  <arg name="extensions" value="php,module,install,inc"/>
+  <arg name="report-width" value="120"/>
+  <arg value="p"/>
+
+  <rule ref="Drupal"/>
+  <rule ref="DrupalPractice"/>
+</ruleset>

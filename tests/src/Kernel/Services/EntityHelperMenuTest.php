@@ -185,6 +185,14 @@ class EntityHelperMenuTest extends EntityHelperKernelTestBase {
   /**
    * Create a menu link content entity.
    *
+   * @param string $menu_name
+   *   The machine name of the menu to attach the link to.
+   * @param string $title
+   *   The link title.
+   * @param string $uri
+   *   The internal or external URI the link points to.
+   * @param bool $hidden
+   *   Whether the link is disabled (TRUE) or enabled (FALSE, default).
    * @param string|null $parent
    *   When non-NULL, the link is created as a child of the given
    *   `menu_link_content:{uuid}` plugin id (testNestedMenuLinksRecurseIntoBelow

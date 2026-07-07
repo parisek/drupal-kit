@@ -12,8 +12,16 @@ use PHPUnit\Framework\TestCase;
  */
 class FilterImageTest extends TestCase {
 
+  /**
+   * The filter plugin instance under test.
+   *
+   * @var \Drupal\custom_components\Plugin\Filter\FilterImage
+   */
   protected FilterImage $filter;
 
+  /**
+   * Instantiates the filter plugin under test.
+   */
   protected function setUp(): void {
     parent::setUp();
     $this->filter = new FilterImage([], 'filter_image', ['provider' => 'custom_components']);

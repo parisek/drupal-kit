@@ -5,9 +5,10 @@ namespace Drupal\Tests\custom_components\Kernel\Services;
 use Drupal\Tests\custom_components\Kernel\EntityHelperFieldsKernelTestBase;
 
 /**
- * Behavioral tests for EntityHelper's contrib-gated field getters:
- * getPriceField, getAddressField, getOfficeHoursField, getGeoField,
- * getWebformField.
+ * Behavioral tests for EntityHelper's contrib-gated field getters.
+ *
+ * Covers getPriceField, getAddressField, getOfficeHoursField, getGeoField,
+ * and getWebformField.
  *
  * Each test markTestSkipped if its required contrib module isn't
  * installable in the kernel container. The skip is intentional — we
@@ -109,9 +110,9 @@ class EntityHelperContribGatedFieldsKernelTest extends EntityHelperFieldsKernelT
   }
 
   /**
-   * Skip the test if a Drupal module isn't installable in this kernel
-   * container (typically because the contrib package isn't in
-   * composer require-dev).
+   * Skips the test if a module isn't installable in this kernel container.
+   *
+   * Typically because the contrib package isn't in composer require-dev.
    */
   protected function skipIfModuleMissing(string $module_name): void {
     $module_handler = $this->container->get('module_handler');

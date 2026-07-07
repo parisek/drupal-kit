@@ -23,7 +23,7 @@ class ResizerFocalPointKernelTest extends ResizerKernelTestBase {
   /**
    * {@inheritdoc}
    *
-   * focal_point + crop on top of the base ResizerKernelTestBase set.
+   * Focal_point + crop on top of the base ResizerKernelTestBase set.
    */
   protected static $modules = [
     'custom_components',
@@ -43,7 +43,7 @@ class ResizerFocalPointKernelTest extends ResizerKernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    // crop entity schema (focal_point stores its position via crop
+    // Crop entity schema (focal_point stores its position via crop
     // entities through the crop_type config defined in
     // focal_point.settings).
     $this->installEntitySchema('crop');
@@ -82,7 +82,8 @@ class ResizerFocalPointKernelTest extends ResizerKernelTestBase {
       'type' => 'image/png',
       'width' => 1,
       'height' => 1,
-    ]];
+    ],
+    ];
 
     $result = Resizer::resizer($image, [[100, 100, 768, 'crop']]);
 
@@ -128,7 +129,8 @@ class ResizerFocalPointKernelTest extends ResizerKernelTestBase {
       'type' => 'image/png',
       'width' => 1,
       'height' => 1,
-    ]];
+    ],
+    ];
 
     // The crop variant pass calls getFocalPointHash once per variant.
     // With focal_point enabled but no crop entity present, it should

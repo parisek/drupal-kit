@@ -27,16 +27,44 @@ use Symfony\Component\HttpFoundation\RequestStack;
  */
 class MenuTreeBuilderTest extends TestCase {
 
+  /**
+   * Mocked menu link tree, stubbed to return empty tree parameters.
+   *
+   * @var \Drupal\Core\Menu\MenuLinkTreeInterface
+   */
   protected MenuLinkTreeInterface $menuLinkTree;
 
+  /**
+   * Mocked active trail resolver, stubbed to return no active trail.
+   *
+   * @var \Drupal\custom_components\Services\MenuActiveTrailResolver
+   */
   protected MenuActiveTrailResolver $activeTrailResolver;
 
+  /**
+   * Mocked language manager, stubbed to report English as current.
+   *
+   * @var \Drupal\Core\Language\LanguageManagerInterface
+   */
   protected LanguageManagerInterface $languageManager;
 
+  /**
+   * Mocked entity type manager passed to the builder under test.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
   protected EntityTypeManagerInterface $entityTypeManager;
 
+  /**
+   * Mocked request stack passed to the builder under test.
+   *
+   * @var \Symfony\Component\HttpFoundation\RequestStack
+   */
   protected RequestStack $requestStack;
 
+  /**
+   * Instantiates mocked dependencies and a minimal cache-contexts container.
+   */
   protected function setUp(): void {
     parent::setUp();
 
@@ -57,7 +85,8 @@ class MenuTreeBuilderTest extends TestCase {
     $this->requestStack = $this->createMock(RequestStack::class);
 
     // CacheableMetadata::createFromRenderArray() drains through
-    // Cache::mergeContexts() which uses \Drupal::service('cache_contexts_manager').
+    // Cache::mergeContexts() which uses
+    // \Drupal::service('cache_contexts_manager').
     // Without a container set up the test crashes the first time it runs in
     // a fresh process (CI order was hiding the gap via container leak from
     // EntityHelperTest's setUp).
@@ -68,6 +97,9 @@ class MenuTreeBuilderTest extends TestCase {
     \Drupal::setContainer($container);
   }
 
+  /**
+   * Restores the container to its prior state after each test.
+   */
   protected function tearDown(): void {
     if (\Drupal::hasContainer()) {
       \Drupal::unsetContainer();
@@ -139,6 +171,9 @@ class MenuTreeBuilderTest extends TestCase {
     $this->assertEmpty($second->getCacheContexts());
   }
 
+  /**
+   * Builds a MenuTreeBuilder wired to this test's mocked dependencies.
+   */
   protected function newBuilder(): MenuTreeBuilder {
     return new MenuTreeBuilder(
       $this->menuLinkTree,

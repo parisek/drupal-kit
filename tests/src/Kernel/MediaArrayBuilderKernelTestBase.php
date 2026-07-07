@@ -63,7 +63,7 @@ abstract class MediaArrayBuilderKernelTestBase extends KernelTestBase {
   }
 
   /**
-   * 1x1 transparent PNG written to public:// as a real file.
+   * Creates a 1x1 transparent PNG written to public:// as a real file.
    *
    * @param string $name
    *   File name within public:// (default: 'test.png').

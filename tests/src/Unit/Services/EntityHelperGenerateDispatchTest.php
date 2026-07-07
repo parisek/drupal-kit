@@ -27,8 +27,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
- * Verifies the nine generateMedia* / generateFile* delegates on
- * EntityHelper forward to MediaArrayBuilder with the expected args.
+ * Verifies EntityHelper's generateMedia()/generateFile() delegates dispatch.
  *
  * These methods are pure facades — the only behaviour worth pinning is
  * the dispatch wiring (right method, right args). All real logic lives

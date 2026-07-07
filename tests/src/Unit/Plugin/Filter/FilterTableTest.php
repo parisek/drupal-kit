@@ -12,8 +12,16 @@ use PHPUnit\Framework\TestCase;
  */
 class FilterTableTest extends TestCase {
 
+  /**
+   * The filter plugin instance under test.
+   *
+   * @var \Drupal\custom_components\Plugin\Filter\FilterTable
+   */
   protected FilterTable $filter;
 
+  /**
+   * Instantiates the filter plugin under test.
+   */
   protected function setUp(): void {
     parent::setUp();
     $this->filter = new FilterTable([], 'filter_table', ['provider' => 'custom_components']);

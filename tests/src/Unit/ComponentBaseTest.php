@@ -118,17 +118,28 @@ class ComponentBaseTest extends TestCase {
       $configFactory ?? $this->createMock(ConfigFactoryInterface::class),
       $entityHelper ?? $this->createMock(EntityHelper::class),
     ) extends ComponentBase {
+
+      /**
+       * Stub build() — not exercised by these tests, returns an empty array.
+       */
       public function build() {
         return [];
       }
+
     };
   }
 
+  /**
+   * Reads a private/protected property value via reflection.
+   */
   private function readProperty(object $object, string $property): mixed {
     $ref = new \ReflectionProperty($object, $property);
     return $ref->getValue($object);
   }
 
+  /**
+   * Invokes a private/protected method via reflection.
+   */
   private function invokeProtected(object $object, string $method, array $args = []): mixed {
     $ref = new \ReflectionMethod($object, $method);
     return $ref->invokeArgs($object, $args);

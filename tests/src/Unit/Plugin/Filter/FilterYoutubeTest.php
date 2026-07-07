@@ -12,8 +12,16 @@ use PHPUnit\Framework\TestCase;
  */
 class FilterYoutubeTest extends TestCase {
 
+  /**
+   * The filter plugin instance under test.
+   *
+   * @var \Drupal\custom_components\Plugin\Filter\FilterYoutube
+   */
   protected FilterYoutube $filter;
 
+  /**
+   * Instantiates the filter plugin under test.
+   */
   protected function setUp(): void {
     parent::setUp();
     $this->filter = new FilterYoutube([], 'filter_youtube', ['provider' => 'custom_components']);

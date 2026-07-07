@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\custom_components\Unit\Plugin\Filter;
 
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\custom_components\Plugin\Filter\FilterLinks;
 use Drupal\filter\FilterProcessResult;
 use PHPUnit\Framework\TestCase;
@@ -14,8 +15,16 @@ use Symfony\Component\HttpFoundation\RequestStack;
  */
 class FilterLinksTest extends TestCase {
 
+  /**
+   * The filter plugin instance under test.
+   *
+   * @var \Drupal\custom_components\Plugin\Filter\FilterLinks
+   */
   protected FilterLinks $filter;
 
+  /**
+   * Instantiates the filter plugin under test with a request-backed stack.
+   */
   protected function setUp(): void {
     parent::setUp();
 
@@ -102,7 +111,7 @@ class FilterLinksTest extends TestCase {
     $stack = new RequestStack();
     $stack->push(Request::create('https://factory.test/', 'GET'));
 
-    $container = $this->createMock(\Symfony\Component\DependencyInjection\ContainerInterface::class);
+    $container = $this->createMock(ContainerInterface::class);
     $container->expects($this->once())
       ->method('get')
       ->with('request_stack')

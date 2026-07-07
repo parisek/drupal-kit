@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\custom_components\Kernel;
 
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\custom_components\DisplayBase;
 use Drupal\custom_components\Services\EntityHelper;
@@ -110,9 +111,14 @@ class DisplayBaseKernelTest extends KernelTestBase {
       $this->container->get('request_stack'),
       $this->container->get('transliteration'),
     ) extends DisplayBase {
-      public function view(\Drupal\Core\Entity\ContentEntityInterface $entity) {
+
+      /**
+       * Stub view() — not exercised by these tests, returns an empty array.
+       */
+      public function view(ContentEntityInterface $entity) {
         return [];
       }
+
     };
   }
 
