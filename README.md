@@ -104,6 +104,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add tests and the unit-vs-kern
 
 DDEV is the canonical local environment, but the repo doesn't hard-depend on it — CI runs vanilla `composer install` + `vendor/bin/phpunit` against PHP 8.3 from the [shivammathur/setup-php](https://github.com/shivammathur/setup-php) GitHub Action. If you prefer host-PHP, ensure you're on PHP 8.3 (matching CI / production) to avoid composer.lock drift.
 
+## Releasing
+
+Tag-driven; the package is consumed straight from GitHub via a `vcs` repository entry (no Packagist). Version bumps follow Conventional Commits, the public-API surface and deprecation lifecycle are defined in [RELEASING.md](RELEASING.md) — read it before tagging.
+
+**Distribution scope:** `composer require` ships only the module files, `src/`, `templates/`, `composer.json`, `LICENSE` and `README.md` — everything development-only is `export-ignore`d in `.gitattributes`.
+
 ## Related projects
 
 Part of the **PORTA** ecosystem:
