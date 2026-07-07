@@ -154,6 +154,13 @@ Functions and filters registered by `TwigExtension` / `TypographyExtension` (`co
 - **Adding** a function/filter/variable → MINOR
 - **Renaming/removing** one, or changing its output shape → MAJOR
 
+### Static utilities
+
+`Resizer::resizer($images, $variants)` and any other `public static` method the README documents for direct consumer calls.
+
+- **Adding** a static method or an accepted variant keyword → MINOR
+- **Changing an existing signature or output shape** → MAJOR
+
 ### Data shapes
 
 The documented return shapes of `EntityHelper` getters and the builders (image arrays `[{src, type, width, height, alt}, …]`, link `{url, title, attributes}`, menu items `{id, title, description, url, attributes, is_active, in_active_trail, below}`, …). Twig templates across every consumer are written against these shapes.
