@@ -39,6 +39,8 @@ The skew risk is contained from two sides:
 - `composer audit` runs against whatever resolves that day, which is
   exactly the set a consumer would get — the useful set to scan.
 - Guards: `.gitignore` keeps the lock out; `RELEASING.md` § Gotchas states
-  the policy ("don't fix red CI by committing a lock"); the platform pin
-  lives in `composer.json` and the hygiene job fails if it's removed
-  carelessly (normalize check keeps the file canonical).
+  the policy ("don't fix red CI by committing a lock"). The platform pin
+  itself has no mechanical guard — the CI hygiene job validates and
+  normalizes `composer.json` but does not assert the pin's presence;
+  removing it is a reviewable diff line, nothing more. If drift through
+  pin removal ever actually happens, add an explicit CI assertion then.
