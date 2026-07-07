@@ -1,44 +1,1404 @@
-# PHPStan baseline (level 5) — legacy errors we accept for now.
+# PHPStan baseline (level 8) — grandfathered errors, regenerated at the
+# level-5 -> 8 raise. The dominant categories are missing parameter/return
+# typehints (~137) and missing iterable value types (~57) on the pre-raise
+# public surface; tightening them is routine follow-up work, entry by entry.
 #
-# Most entries are for Drupal's magic field-item property access
-# (`$item->value`, `$item->entity`, `$item->uri`, `$item->target_id`)
-# on the generic FieldItemInterface — phpstan-drupal can't infer the
-# concrete subtype without an explicit @var at each read site.
+# The baseline shrinks over time: when you add the missing typehint or
+# narrow a Drupal magic field access with a concrete @var, delete the
+# corresponding entry. New code baselines nothing — it is held to level 8.
 #
-# The baseline shrinks over time. When you tighten a typehint to a
-# concrete FieldItem class (e.g. StringItem instead of FieldItemInterface),
-# delete the corresponding entry.
-#
-# Long-term: level 7 / 8 with this file empty (tracked in v1.5.0).
-
+# Regenerate after legitimate structural moves only:
+#   composer phpstan -- --generate-baseline
 parameters:
-    ignoreErrors:
-        # Drupal field-item magic property access (->value, ->entity, ->uri, ...).
-        -
-            identifier: property.notFound
-            paths:
-                - src/Services/EntityHelper.php
-                - src/Services/MediaArrayBuilder.php
+	ignoreErrors:
+		-
+			message: '#^Method Drupal\\custom_components\\ComponentBase\:\:__construct\(\) has parameter \$configuration with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/ComponentBase.php
 
-        # Contrib-conditional method calls (toPrice, getLanguageConfigOverride).
-        -
-            identifier: method.notFound
-            path: src/Services/EntityHelper.php
+		-
+			message: '#^Method Drupal\\custom_components\\ComponentBase\:\:baseConfigurationDefaults\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/ComponentBase.php
 
-        # PHPDoc-derived always-true ifs (defensive instanceof checks).
-        # treatPhpDocTypesAsCertain: false suppresses Resizer's
-        # entries — leaving only the EntityHelper ones.
-        -
-            identifier: if.alwaysTrue
-            path: src/Services/EntityHelper.php
+		-
+			message: '#^Method Drupal\\custom_components\\ComponentBase\:\:buildConfigurationForm\(\) has parameter \$form with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/ComponentBase.php
 
-        -
-            identifier: function.alreadyNarrowedType
-            path: src/Services/EntityHelper.php
+		-
+			message: '#^Method Drupal\\custom_components\\ComponentBase\:\:buildConfigurationForm\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/ComponentBase.php
 
-        # Plugin factory returns concrete class instead of `static`.
-        -
-            identifier: return.type
-            paths:
-                - src/Plugin/Filter/FilterLinks.php
-                - src/Plugin/Filter/FilterTypography.php
+		-
+			message: '#^Method Drupal\\custom_components\\ComponentBase\:\:create\(\) has parameter \$configuration with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/ComponentBase.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\ComponentBase\:\:submitConfigurationForm\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/ComponentBase.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\ComponentBase\:\:submitConfigurationForm\(\) has parameter \$form with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/ComponentBase.php
+
+		-
+			message: '#^Class Drupal\\custom_components\\DisplayBase has PHPDoc tag @method for method formatFields\(\) return type with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/DisplayBase.php
+
+		-
+			message: '#^Class Drupal\\custom_components\\DisplayBase has PHPDoc tag @method for method mapFields\(\) parameter \#2 \$map with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/DisplayBase.php
+
+		-
+			message: '#^Class Drupal\\custom_components\\DisplayBase has PHPDoc tag @method for method mapFields\(\) return type with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/DisplayBase.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\DisplayBase\:\:__call\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/DisplayBase.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\DisplayBase\:\:__construct\(\) has parameter \$configuration with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/DisplayBase.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\DisplayBase\:\:create\(\) has parameter \$configuration with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/DisplayBase.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Plugin\\Filter\\FilterLinks\:\:__construct\(\) has parameter \$configuration with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Plugin/Filter/FilterLinks.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Plugin\\Filter\\FilterLinks\:\:create\(\) has parameter \$configuration with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Plugin/Filter/FilterLinks.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Plugin\\Filter\\FilterLinks\:\:create\(\) should return static\(Drupal\\custom_components\\Plugin\\Filter\\FilterLinks\) but returns Drupal\\custom_components\\Plugin\\Filter\\FilterLinks\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Plugin/Filter/FilterLinks.php
+
+		-
+			message: '#^Cannot call method replaceChild\(\) on DOMNode\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: src/Plugin/Filter/FilterTable.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Plugin\\Filter\\FilterTypography\:\:__construct\(\) has parameter \$configuration with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Plugin/Filter/FilterTypography.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Plugin\\Filter\\FilterTypography\:\:create\(\) has parameter \$configuration with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Plugin/Filter/FilterTypography.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Plugin\\Filter\\FilterTypography\:\:create\(\) should return static\(Drupal\\custom_components\\Plugin\\Filter\\FilterTypography\) but returns Drupal\\custom_components\\Plugin\\Filter\\FilterTypography\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Plugin/Filter/FilterTypography.php
+
+		-
+			message: '#^Parameter \#1 \$node of method DOMDocument\:\:importNode\(\) expects DOMNode, DOMElement\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Plugin/Filter/FilterYoutube.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Routing\\RouteSubscriber\:\:alterRoutes\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Routing/RouteSubscriber.php
+
+		-
+			message: '#^Access to an undefined property Drupal\\Core\\Field\\FieldItemInterface\:\:\$date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Access to an undefined property Drupal\\Core\\Field\\FieldItemInterface\:\:\$entity\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Access to an undefined property Drupal\\Core\\Field\\FieldItemInterface\:\:\$format\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Access to an undefined property Drupal\\Core\\Field\\FieldItemInterface\:\:\$value\.$#'
+			identifier: property.notFound
+			count: 5
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Access to an undefined property Drupal\\link\\LinkItemInterface\:\:\$uri\.$#'
+			identifier: property.notFound
+			count: 3
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\Core\\Field\\FieldItemInterface\:\:toPrice\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\Core\\Language\\LanguageManagerInterface\:\:getLanguageConfigOverride\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Call to an undefined method object\:\:get\(\)\.$#'
+			identifier: method.notFound
+			count: 4
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Call to an undefined method object\:\:getFieldDefinition\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Call to an undefined method object\:\:getFieldDefinitions\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Call to an undefined method object\:\:hasField\(\)\.$#'
+			identifier: method.notFound
+			count: 5
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Call to function is_countable\(\) with Drupal\\Core\\Field\\FieldItemListInterface will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Cannot call method getThirdPartySetting\(\) on class\-string\|object\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^If condition is always true\.$#'
+			identifier: if.alwaysTrue
+			count: 10
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:buildFieldParams\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:dispatchByFieldType\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:formatField\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:formatFields\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:formatFields\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateFileImage\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateFileImage\(\) has parameter \$file with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateFileImage\(\) has parameter \$image_style with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateFileImage\(\) has parameter \$params with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateFileImageLink\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateFileImageLink\(\) has parameter \$file with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateFileImageLink\(\) has parameter \$image_style with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateMediaDocument\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateMediaImage\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateMediaImage\(\) has parameter \$image_style with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateMediaImageLink\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateMediaImageLink\(\) has parameter \$image with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateMediaImageLink\(\) has parameter \$image_style with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateMediaLottie\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateMediaRemoteVideo\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateMediaSvg\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:generateMediaVideo\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getAddressField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getAddressField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getAddressField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getBooleanField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getBooleanField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getBooleanField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getDateField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getDateField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getDateField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getDateRangeField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getDateRangeField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getDateRangeField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getDoubleField\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getEntityReferenceField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getEntityReferenceField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getEntityReferenceField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getEntityReferenceField\(\) has parameter \$params with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getFileField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getFileField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getFileField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getGeoField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getGeoField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getGeoField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getImageField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getImageField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getImageField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getImageField\(\) has parameter \$params with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getLinkField\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getMediaField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getMediaField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getMediaField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getMediaField\(\) has parameter \$params with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getMenu\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getMenu\(\) has parameter \$custom_parameters with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getMenu\(\) has parameter \$menu_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getMenuField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getMenuField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getMenuField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getOfficeHoursField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getOfficeHoursField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getOfficeHoursField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getPriceField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getPriceField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getPriceField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getSelectField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getSelectField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getSelectField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getSelectFieldOptions\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getSelectFieldOptions\(\) has parameter \$entity_type with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getSelectFieldOptions\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getSelectFieldOptions\(\) has parameter \$langcode with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getSvgViewBoxDimensions\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getSvgViewBoxDimensions\(\) has parameter \$uri with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTaxonomy\(\) has parameter \$custom_parameters with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTaxonomy\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTermField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTermField\(\) has parameter \$custom_parameters with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTermField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTermField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTextField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTextField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTextField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTextField\(\) has parameter \$params with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTextareaField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTextareaField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getTextareaField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getWebformField\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getWebformField\(\) has parameter \$entity with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:getWebformField\(\) has parameter \$field_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:mapArrayConfig\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:mapDotNotation\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:mapDotNotation\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:mapFields\(\) has parameter \$map with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:mapFields\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:normalizeFieldName\(\) has parameter \$exempt with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:normalizeReturnValue\(\) has parameter \$items with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:normalizeReturnValue\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\EntityHelper\:\:resolveEntityReference\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Parameter \#1 \$size of static method Drupal\\Core\\StringTranslation\\ByteSizeMarkup\:\:create\(\) expects float\|int, int\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Services/EntityHelper.php
+
+		-
+			message: '#^Access to an undefined property Drupal\\Core\\Field\\FieldItemInterface\:\:\$entity\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Access to an undefined property Drupal\\media\\MediaInterface\:\:\$field_media_image\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Access to an undefined property Drupal\\media\\MediaInterface\:\:\$thumbnail\.$#'
+			identifier: property.notFound
+			count: 2
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildDocument\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildFileImage\(\) has parameter \$file with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildFileImage\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildFileImage\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildFileImageLink\(\) has parameter \$file with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildImage\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildImageField\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildImageLink\(\) has parameter \$image with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildLottie\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildRemoteVideo\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildSvg\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:buildVideo\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:getSvgViewBoxDimensions\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Parameter \#1 \$filename of function file_exists expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 3
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Parameter \#1 \$path of method Drupal\\image\\Entity\\ImageStyle\:\:buildUrl\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 4
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Parameter \#1 \$size of static method Drupal\\Core\\StringTranslation\\ByteSizeMarkup\:\:create\(\) expects float\|int, int\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Parameter \#1 \$uri of method Drupal\\custom_components\\Services\\MediaArrayBuilder\:\:getSvgViewBoxDimensions\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, list\<string\>\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Parameter \#2 \$uri of method Drupal\\image\\Entity\\ImageStyle\:\:transformDimensions\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Services/MediaArrayBuilder.php
+
+		-
+			message: '#^Cannot call method getPluginId\(\) on Drupal\\Core\\Menu\\MenuLinkInterface\|false\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: src/Services/MenuActiveTrailResolver.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MenuActiveTrailResolver\:\:pickShallowest\(\) should return Drupal\\Core\\Menu\\MenuLinkInterface but returns Drupal\\Core\\Menu\\MenuLinkInterface\|false\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Services/MenuActiveTrailResolver.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MenuTreeBuilder\:\:build\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MenuTreeBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MenuTreeBuilder\:\:build\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MenuTreeBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MenuTreeBuilder\:\:renderLinks\(\) has parameter \$items with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MenuTreeBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\MenuTreeBuilder\:\:renderLinks\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/MenuTreeBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\Resizer\:\:addCanvasEffect\(\) has parameter \$variant with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/Resizer.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\Resizer\:\:addCropEffect\(\) has parameter \$variant with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/Resizer.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\Resizer\:\:addScaleEffect\(\) has parameter \$variant with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/Resizer.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\Resizer\:\:addSmartCropEffect\(\) has parameter \$variant with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/Resizer.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\Resizer\:\:resizer\(\) has parameter \$variants with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/Resizer.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\Resizer\:\:resizer\(\) should return array\<int, array\{src\: string, type\: string, width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\> but returns array\{non\-empty\-array\<mixed\>\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Services/Resizer.php
+
+		-
+			message: '#^Parameter \#1 \$haystack of function str_starts_with expects string, string\|false\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Services/Resizer.php
+
+		-
+			message: '#^Parameter \#3 \$subject of function str_replace expects array\<string\>\|string, string\|false\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Services/Resizer.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\TaxonomyTreeBuilder\:\:build\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/TaxonomyTreeBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\TaxonomyTreeBuilder\:\:build\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/TaxonomyTreeBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\TaxonomyTreeBuilder\:\:buildTermTree\(\) has parameter \$children_map with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/TaxonomyTreeBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\TaxonomyTreeBuilder\:\:buildTermTree\(\) has parameter \$term_map with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/TaxonomyTreeBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\Services\\TaxonomyTreeBuilder\:\:buildTermTree\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Services/TaxonomyTreeBuilder.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:applyTypographyFilter\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:applyTypographyFilter\(\) has parameter \$value with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getComponentTemplate\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getComponentTemplate\(\) has parameter \$content with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getComponentTemplate\(\) has parameter \$context with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getComponentTemplate\(\) has parameter \$template_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getCountryName\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getCountryName\(\) has parameter \$build with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getName\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getOptionLabel\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getOptionLabel\(\) has parameter \$build with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getPageTemplate\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getPageTemplate\(\) has parameter \$content with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getPageTemplate\(\) has parameter \$context with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getPageTemplate\(\) has parameter \$template_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getResizer\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getResizer\(\) has parameter \$image with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getResizer\(\) has parameter \$variants with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslation\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslation\(\) has parameter \$context with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslation\(\) has parameter \$value with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationContextTypography\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationContextTypography\(\) has parameter \$context with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationContextTypography\(\) has parameter \$domain with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationContextTypography\(\) has parameter \$value with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPlural\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPlural\(\) has parameter \$context with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPlural\(\) has parameter \$count with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPlural\(\) has parameter \$plural with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPlural\(\) has parameter \$single with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPluralContextTypography\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPluralContextTypography\(\) has parameter \$context with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPluralContextTypography\(\) has parameter \$count with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPluralContextTypography\(\) has parameter \$domain with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPluralContextTypography\(\) has parameter \$plural with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPluralContextTypography\(\) has parameter \$single with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPluralTypography\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPluralTypography\(\) has parameter \$count with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPluralTypography\(\) has parameter \$domain with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPluralTypography\(\) has parameter \$plural with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationPluralTypography\(\) has parameter \$single with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationTypography\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationTypography\(\) has parameter \$domain with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getTranslationTypography\(\) has parameter \$value with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:getUniqueId\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:loadTemplate\(\) has parameter \$content with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:loadTemplate\(\) has parameter \$context with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:mergeResizer\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:mergeResizer\(\) has parameter \$items with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:templateExists\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:templateExists\(\) has parameter \$context with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Method Drupal\\custom_components\\TwigExtension\:\:templateExists\(\) has parameter \$template with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Parameter \#2 \$variants of static method Drupal\\custom_components\\Services\\Resizer\:\:resizer\(\) expects array\<int, array\>, array\<int\|string, mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/TwigExtension.php
+
+		-
+			message: '#^Property Drupal\\custom_components\\TwigExtension\:\:\$uniqueIds type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/TwigExtension.php

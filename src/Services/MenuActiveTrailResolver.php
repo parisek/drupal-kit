@@ -132,7 +132,9 @@ class MenuActiveTrailResolver {
     while ($parent_id) {
       $trail[$parent_id] = $parent_id;
       $parent = $this->menuLinkManager->createInstance($parent_id);
-      $parent_id = $parent->getParent();
+      // createInstance() is typed as a bare object — stop walking if the
+      // plugin is somehow not a menu link rather than fatal on getParent().
+      $parent_id = $parent instanceof MenuLinkInterface ? $parent->getParent() : '';
     }
     return $trail;
   }

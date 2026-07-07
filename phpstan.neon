@@ -1,8 +1,8 @@
 parameters:
-    level: 5
+    level: 8
     paths:
         - src
-    # Most "if.alwaysTrue" reports at level 5 in our code come from
+    # Most "if.alwaysTrue" reports in our code come from
     # PHPDoc-derived types (FieldItemInterface, etc.) — we'd have to
     # tighten typehints on every iteration variable to fix them. Off
     # for now; if a real always-true if appears in our own logic the

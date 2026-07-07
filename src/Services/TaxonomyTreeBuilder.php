@@ -6,6 +6,7 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
+use Drupal\taxonomy\TermInterface;
 
 /**
  * Builds flat / nested taxonomy term arrays for consumption by templates.
@@ -78,7 +79,10 @@ class TaxonomyTreeBuilder {
     $children_map = [];
 
     foreach ($terms as $term) {
-      if (!$term->isPublished()) {
+      // loadTree(..., TRUE) loads full entities, but its stub type keeps
+      // the stdClass alternative — narrow so the entity API calls below
+      // are checked instead of baselined.
+      if (!$term instanceof TermInterface || !$term->isPublished()) {
         continue;
       }
 
