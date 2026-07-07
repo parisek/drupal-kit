@@ -53,6 +53,24 @@ After PHP changes the autoloader picks them up — no rebuild needed.
 - `menu_link_content` requires `link`.
 - Field storage config for `list_string` `allowed_values` accepts the compact `key => label` map on save; Drupal canonicalises to the `{value, label}` sequence on read.
 
+## TDD — non-negotiable
+
+Always work test-first. The discipline, not just the coverage:
+
+- **Failing test first.** Write it, run it, watch it go red *for the right reason*, then write the minimal code to green. No production change lands without a test that failed before it existed.
+- **Bug fixes too** — reproduce the bug as a failing test first; it doubles as the regression guard (e.g. `MediaArrayBuilderRemoteVideoFallbackTest` pins the no-resolver fallback to `field_media_image` so it can't silently drift back to reading the source field).
+- **Pick the lowest tier that exercises the behavior** — unit (mocks, no container) before kernel (sqlite, real services). The decision tree and per-tier checklists live in `CONTRIBUTING.md`.
+- **Keep output pristine.** `composer test` must stay green with `failOnRisky` / `failOnWarning` (already enforced by `phpunit.xml.dist`) for code you touch; don't add tests that emit output or mutate global state.
+
+## Feature flags & breaking changes
+
+New behavior that changes rendered output, data shapes, or anything a consumer could be surprised by ships **opt-in, default off** — never on by default. The library stays backwards-compatible; projects opt in.
+
+- **Pattern (consumer-subclassed base classes).** Declare `protected bool $feature_name = FALSE;` on `ComponentBase` / `DisplayBase` (no such flag exists yet — this defines the shape for the first one) (docblock stating *what it changes* and *why it's opt-in*), gate the behavior on it, and cover both branches (off → old behavior, on → new) in the matching kernel test.
+- **Pattern (container services).** Services like `EntityHelper` or the builders aren't subclassed by consumers — new behavior there opts in via a `$params` / `$custom_parameters` key (e.g. `['return_format' => 'array']` style), defaulting to the old behavior.
+- **Breaking changes are allowed — but only this way.** A behavior-changing change may land *provided* it's behind such an opt-in and defaults to off, so existing consumers are unaffected until they flip it. No silent behavior changes on upgrade. Removing the old path later is a MAJOR release (see `RELEASING.md` § Public API surface).
+- **Opinionated defaults live downstream.** `drupal-base` and site projects flip the flags in their own subclasses / call sites — that's where Porta Design's best-practice config is expressed, not in the library defaults.
+
 ## PR + Review workflow
 
 - One branch per issue: `feat/<n>-<slug>`, `fix/<n>-<slug>`, `refactor/<n>-<slug>`, `chore/<slug>`.
