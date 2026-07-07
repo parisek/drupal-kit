@@ -1392,7 +1392,7 @@ parameters:
 			path: src/TwigExtension.php
 
 		-
-			message: '#^Parameter \#2 \$variants of static method Drupal\\custom_components\\Services\\Resizer\:\:resizer\(\) expects array\<int, array\>, array\<int\|string, mixed\> given\.$#'
+			message: '#^Parameter \#2 \$variants of static method Drupal\\custom_components\\Services\\Resizer\:\:resizer\(\) expects array\<int, array\>, array\<int(?:\<0, max\>)?\|string, mixed\> given\.$#'
 			identifier: argument.type
 			count: 1
 			path: src/TwigExtension.php
