@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file. The format foll
 ## [Unreleased]
 
 ### Added
+- **`docs/adr/` — Architecture Decision Records** — Nygard-triad ADRs (Context / Decision / Consequences), numbered permanently, written sparingly (hard-to-reverse + surprising-without-context + real-trade-off, all three). `docs/` is git-ignored repo-wide with only the `adr/` subtree tracked, so scratch planning docs never enter history. Ships with ADR 0001 recording the deliberate no-`composer.lock` policy (drift-detection over reproducibility, contained by the `platform.php` pin and the CI PHP matrix + hygiene job). Doctrine ported from `parisek/timber-kit`.
 - **`RELEASING.md` — release doctrine** — tag-driven flow adapted to this package's no-Packagist distribution (consumers install via a `vcs` repository entry, so a pushed annotated tag is immediately consumable): semver procedure, Conventional Commits → bump mapping table, a **Public API surface** definition specific to this package (service IDs + public methods, `ComponentBase`/`DisplayBase` overridables, the Twig function/filter surface, documented data shapes; container-wired constructor signatures explicitly excluded), and a **Deprecation lifecycle** (docblock-only `@deprecated`, no runtime notices in request-serving paths, ≥ one MINOR grace period, live deprecations table — currently empty). README gains a short `## Releasing` section pointing at it. Ported from `parisek/timber-kit` and adapted.
 
 ### Fixed
