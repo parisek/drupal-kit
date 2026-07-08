@@ -5,13 +5,13 @@
 # the same way it does in CI.
 #
 # Run after `composer install`. Idempotent — re-running picks up newly
-# added top-level files (e.g. a future custom_components.routing.yml)
+# added top-level files (e.g. a future drupal_kit.routing.yml)
 # without needing this script edited.
 #
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
-target="$repo_root/web/modules/contrib/custom_components"
+target="$repo_root/web/modules/contrib/drupal_kit"
 
 mkdir -p "$repo_root/web/profiles" \
          "$repo_root/web/sites" \

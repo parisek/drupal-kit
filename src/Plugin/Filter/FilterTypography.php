@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\custom_components\Plugin\Filter;
+namespace Drupal\drupal_kit\Plugin\Filter;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\custom_components\Twig\TypographyExtension;
+use Drupal\drupal_kit\Twig\TypographyExtension;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -40,7 +40,7 @@ class FilterTypography extends FilterBase implements ContainerFactoryPluginInter
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('custom_components.typography_twig_extension'),
+      $container->get('drupal_kit.typography_twig_extension'),
     );
   }
 

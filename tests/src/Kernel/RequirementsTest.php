@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel;
+namespace Drupal\Tests\drupal_kit\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\language\Entity\ConfigurableLanguage;
@@ -13,7 +13,7 @@ use Drupal\language\Entity\ConfigurableLanguage;
  * side: no entry on a monolingual site, a warning on a multilingual
  * one.
  *
- * @group custom_components
+ * @group drupal_kit
  */
 class RequirementsTest extends KernelTestBase {
 
@@ -21,7 +21,7 @@ class RequirementsTest extends KernelTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'language',
@@ -33,14 +33,14 @@ class RequirementsTest extends KernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     include_once $this->root . '/core/includes/install.inc';
-    include_once __DIR__ . '/../../../custom_components.install';
+    include_once __DIR__ . '/../../../drupal_kit.install';
   }
 
   /**
    * Non-runtime phases report nothing.
    */
   public function testInstallPhaseReportsNothing(): void {
-    $this->assertSame([], custom_components_requirements('install'));
+    $this->assertSame([], drupal_kit_requirements('install'));
   }
 
   /**
@@ -48,8 +48,8 @@ class RequirementsTest extends KernelTestBase {
    */
   public function testMonolingualSiteReportsNothing(): void {
     $this->assertArrayNotHasKey(
-      'custom_components_language_tree_manipulator',
-      custom_components_requirements('runtime'),
+      'drupal_kit_language_tree_manipulator',
+      drupal_kit_requirements('runtime'),
     );
   }
 
@@ -59,10 +59,10 @@ class RequirementsTest extends KernelTestBase {
   public function testMultilingualSiteWithoutServiceWarns(): void {
     ConfigurableLanguage::createFromLangcode('cs')->save();
 
-    $requirements = custom_components_requirements('runtime');
+    $requirements = drupal_kit_requirements('runtime');
 
-    $this->assertArrayHasKey('custom_components_language_tree_manipulator', $requirements);
-    $requirement = $requirements['custom_components_language_tree_manipulator'];
+    $this->assertArrayHasKey('drupal_kit_language_tree_manipulator', $requirements);
+    $requirement = $requirements['drupal_kit_language_tree_manipulator'];
     $this->assertSame(REQUIREMENT_WARNING, $requirement['severity']);
     $this->assertStringContainsString(
       'menu.language_tree_manipulator',

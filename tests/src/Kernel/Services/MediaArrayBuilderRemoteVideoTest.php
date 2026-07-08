@@ -1,16 +1,16 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
 use Drupal\Core\Field\FieldItemListInterface;
-use Drupal\Tests\custom_components\Kernel\MediaArrayBuilderKernelTestBase;
+use Drupal\Tests\drupal_kit\Kernel\MediaArrayBuilderKernelTestBase;
 use Drupal\media\Entity\Media;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Services\MediaArrayBuilder
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\MediaArrayBuilder
+ * @group drupal_kit
  *
  * Tests the URL-extraction path of buildRemoteVideo without setting up
  * media_oembed (which needs network access for the YouTube oembed

@@ -14,20 +14,20 @@ Requires [PHP 8.3+](https://www.php.net/releases/8.3/) and [Drupal](https://www.
 
 **Services**
 
-- `custom_components.entity_helper` — high-level entity loading and rendering helpers consumed by display plugins and Twig templates. Facade over the three builders below.
-- `custom_components.media_array_builder` — builds the documented array shapes for Media and File entities (image, SVG, video, remote video, document, Lottie).
-- `custom_components.menu_tree_builder` — renders a menu into the documented item shape (active trail, `field_*` enrichment, subtree scoping via `params['root']`).
-- `custom_components.taxonomy_tree_builder` — builds nested taxonomy term trees.
-- `Drupal\custom_components\Services\Resizer` — static utility: image style + focal point + responsive variant generator. Call `Resizer::resizer($images, $variants)` directly.
-- `custom_components.menu_active_trail_resolver` — resolves the active menu trail accounting for entity references and aliases.
-- `custom_components.twig_extension` — registers Twig functions used by component templates, including the typography-aware translation helpers `_xt` / `__t` / `_nt` / `_nxt` (translate, then pipe through `|typography`).
-- `custom_components.typography_twig_extension` — provides the `|typography` Twig filter; delegates to [`parisek/twig-typography`](https://github.com/parisek/twig-typography) and resolves typography config from `{active_theme}/static/typography.yml`.
-- `custom_components.route_subscriber` — alters routes for entity access edge cases.
+- `drupal_kit.entity_helper` — high-level entity loading and rendering helpers consumed by display plugins and Twig templates. Facade over the three builders below.
+- `drupal_kit.media_array_builder` — builds the documented array shapes for Media and File entities (image, SVG, video, remote video, document, Lottie).
+- `drupal_kit.menu_tree_builder` — renders a menu into the documented item shape (active trail, `field_*` enrichment, subtree scoping via `params['root']`).
+- `drupal_kit.taxonomy_tree_builder` — builds nested taxonomy term trees.
+- `Drupal\drupal_kit\Services\Resizer` — static utility: image style + focal point + responsive variant generator. Call `Resizer::resizer($images, $variants)` directly.
+- `drupal_kit.menu_active_trail_resolver` — resolves the active menu trail accounting for entity references and aliases.
+- `drupal_kit.twig_extension` — registers Twig functions used by component templates, including the typography-aware translation helpers `_xt` / `__t` / `_nt` / `_nxt` (translate, then pipe through `|typography`).
+- `drupal_kit.typography_twig_extension` — provides the `|typography` Twig filter; delegates to [`parisek/twig-typography`](https://github.com/parisek/twig-typography) and resolves typography config from `{active_theme}/static/typography.yml`.
+- `drupal_kit.route_subscriber` — alters routes for entity access edge cases.
 
 **Base classes**
 
-- `Drupal\custom_components\ComponentBase` — base for component [block plugins](https://www.drupal.org/docs/drupal-apis/block-api/block-api-overview).
-- `Drupal\custom_components\DisplayBase` — base for [`extra_field`](https://www.drupal.org/project/extra_field) display plugins that render components.
+- `Drupal\drupal_kit\ComponentBase` — base for component [block plugins](https://www.drupal.org/docs/drupal-apis/block-api/block-api-overview).
+- `Drupal\drupal_kit\DisplayBase` — base for [`extra_field`](https://www.drupal.org/project/extra_field) display plugins that render components.
 
 **Filters**
 

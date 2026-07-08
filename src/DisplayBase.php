@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\custom_components;
+namespace Drupal\drupal_kit;
 
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Path\PathMatcherInterface;
@@ -107,7 +107,7 @@ abstract class DisplayBase extends ExtraFieldDisplayBase implements ContainerFac
   /**
    * The entity helper service.
    *
-   * @var \Drupal\custom_components\Services\EntityHelper
+   * @var \Drupal\drupal_kit\Services\EntityHelper
    */
   protected $entityHelper;
 
@@ -153,7 +153,7 @@ abstract class DisplayBase extends ExtraFieldDisplayBase implements ContainerFac
    *   The config factory service.
    * @param \Drupal\Core\Database\Connection $connection
    *   The database connection service.
-   * @param \Drupal\custom_components\Services\EntityHelper $entity_helper
+   * @param \Drupal\drupal_kit\Services\EntityHelper $entity_helper
    *   The entity helper service.
    * @param \Drupal\Core\Path\PathMatcherInterface $path_matcher
    *   The path matcher service.
@@ -204,7 +204,7 @@ abstract class DisplayBase extends ExtraFieldDisplayBase implements ContainerFac
       $container->get('entity.repository'),
       $container->get('config.factory'),
       $container->get('database'),
-      $container->get('custom_components.entity_helper'),
+      $container->get('drupal_kit.entity_helper'),
       $container->get('path.matcher'),
       $container->get('request_stack'),
       $container->get('transliteration'),

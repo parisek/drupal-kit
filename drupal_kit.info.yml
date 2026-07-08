@@ -1,6 +1,6 @@
-name: "Component: Global"
+name: "Drupal Kit"
 type: module
-description: "Component blocks"
+description: "Shared PORTA component infrastructure: services, base classes, Twig extensions, image resizer."
 core_version_requirement: ^10 || ^11
 package: "PORTA"
 

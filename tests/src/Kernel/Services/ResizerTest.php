@@ -1,9 +1,9 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\ResizerKernelTestBase;
-use Drupal\custom_components\Services\Resizer;
+use Drupal\Tests\drupal_kit\Kernel\ResizerKernelTestBase;
+use Drupal\drupal_kit\Services\Resizer;
 
 /**
  * Kernel tests for the Resizer service.
@@ -11,8 +11,8 @@ use Drupal\custom_components\Services\Resizer;
  * Resizer::resizer is the public static entry point; tests assert on
  * its observable output, not internal helper methods.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\Resizer
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\Resizer
+ * @group drupal_kit
  */
 class ResizerTest extends ResizerKernelTestBase {
 

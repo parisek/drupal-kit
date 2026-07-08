@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\EntityHelperKernelTestBase;
+use Drupal\Tests\drupal_kit\Kernel\EntityHelperKernelTestBase;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
@@ -11,8 +11,8 @@ use Drupal\system\Entity\Menu;
 /**
  * Behavioral tests for EntityHelper::getMenu against a real menu API.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\EntityHelper
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\EntityHelper
+ * @group drupal_kit
  */
 class EntityHelperMenuTest extends EntityHelperKernelTestBase {
 
@@ -20,7 +20,7 @@ class EntityHelperMenuTest extends EntityHelperKernelTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'menu_link_content',

@@ -2,13 +2,13 @@
 
 /**
  * @file
- * Install, update and uninstall functions for Custom Components.
+ * Install, update and uninstall functions for Drupal Kit.
  */
 
 /**
  * Implements hook_requirements().
  */
-function custom_components_requirements($phase): array {
+function drupal_kit_requirements($phase): array {
   $requirements = [];
 
   if ($phase !== 'runtime') {
@@ -24,14 +24,14 @@ function custom_components_requirements($phase): array {
   // gap must be visible on the status report.
   if (\Drupal::languageManager()->isMultilingual()) {
     $available = \Drupal::hasService('menu.language_tree_manipulator');
-    $requirements['custom_components_language_tree_manipulator'] = [
-      'title' => t('Custom Components: menu language filtering'),
+    $requirements['drupal_kit_language_tree_manipulator'] = [
+      'title' => t('Drupal Kit: menu language filtering'),
       'value' => $available ? t('Available') : t('Not available'),
       'severity' => $available ? REQUIREMENT_OK : REQUIREMENT_WARNING,
     ];
     if (!$available) {
-      $requirements['custom_components_language_tree_manipulator']['description'] = t(
-        'The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Custom Components are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=":url">issue #2466553</a>.',
+      $requirements['drupal_kit_language_tree_manipulator']['description'] = t(
+        'The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=":url">issue #2466553</a>.',
         [':url' => 'https://www.drupal.org/project/drupal/issues/2466553'],
       );
     }

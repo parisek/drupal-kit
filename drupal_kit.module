@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains custom_components.module.
+ * Contains drupal_kit.module.
  */
 
 use Drupal\Core\Url;
@@ -17,20 +17,20 @@ use Drupal\Core\Language\LanguageInterface;
 /**
  * Implements hook_module_implements_alter().
  */
-function custom_components_module_implements_alter(&$implementations, $hook) {
+function drupal_kit_module_implements_alter(&$implementations, $hook) {
   // Added to modify weight of form_alter execution
   // http://drupal.stackexchange.com/questions/99980/how-do-i-set-locale-settings-fieldset-in-the-user-profile-form-to-uncollapsi.
   if ($hook == 'form_alter') {
-    $group = $implementations['custom_components'];
-    unset($implementations['custom_components']);
-    $implementations['custom_components'] = $group;
+    $group = $implementations['drupal_kit'];
+    unset($implementations['drupal_kit']);
+    $implementations['drupal_kit'] = $group;
   }
 }
 
 /**
  * Implements hook_page_attachments_alter().
  */
-function custom_components_page_attachments_alter(array &$page) {
+function drupal_kit_page_attachments_alter(array &$page) {
 
   $langcode = \Drupal::languageManager()->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
   $route_name = \Drupal::routeMatch()->getRouteName();
@@ -67,12 +67,12 @@ function custom_components_page_attachments_alter(array &$page) {
 /**
  * Implements hook_form_alter().
  */
-function custom_components_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+function drupal_kit_form_alter(&$form, FormStateInterface $form_state, $form_id) {
 
   if (in_array($form_id, ['block_form', 'layout_builder_add_block', 'layout_builder_update_block'])) {
     if (isset($form['settings']['provider'])) {
       $provider = $form['settings']['provider']['#value'];
-      if (strpos($provider, 'custom_components') !== FALSE) {
+      if (strpos($provider, 'drupal_kit') !== FALSE) {
         $form['settings']['label_display']['#default_value'] = FALSE;
         $form['settings']['label_display']['#access'] = FALSE;
         $form['settings']['label']['#access'] = FALSE;
@@ -112,7 +112,7 @@ function custom_components_form_alter(&$form, FormStateInterface $form_state, $f
 /**
  * Implements hook_file_download().
  */
-function custom_components_file_download($uri) {
+function drupal_kit_file_download($uri) {
   if (Drupal::currentUser()->isAnonymous()) {
     $response = new RedirectResponse('/user/login');
     $response->send();
@@ -122,7 +122,7 @@ function custom_components_file_download($uri) {
 /**
  * Implements hook_theme().
  */
-function custom_components_theme() {
+function drupal_kit_theme() {
   return [
     'custom_component' => [
       'base hook' => 'custom_component',

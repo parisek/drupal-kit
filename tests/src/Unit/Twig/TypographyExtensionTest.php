@@ -1,19 +1,19 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Twig;
+namespace Drupal\Tests\drupal_kit\Unit\Twig;
 
 use Drupal\Core\Extension\ExtensionPathResolver;
 use Drupal\Core\Theme\ActiveTheme;
 use Drupal\Core\Theme\ThemeManagerInterface;
-use Drupal\custom_components\Twig\TypographyExtension;
+use Drupal\drupal_kit\Twig\TypographyExtension;
 use PHPUnit\Framework\TestCase;
 use Twig\TwigFilter;
 
 /**
  * Tests for the Drupal-side TypographyExtension wrapper.
  *
- * @coversDefaultClass \Drupal\custom_components\Twig\TypographyExtension
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Twig\TypographyExtension
+ * @group drupal_kit
  */
 class TypographyExtensionTest extends TestCase {
 
@@ -43,7 +43,7 @@ class TypographyExtensionTest extends TestCase {
   protected function setUp(): void {
     parent::setUp();
 
-    $this->tmpDir = sys_get_temp_dir() . '/custom_components_test_' . uniqid();
+    $this->tmpDir = sys_get_temp_dir() . '/drupal_kit_test_' . uniqid();
     mkdir($this->tmpDir . '/static', 0777, TRUE);
 
     $this->themeManager = $this->createMock(ThemeManagerInterface::class);

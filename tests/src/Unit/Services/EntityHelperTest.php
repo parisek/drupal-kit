@@ -1,12 +1,12 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Services;
+namespace Drupal\Tests\drupal_kit\Unit\Services;
 
 use Drupal\office_hours\OfficeHoursDateHelper;
-use Drupal\custom_components\Services\EntityHelper;
-use Drupal\custom_components\Services\MediaArrayBuilder;
-use Drupal\custom_components\Services\MenuTreeBuilder;
-use Drupal\custom_components\Services\TaxonomyTreeBuilder;
+use Drupal\drupal_kit\Services\EntityHelper;
+use Drupal\drupal_kit\Services\MediaArrayBuilder;
+use Drupal\drupal_kit\Services\MenuTreeBuilder;
+use Drupal\drupal_kit\Services\TaxonomyTreeBuilder;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\ContentEntityInterface;
@@ -28,7 +28,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Image\ImageFactory;
 use Drupal\Core\Url;
-use Drupal\custom_components\Services\MenuActiveTrailResolver;
+use Drupal\drupal_kit\Services\MenuActiveTrailResolver;
 use Drupal\node\NodeInterface;
 use Drupal\taxonomy\TermInterface;
 use Drupal\taxonomy\TermStorageInterface;
@@ -42,8 +42,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * Tests for the EntityHelper service.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\EntityHelper
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\EntityHelper
+ * @group drupal_kit
  */
 class EntityHelperTest extends TestCase {
 
@@ -1022,7 +1022,7 @@ class EntityHelperTest extends TestCase {
    * @param array $methods
    *   Methods to mock.
    *
-   * @return \Drupal\custom_components\Services\EntityHelper|\PHPUnit\Framework\MockObject\MockObject
+   * @return \Drupal\drupal_kit\Services\EntityHelper|\PHPUnit\Framework\MockObject\MockObject
    *   The partial mock.
    */
   protected function createPartialHelper(array $methods) {

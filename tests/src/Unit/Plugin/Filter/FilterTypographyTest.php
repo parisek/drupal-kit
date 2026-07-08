@@ -1,30 +1,30 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Plugin\Filter;
+namespace Drupal\Tests\drupal_kit\Unit\Plugin\Filter;
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\custom_components\Plugin\Filter\FilterTypography;
-use Drupal\custom_components\Twig\TypographyExtension;
+use Drupal\drupal_kit\Plugin\Filter\FilterTypography;
+use Drupal\drupal_kit\Twig\TypographyExtension;
 use Drupal\filter\FilterProcessResult;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Plugin\Filter\FilterTypography
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Plugin\Filter\FilterTypography
+ * @group drupal_kit
  */
 class FilterTypographyTest extends TestCase {
 
   /**
    * Mocked typography extension, stubbed to pass text through unchanged.
    *
-   * @var \Drupal\custom_components\Twig\TypographyExtension
+   * @var \Drupal\drupal_kit\Twig\TypographyExtension
    */
   protected TypographyExtension $typography;
 
   /**
    * The filter plugin instance under test.
    *
-   * @var \Drupal\custom_components\Plugin\Filter\FilterTypography
+   * @var \Drupal\drupal_kit\Plugin\Filter\FilterTypography
    */
   protected FilterTypography $filter;
 
@@ -43,7 +43,7 @@ class FilterTypographyTest extends TestCase {
     $this->filter = new FilterTypography(
       [],
       'filter_typography',
-      ['provider' => 'custom_components'],
+      ['provider' => 'drupal_kit'],
       $this->typography,
     );
   }
@@ -69,7 +69,7 @@ class FilterTypographyTest extends TestCase {
     $filter = new FilterTypography(
       [],
       'filter_typography',
-      ['provider' => 'custom_components'],
+      ['provider' => 'drupal_kit'],
       $typography,
     );
 
@@ -130,10 +130,10 @@ class FilterTypographyTest extends TestCase {
     $container = $this->createMock(ContainerInterface::class);
     $container->expects($this->once())
       ->method('get')
-      ->with('custom_components.typography_twig_extension')
+      ->with('drupal_kit.typography_twig_extension')
       ->willReturn($typography);
 
-    $instance = FilterTypography::create($container, [], 'filter_typography_plugin', ['provider' => 'custom_components']);
+    $instance = FilterTypography::create($container, [], 'filter_typography_plugin', ['provider' => 'drupal_kit']);
 
     $this->assertInstanceOf(FilterTypography::class, $instance);
   }

@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel;
+namespace Drupal\Tests\drupal_kit\Kernel;
 
-use Drupal\custom_components\ComponentBase;
+use Drupal\drupal_kit\ComponentBase;
 
 /**
  * Minimal concrete ComponentBase subclass for kernel tests.

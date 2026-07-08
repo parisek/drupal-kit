@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\custom_components\Plugin\Filter;
+namespace Drupal\drupal_kit\Plugin\Filter;
 
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;

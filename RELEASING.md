@@ -75,7 +75,7 @@ The dry run should offer `vX.Y.Z`. Consumers pin `"parisek/drupal-kit": "^X.Y"`.
 
   ```json
   "repositories": {
-      "custom_components": {
+      "drupal_kit": {
           "type": "vcs",
           "url": "https://github.com/parisek/drupal-kit.git"
       }
@@ -133,12 +133,12 @@ The bump type (MAJOR / MINOR / PATCH) is determined by whether the change touche
 
 ### Service IDs and their public methods
 
-Everything registered in `custom_components.services.yml` that consumers fetch from the container or receive via autowiring: `custom_components.entity_helper`, `custom_components.menu_tree_builder`, `custom_components.taxonomy_tree_builder`, `custom_components.media_array_builder`, `custom_components.menu_active_trail_resolver`, `custom_components.twig_extension`, `custom_components.typography_twig_extension` — plus every `public` method on those classes.
+Everything registered in `drupal_kit.services.yml` that consumers fetch from the container or receive via autowiring: `drupal_kit.entity_helper`, `drupal_kit.menu_tree_builder`, `drupal_kit.taxonomy_tree_builder`, `drupal_kit.media_array_builder`, `drupal_kit.menu_active_trail_resolver`, `drupal_kit.twig_extension`, `drupal_kit.typography_twig_extension` — plus every `public` method on those classes.
 
 - **Adding** a service or public method → MINOR
 - **Renaming/removing** a service ID or public method → MAJOR
 - **Changing a public method signature** breakingly → MAJOR; adding a trailing optional parameter → MINOR
-- **Constructor signatures are NOT public API** as long as `custom_components.services.yml` is updated in the same commit — the container owns the wiring. A consumer subclassing a service and calling `parent::__construct()` is on unsupported ground.
+- **Constructor signatures are NOT public API** as long as `drupal_kit.services.yml` is updated in the same commit — the container owns the wiring. A consumer subclassing a service and calling `parent::__construct()` is on unsupported ground.
 
 ### Base classes for consumer plugins
 

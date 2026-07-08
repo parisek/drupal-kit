@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Services;
+namespace Drupal\Tests\drupal_kit\Unit\Services;
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\Context\CacheContextsManager;
@@ -10,8 +10,8 @@ use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
 use Drupal\Core\Menu\MenuTreeParameters;
-use Drupal\custom_components\Services\MenuActiveTrailResolver;
-use Drupal\custom_components\Services\MenuTreeBuilder;
+use Drupal\drupal_kit\Services\MenuActiveTrailResolver;
+use Drupal\drupal_kit\Services\MenuTreeBuilder;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -22,8 +22,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * EntityHelperMenuTest kernel test continues to assert the same
  * public contract.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\MenuTreeBuilder
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\MenuTreeBuilder
+ * @group drupal_kit
  */
 class MenuTreeBuilderTest extends TestCase {
 
@@ -37,7 +37,7 @@ class MenuTreeBuilderTest extends TestCase {
   /**
    * Mocked active trail resolver, stubbed to return no active trail.
    *
-   * @var \Drupal\custom_components\Services\MenuActiveTrailResolver
+   * @var \Drupal\drupal_kit\Services\MenuActiveTrailResolver
    */
   protected MenuActiveTrailResolver $activeTrailResolver;
 

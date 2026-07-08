@@ -1,9 +1,9 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\ResizerKernelTestBase;
-use Drupal\custom_components\Services\Resizer;
+use Drupal\Tests\drupal_kit\Kernel\ResizerKernelTestBase;
+use Drupal\drupal_kit\Services\Resizer;
 
 /**
  * Resizer coverage with the focal_point module enabled.
@@ -15,8 +15,8 @@ use Drupal\custom_components\Services\Resizer;
  * addCropEffect's `focal_point_scale_and_crop` path + the
  * getFocalPointHash helper.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\Resizer
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\Resizer
+ * @group drupal_kit
  */
 class ResizerFocalPointKernelTest extends ResizerKernelTestBase {
 
@@ -26,7 +26,7 @@ class ResizerFocalPointKernelTest extends ResizerKernelTestBase {
    * Focal_point + crop on top of the base ResizerKernelTestBase set.
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'file',

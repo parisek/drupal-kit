@@ -1,12 +1,12 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\EntityHelperFieldsKernelTestBase;
+use Drupal\Tests\drupal_kit\Kernel\EntityHelperFieldsKernelTestBase;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Services\EntityHelper
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\EntityHelper
+ * @group drupal_kit
  */
 class EntityHelperLinkFieldsKernelTest extends EntityHelperFieldsKernelTestBase {
 
@@ -14,7 +14,7 @@ class EntityHelperLinkFieldsKernelTest extends EntityHelperFieldsKernelTestBase 
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'field',

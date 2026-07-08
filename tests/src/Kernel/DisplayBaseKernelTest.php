@@ -1,11 +1,11 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel;
+namespace Drupal\Tests\drupal_kit\Kernel;
 
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\KernelTests\KernelTestBase;
-use Drupal\custom_components\DisplayBase;
-use Drupal\custom_components\Services\EntityHelper;
+use Drupal\drupal_kit\DisplayBase;
+use Drupal\drupal_kit\Services\EntityHelper;
 
 /**
  * Kernel-level tests for DisplayBase's __call delegation.
@@ -16,8 +16,8 @@ use Drupal\custom_components\Services\EntityHelper;
  * to the injected EntityHelper. v1.3.0 #35 covered ComponentBase form
  * API; #47 finishes the pair by covering DisplayBase's delegation.
  *
- * @coversDefaultClass \Drupal\custom_components\DisplayBase
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\DisplayBase
+ * @group drupal_kit
  */
 class DisplayBaseKernelTest extends KernelTestBase {
 
@@ -25,7 +25,7 @@ class DisplayBaseKernelTest extends KernelTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'block',
@@ -99,7 +99,7 @@ class DisplayBaseKernelTest extends KernelTestBase {
     return new class(
       [],
       'kernel_display_stub',
-      ['provider' => 'custom_components'],
+      ['provider' => 'drupal_kit'],
       $this->container->get('entity_type.manager'),
       $this->container->get('current_route_match'),
       $this->container->get('language_manager'),

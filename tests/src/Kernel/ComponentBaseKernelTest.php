@@ -1,10 +1,10 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel;
+namespace Drupal\Tests\drupal_kit\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\KernelTests\KernelTestBase;
-use Drupal\custom_components\ComponentBase;
+use Drupal\drupal_kit\ComponentBase;
 
 /**
  * Kernel-level tests for ComponentBase form API methods.
@@ -15,8 +15,8 @@ use Drupal\custom_components\ComponentBase;
  * These kernel tests use a real Drupal\Core\Form\FormState instance to
  * verify the build + submit cycle against the real implementation.
  *
- * @coversDefaultClass \Drupal\custom_components\ComponentBase
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\ComponentBase
+ * @group drupal_kit
  */
 class ComponentBaseKernelTest extends KernelTestBase {
 
@@ -24,7 +24,7 @@ class ComponentBaseKernelTest extends KernelTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'block',
@@ -104,7 +104,7 @@ class ComponentBaseKernelTest extends KernelTestBase {
    *
    * The container factory wires six services into the plugin
    * constructor: entity type manager, current route match, language
-   * manager, entity repository, config factory, and the custom_components
+   * manager, entity repository, config factory, and the drupal_kit
    * entity helper. We assert on the resulting instance shape (and on
    * subsequent buildConfigurationForm working) rather than peeking at
    * the private props directly — that keeps the test resilient to
@@ -120,7 +120,7 @@ class ComponentBaseKernelTest extends KernelTestBase {
       $this->container,
       [],
       'kernel_stub_create',
-      ['provider' => 'custom_components', 'admin_label' => 'Stub'],
+      ['provider' => 'drupal_kit', 'admin_label' => 'Stub'],
     );
 
     $this->assertInstanceOf(ComponentBaseStub::class, $instance);
@@ -151,13 +151,13 @@ class ComponentBaseKernelTest extends KernelTestBase {
     return new class(
       [],
       'kernel_stub',
-      ['provider' => 'custom_components', 'admin_label' => 'Stub'],
+      ['provider' => 'drupal_kit', 'admin_label' => 'Stub'],
       $this->container->get('entity_type.manager'),
       $this->container->get('current_route_match'),
       $this->container->get('language_manager'),
       $this->container->get('entity.repository'),
       $this->container->get('config.factory'),
-      $this->container->get('custom_components.entity_helper'),
+      $this->container->get('drupal_kit.entity_helper'),
     ) extends ComponentBase {
 
       /**

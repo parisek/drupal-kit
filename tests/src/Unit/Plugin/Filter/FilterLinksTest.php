@@ -1,24 +1,24 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Plugin\Filter;
+namespace Drupal\Tests\drupal_kit\Unit\Plugin\Filter;
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\custom_components\Plugin\Filter\FilterLinks;
+use Drupal\drupal_kit\Plugin\Filter\FilterLinks;
 use Drupal\filter\FilterProcessResult;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Plugin\Filter\FilterLinks
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Plugin\Filter\FilterLinks
+ * @group drupal_kit
  */
 class FilterLinksTest extends TestCase {
 
   /**
    * The filter plugin instance under test.
    *
-   * @var \Drupal\custom_components\Plugin\Filter\FilterLinks
+   * @var \Drupal\drupal_kit\Plugin\Filter\FilterLinks
    */
   protected FilterLinks $filter;
 
@@ -35,7 +35,7 @@ class FilterLinksTest extends TestCase {
     $this->filter = new FilterLinks(
       [],
       'filter_links',
-      ['provider' => 'custom_components'],
+      ['provider' => 'drupal_kit'],
       $stack,
     );
   }
@@ -117,7 +117,7 @@ class FilterLinksTest extends TestCase {
       ->with('request_stack')
       ->willReturn($stack);
 
-    $filter = FilterLinks::create($container, [], 'filter_links', ['provider' => 'custom_components']);
+    $filter = FilterLinks::create($container, [], 'filter_links', ['provider' => 'drupal_kit']);
     $this->assertInstanceOf(FilterLinks::class, $filter);
 
     // Smoke test: the injected stack is what the filter uses for host

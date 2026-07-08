@@ -1,9 +1,9 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit;
+namespace Drupal\Tests\drupal_kit\Unit;
 
-use Drupal\custom_components\DisplayBase;
-use Drupal\custom_components\Services\EntityHelper;
+use Drupal\drupal_kit\DisplayBase;
+use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -19,8 +19,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * Tests for the DisplayBase abstract class.
  *
- * @coversDefaultClass \Drupal\custom_components\DisplayBase
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\DisplayBase
+ * @group drupal_kit
  */
 class DisplayBaseTest extends TestCase {
 

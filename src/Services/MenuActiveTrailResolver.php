@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\custom_components\Services;
+namespace Drupal\drupal_kit\Services;
 
 use Drupal\Core\Breadcrumb\BreadcrumbBuilderInterface;
 use Drupal\Core\Cache\CacheableMetadata;

@@ -1,16 +1,16 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Routing;
+namespace Drupal\Tests\drupal_kit\Unit\Routing;
 
 use Drupal\Core\Routing\RoutingEvents;
-use Drupal\custom_components\Routing\RouteSubscriber;
+use Drupal\drupal_kit\Routing\RouteSubscriber;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Routing\RouteSubscriber
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Routing\RouteSubscriber
+ * @group drupal_kit
  */
 class RouteSubscriberTest extends TestCase {
 

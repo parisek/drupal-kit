@@ -4,7 +4,7 @@ Project instructions for AI coding assistants (Claude Code, Codex CLI, Cursor, C
 
 ## Overview
 
-`parisek/drupal-kit` is a Drupal module providing shared infrastructure (services, base classes, Twig extensions, image resizer) for sites built on the PORTA component pattern. Ships as a Composer package; consumers `composer require` + `drush en custom_components`.
+`parisek/drupal-kit` is a Drupal module providing shared infrastructure (services, base classes, Twig extensions, image resizer) for sites built on the PORTA component pattern. Ships as a Composer package; consumers `composer require` + `drush en drupal_kit`.
 
 Surface: `EntityHelper` facade (entity loading + field formatting), `MediaArrayBuilder` (Media/File array shapes), `MenuTreeBuilder` / `TaxonomyTreeBuilder` / `MenuActiveTrailResolver` (tree services), `Resizer` (static image variant builder), `ComponentBase` / `DisplayBase` (component plugins), `TwigExtension` / `TypographyExtension`, text-format filters.
 

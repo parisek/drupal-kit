@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Services;
+namespace Drupal\Tests\drupal_kit\Unit\Services;
 
-use Drupal\custom_components\Services\Resizer;
+use Drupal\drupal_kit\Services\Resizer;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -12,8 +12,8 @@ use PHPUnit\Framework\TestCase;
  * These tests cover input validation and SVG passthrough paths that
  * don't require a full Drupal bootstrap.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\Resizer
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\Resizer
+ * @group drupal_kit
  */
 class ResizerTest extends TestCase {
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Services;
+namespace Drupal\Tests\drupal_kit\Unit\Services;
 
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -15,11 +15,11 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\custom_components\Services\EntityHelper;
-use Drupal\custom_components\Services\MediaArrayBuilder;
-use Drupal\custom_components\Services\MenuActiveTrailResolver;
-use Drupal\custom_components\Services\MenuTreeBuilder;
-use Drupal\custom_components\Services\TaxonomyTreeBuilder;
+use Drupal\drupal_kit\Services\EntityHelper;
+use Drupal\drupal_kit\Services\MediaArrayBuilder;
+use Drupal\drupal_kit\Services\MenuActiveTrailResolver;
+use Drupal\drupal_kit\Services\MenuTreeBuilder;
+use Drupal\drupal_kit\Services\TaxonomyTreeBuilder;
 use Drupal\file\FileInterface;
 use Drupal\media\MediaInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -33,8 +33,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * the dispatch wiring (right method, right args). All real logic lives
  * in MediaArrayBuilder and is covered by its kernel tests.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\EntityHelper
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\EntityHelper
+ * @group drupal_kit
  */
 class EntityHelperGenerateDispatchTest extends TestCase {
 
@@ -46,7 +46,7 @@ class EntityHelperGenerateDispatchTest extends TestCase {
   /**
    * Mocked MediaArrayBuilder — the only dependency this suite exercises.
    *
-   * @var \Drupal\custom_components\Services\MediaArrayBuilder&\PHPUnit\Framework\MockObject\MockObject
+   * @var \Drupal\drupal_kit\Services\MediaArrayBuilder&\PHPUnit\Framework\MockObject\MockObject
    */
   protected MockObject $builder;
 

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ruleset name="custom_components">
+<ruleset name="drupal_kit">
   <description>Drupal coding standards for parisek/drupal-kit.</description>
 
   <file>src</file>
   <file>tests</file>
-  <file>custom_components.install</file>
-  <file>custom_components.module</file>
+  <file>drupal_kit.install</file>
+  <file>drupal_kit.module</file>
 
   <arg name="extensions" value="php,module,install,inc"/>
   <arg name="report-width" value="120"/>

@@ -1,10 +1,10 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel;
+namespace Drupal\Tests\drupal_kit\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\Tests\media\Traits\MediaTypeCreationTrait;
-use Drupal\custom_components\Services\MediaArrayBuilder;
+use Drupal\drupal_kit\Services\MediaArrayBuilder;
 use Drupal\file\Entity\File;
 use Drupal\image\Entity\ImageStyle;
 use Drupal\media\Entity\Media;
@@ -21,7 +21,7 @@ use Drupal\media\Entity\Media;
  * the heavy ones (SVG file, image style for transform tests) are not
  * built unconditionally to keep test setup cost down.
  *
- * @group custom_components
+ * @group drupal_kit
  */
 abstract class MediaArrayBuilderKernelTestBase extends KernelTestBase {
 
@@ -31,7 +31,7 @@ abstract class MediaArrayBuilderKernelTestBase extends KernelTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'file',
@@ -59,7 +59,7 @@ abstract class MediaArrayBuilderKernelTestBase extends KernelTestBase {
     $this->installEntitySchema('media');
     $this->installSchema('file', ['file_usage']);
 
-    $this->builder = $this->container->get('custom_components.media_array_builder');
+    $this->builder = $this->container->get('drupal_kit.media_array_builder');
   }
 
   /**

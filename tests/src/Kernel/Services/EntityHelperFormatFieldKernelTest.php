@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\EntityHelperFieldsKernelTestBase;
+use Drupal\Tests\drupal_kit\Kernel\EntityHelperFieldsKernelTestBase;
 
 /**
  * Behavioral tests for EntityHelper::formatField polymorphic dispatch.
@@ -13,8 +13,8 @@ use Drupal\Tests\custom_components\Kernel\EntityHelperFieldsKernelTestBase;
  * EntityHelperTest::testFormatField* — those verify mock-call shape;
  * these verify the real getter is reached for each declared type.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\EntityHelper
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\EntityHelper
+ * @group drupal_kit
  */
 class EntityHelperFormatFieldKernelTest extends EntityHelperFieldsKernelTestBase {
 
@@ -22,7 +22,7 @@ class EntityHelperFormatFieldKernelTest extends EntityHelperFieldsKernelTestBase
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'field',

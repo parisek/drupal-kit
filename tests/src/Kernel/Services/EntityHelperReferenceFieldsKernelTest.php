@@ -1,14 +1,14 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\EntityHelperFieldsKernelTestBase;
+use Drupal\Tests\drupal_kit\Kernel\EntityHelperFieldsKernelTestBase;
 use Drupal\taxonomy\Entity\Term;
 use Drupal\taxonomy\Entity\Vocabulary;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Services\EntityHelper
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\EntityHelper
+ * @group drupal_kit
  */
 class EntityHelperReferenceFieldsKernelTest extends EntityHelperFieldsKernelTestBase {
 
@@ -16,7 +16,7 @@ class EntityHelperReferenceFieldsKernelTest extends EntityHelperFieldsKernelTest
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'field',

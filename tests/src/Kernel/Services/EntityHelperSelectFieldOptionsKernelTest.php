@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\EntityHelperFieldsKernelTestBase;
+use Drupal\Tests\drupal_kit\Kernel\EntityHelperFieldsKernelTestBase;
 
 /**
  * Behavioural coverage for EntityHelper::getSelectFieldOptions.
@@ -11,8 +11,8 @@ use Drupal\Tests\custom_components\Kernel\EntityHelperFieldsKernelTestBase;
  * config via the config factory. Verified end-to-end through the real
  * field + config stack rather than mocked.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\EntityHelper
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\EntityHelper
+ * @group drupal_kit
  */
 class EntityHelperSelectFieldOptionsKernelTest extends EntityHelperFieldsKernelTestBase {
 
@@ -20,7 +20,7 @@ class EntityHelperSelectFieldOptionsKernelTest extends EntityHelperFieldsKernelT
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'field',

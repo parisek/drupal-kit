@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit;
+namespace Drupal\Tests\drupal_kit\Unit;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityRepositoryInterface;
@@ -8,8 +8,8 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\custom_components\ComponentBase;
-use Drupal\custom_components\Services\EntityHelper;
+use Drupal\drupal_kit\ComponentBase;
+use Drupal\drupal_kit\Services\EntityHelper;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -22,8 +22,8 @@ use PHPUnit\Framework\TestCase;
  * constructor wiring, configuration defaults, and configuration save
  * logic via direct method invocation on a stub subclass.
  *
- * @coversDefaultClass \Drupal\custom_components\ComponentBase
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\ComponentBase
+ * @group drupal_kit
  */
 class ComponentBaseTest extends TestCase {
 
@@ -110,7 +110,7 @@ class ComponentBaseTest extends TestCase {
     return new class(
       [],
       'component_base_stub',
-      ['provider' => 'custom_components', 'admin_label' => 'Stub'],
+      ['provider' => 'drupal_kit', 'admin_label' => 'Stub'],
       $entityTypeManager ?? $this->createMock(EntityTypeManagerInterface::class),
       $routeMatch ?? $this->createMock(RouteMatchInterface::class),
       $languageManager ?? $this->createMock(LanguageManagerInterface::class),

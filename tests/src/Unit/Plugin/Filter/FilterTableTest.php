@@ -1,21 +1,21 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Plugin\Filter;
+namespace Drupal\Tests\drupal_kit\Unit\Plugin\Filter;
 
-use Drupal\custom_components\Plugin\Filter\FilterTable;
+use Drupal\drupal_kit\Plugin\Filter\FilterTable;
 use Drupal\filter\FilterProcessResult;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Plugin\Filter\FilterTable
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Plugin\Filter\FilterTable
+ * @group drupal_kit
  */
 class FilterTableTest extends TestCase {
 
   /**
    * The filter plugin instance under test.
    *
-   * @var \Drupal\custom_components\Plugin\Filter\FilterTable
+   * @var \Drupal\drupal_kit\Plugin\Filter\FilterTable
    */
   protected FilterTable $filter;
 
@@ -24,7 +24,7 @@ class FilterTableTest extends TestCase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->filter = new FilterTable([], 'filter_table', ['provider' => 'custom_components']);
+    $this->filter = new FilterTable([], 'filter_table', ['provider' => 'drupal_kit']);
   }
 
   /**

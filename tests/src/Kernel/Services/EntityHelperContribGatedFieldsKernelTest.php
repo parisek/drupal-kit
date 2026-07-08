@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\EntityHelperFieldsKernelTestBase;
+use Drupal\Tests\drupal_kit\Kernel\EntityHelperFieldsKernelTestBase;
 
 /**
  * Behavioral tests for EntityHelper's contrib-gated field getters.
@@ -16,8 +16,8 @@ use Drupal\Tests\custom_components\Kernel\EntityHelperFieldsKernelTestBase;
  * the path automatically the moment the consumer installs the contrib
  * module.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\EntityHelper
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\EntityHelper
+ * @group drupal_kit
  */
 class EntityHelperContribGatedFieldsKernelTest extends EntityHelperFieldsKernelTestBase {
 
@@ -149,7 +149,7 @@ class EntityHelperContribGatedFieldsKernelTest extends EntityHelperFieldsKernelT
       ));
     }
     // Re-read entityHelper from the rebuilt container.
-    $this->entityHelper = $this->container->get('custom_components.entity_helper');
+    $this->entityHelper = $this->container->get('drupal_kit.entity_helper');
   }
 
 }

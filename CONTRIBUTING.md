@@ -1,4 +1,4 @@
-# Contributing to custom_components
+# Contributing to drupal_kit
 
 ## Running tests locally
 
@@ -9,7 +9,7 @@ composer install
 scripts/dev-link-module.sh
 ```
 
-The script handles three things: creates the `web/{profiles,sites,themes,libraries,modules/contrib}` directory structure that Drupal's bootstrap scans, bridges `web/autoload.php` to `vendor/autoload.php` (drupal/core 11.3.x stopped shipping that file), and symlinks every top-level module file into `web/modules/contrib/custom_components/` via `find -maxdepth 1` so new files (a future `*.routing.yml`, `config/`, etc.) are picked up without a script edit.
+The script handles three things: creates the `web/{profiles,sites,themes,libraries,modules/contrib}` directory structure that Drupal's bootstrap scans, bridges `web/autoload.php` to `vendor/autoload.php` (drupal/core 11.3.x stopped shipping that file), and symlinks every top-level module file into `web/modules/contrib/drupal_kit/` via `find -maxdepth 1` so new files (a future `*.routing.yml`, `config/`, etc.) are picked up without a script edit.
 
 After setup:
 
@@ -46,11 +46,11 @@ When unsure, write a unit test first with mocks. If the mocks balloon beyond ~3 
 
 ### Adding a kernel test
 
-1. Extend `Drupal\Tests\custom_components\Kernel\EntityHelperKernelTestBase` if the test exercises `EntityHelper`. Otherwise extend `KernelTestBase` directly.
+1. Extend `Drupal\Tests\drupal_kit\Kernel\EntityHelperKernelTestBase` if the test exercises `EntityHelper`. Otherwise extend `KernelTestBase` directly.
 2. Add the modules you need to `protected static $modules`.
 3. In `setUp()`, call `parent::setUp()` first, then `installEntitySchema()` for each entity type. **Order matters** — entity types with `revision_user` (taxonomy_term, menu_link_content) need `user` installed first.
 4. Avoid `installConfig(['module'])` unless you actually need the default config — it triggers strict schema validation that may fail on minimal stacks.
-5. Use the `@group custom_components` annotation so the test is selectable by group.
+5. Use the `@group drupal_kit` annotation so the test is selectable by group.
 
 ### Adding a unit test
 

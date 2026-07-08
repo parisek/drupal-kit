@@ -1,15 +1,15 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\MediaArrayBuilderKernelTestBase;
+use Drupal\Tests\drupal_kit\Kernel\MediaArrayBuilderKernelTestBase;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\media\Entity\Media;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Services\MediaArrayBuilder
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\MediaArrayBuilder
+ * @group drupal_kit
  *
  * Tests the no-resolver fallback of buildRemoteVideo() with real
  * entities. The media type uses the `file` source plugin (offline,
@@ -84,7 +84,7 @@ class MediaArrayBuilderRemoteVideoFallbackTest extends MediaArrayBuilderKernelTe
    * @covers ::buildRemoteVideo
    */
   public function testNoResolverFallbackMatchesEntityHelperResolver(): void {
-    $entity_helper = $this->container->get('custom_components.entity_helper');
+    $entity_helper = $this->container->get('drupal_kit.entity_helper');
 
     $with_resolver = $this->builder->buildRemoteVideo(
       $this->media,

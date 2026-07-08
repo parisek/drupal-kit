@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel;
+namespace Drupal\Tests\drupal_kit\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\file\Entity\File;
@@ -13,7 +13,7 @@ use Drupal\file\Entity\File;
  * \Drupal::moduleHandler(), and reads files from public://, so a real
  * kernel container is required.
  *
- * @group custom_components
+ * @group drupal_kit
  */
 abstract class ResizerKernelTestBase extends KernelTestBase {
 
@@ -21,7 +21,7 @@ abstract class ResizerKernelTestBase extends KernelTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'file',

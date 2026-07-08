@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\custom_components\Services;
+namespace Drupal\drupal_kit\Services;
 
 use Drupal\commerce_product\Entity\ProductInterface;
 use Drupal\office_hours\OfficeHoursDateHelper;

@@ -1,9 +1,9 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel;
+namespace Drupal\Tests\drupal_kit\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
-use Drupal\custom_components\Services\EntityHelper;
+use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\Node;
@@ -16,7 +16,7 @@ use Drupal\node\Entity\NodeType;
  * needs in its own setUp() — the per-test-type module additions
  * (link, datetime, image, file, taxonomy, …) plug in via $modules.
  *
- * @group custom_components
+ * @group drupal_kit
  */
 abstract class EntityHelperFieldsKernelTestBase extends KernelTestBase {
 
@@ -24,7 +24,7 @@ abstract class EntityHelperFieldsKernelTestBase extends KernelTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'field',
@@ -53,7 +53,7 @@ abstract class EntityHelperFieldsKernelTestBase extends KernelTestBase {
       'name' => 'Test Article',
     ])->save();
 
-    $this->entityHelper = $this->container->get('custom_components.entity_helper');
+    $this->entityHelper = $this->container->get('drupal_kit.entity_helper');
   }
 
   /**

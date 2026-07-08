@@ -1,9 +1,9 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel;
+namespace Drupal\Tests\drupal_kit\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
-use Drupal\custom_components\Services\EntityHelper;
+use Drupal\drupal_kit\Services\EntityHelper;
 
 /**
  * Shared base for EntityHelper kernel tests.
@@ -18,14 +18,14 @@ use Drupal\custom_components\Services\EntityHelper;
  * behavioral source of truth that #6's MediaArrayBuilder /
  * MenuTreeBuilder / TaxonomyTreeBuilder extraction is checked against.
  *
- * @group custom_components
+ * @group drupal_kit
  */
 abstract class EntityHelperKernelTestBase extends KernelTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['custom_components'];
+  protected static $modules = ['drupal_kit'];
 
   /**
    * The EntityHelper service under test.
@@ -37,7 +37,7 @@ abstract class EntityHelperKernelTestBase extends KernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->entityHelper = $this->container->get('custom_components.entity_helper');
+    $this->entityHelper = $this->container->get('drupal_kit.entity_helper');
   }
 
 }

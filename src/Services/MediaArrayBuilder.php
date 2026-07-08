@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\custom_components\Services;
+namespace Drupal\drupal_kit\Services;
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
@@ -229,7 +229,7 @@ class MediaArrayBuilder {
       else {
         $images[] = $legacy_image;
         if (!empty($image_style)) {
-          $this->loggerFactory->get('custom_components')->notice(
+          $this->loggerFactory->get('drupal_kit')->notice(
             'Missing image style @style',
             ['@style' => $image_style],
           );
@@ -271,7 +271,7 @@ class MediaArrayBuilder {
       else {
         $images[] = $legacy_image;
         if (!empty($image_style)) {
-          $this->loggerFactory->get('custom_components')->notice(
+          $this->loggerFactory->get('drupal_kit')->notice(
             'Missing image style @style',
             ['@style' => $image_style],
           );
@@ -323,7 +323,7 @@ class MediaArrayBuilder {
    * unreadable files or absent dimension data.
    */
   public function getSvgViewBoxDimensions(string $uri): ?array {
-    $cid = 'custom_components:entity:svg:' . md5($uri);
+    $cid = 'drupal_kit:entity:svg:' . md5($uri);
     $cache = $this->cache->get($cid);
     if ($cache) {
       return $cache->data;

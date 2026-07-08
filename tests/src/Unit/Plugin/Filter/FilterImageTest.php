@@ -1,21 +1,21 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Plugin\Filter;
+namespace Drupal\Tests\drupal_kit\Unit\Plugin\Filter;
 
-use Drupal\custom_components\Plugin\Filter\FilterImage;
+use Drupal\drupal_kit\Plugin\Filter\FilterImage;
 use Drupal\filter\FilterProcessResult;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Plugin\Filter\FilterImage
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Plugin\Filter\FilterImage
+ * @group drupal_kit
  */
 class FilterImageTest extends TestCase {
 
   /**
    * The filter plugin instance under test.
    *
-   * @var \Drupal\custom_components\Plugin\Filter\FilterImage
+   * @var \Drupal\drupal_kit\Plugin\Filter\FilterImage
    */
   protected FilterImage $filter;
 
@@ -24,7 +24,7 @@ class FilterImageTest extends TestCase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->filter = new FilterImage([], 'filter_image', ['provider' => 'custom_components']);
+    $this->filter = new FilterImage([], 'filter_image', ['provider' => 'drupal_kit']);
   }
 
   /**

@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel;
+namespace Drupal\Tests\drupal_kit\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
 
@@ -13,22 +13,22 @@ use Drupal\KernelTests\KernelTestBase;
  * in-memory. Deliberately does NOT instantiate EntityHelper — that has 15
  * dependencies and would couple this smoke test to issue #4 fixtures.
  *
- * @group custom_components
+ * @group drupal_kit
  */
 class SmokeTest extends KernelTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['custom_components'];
+  protected static $modules = ['drupal_kit'];
 
   /**
    * The module is discoverable and enabled in the kernel container.
    */
   public function testModuleIsEnabled(): void {
     $this->assertTrue(
-      $this->container->get('module_handler')->moduleExists('custom_components'),
-      'custom_components module is enabled in the kernel container.',
+      $this->container->get('module_handler')->moduleExists('drupal_kit'),
+      'drupal_kit module is enabled in the kernel container.',
     );
   }
 

@@ -1,12 +1,12 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\EntityHelperMediaFieldsKernelTestBase;
+use Drupal\Tests\drupal_kit\Kernel\EntityHelperMediaFieldsKernelTestBase;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Services\EntityHelper
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\EntityHelper
+ * @group drupal_kit
  */
 class EntityHelperFileFieldKernelTest extends EntityHelperMediaFieldsKernelTestBase {
 

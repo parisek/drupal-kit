@@ -1,20 +1,20 @@
 services:
-  custom_components.route_subscriber:
-    class: Drupal\custom_components\Routing\RouteSubscriber
+  drupal_kit.route_subscriber:
+    class: Drupal\drupal_kit\Routing\RouteSubscriber
     tags:
       - { name: event_subscriber }
-  custom_components.twig_extension:
+  drupal_kit.twig_extension:
     arguments: ["@date.formatter", "@language_manager", "@string_translation"]
-    class: Drupal\custom_components\TwigExtension
+    class: Drupal\drupal_kit\TwigExtension
     tags:
       - { name: twig.extension }
-  custom_components.typography_twig_extension:
-    class: Drupal\custom_components\Twig\TypographyExtension
+  drupal_kit.typography_twig_extension:
+    class: Drupal\drupal_kit\Twig\TypographyExtension
     arguments: ["@theme.manager", "@extension.path.resolver", "%app.root%"]
     tags:
       - { name: twig.extension }
-  custom_components.entity_helper:
-    class: Drupal\custom_components\Services\EntityHelper
+  drupal_kit.entity_helper:
+    class: Drupal\drupal_kit\Services\EntityHelper
     arguments:
       [
         "@entity_type.manager",
@@ -31,40 +31,40 @@ services:
         "@date.formatter",
         "@image.factory",
         "@request_stack",
-        "@custom_components.menu_active_trail_resolver",
-        "@custom_components.taxonomy_tree_builder",
-        "@custom_components.menu_tree_builder",
-        "@custom_components.media_array_builder",
+        "@drupal_kit.menu_active_trail_resolver",
+        "@drupal_kit.taxonomy_tree_builder",
+        "@drupal_kit.menu_tree_builder",
+        "@drupal_kit.media_array_builder",
       ]
-  custom_components.taxonomy_tree_builder:
-    class: Drupal\custom_components\Services\TaxonomyTreeBuilder
+  drupal_kit.taxonomy_tree_builder:
+    class: Drupal\drupal_kit\Services\TaxonomyTreeBuilder
     arguments:
       - "@entity_type.manager"
       - "@language_manager"
-  custom_components.menu_tree_builder:
-    class: Drupal\custom_components\Services\MenuTreeBuilder
+  drupal_kit.menu_tree_builder:
+    class: Drupal\drupal_kit\Services\MenuTreeBuilder
     arguments:
       - "@menu.link_tree"
-      - "@custom_components.menu_active_trail_resolver"
+      - "@drupal_kit.menu_active_trail_resolver"
       - "@language_manager"
       - "@entity_type.manager"
       - "@request_stack"
       # Optional — Drupal core patch (drupal.org#2466553) provides it.
       # NULL when patch is absent; filter is skipped silently.
       - "@?menu.language_tree_manipulator"
-  custom_components.media_array_builder:
-    class: Drupal\custom_components\Services\MediaArrayBuilder
+  drupal_kit.media_array_builder:
+    class: Drupal\drupal_kit\Services\MediaArrayBuilder
     arguments:
       - "@language_manager"
       - "@image.factory"
       - "@logger.factory"
       - "@cache.default"
       - "@file_url_generator"
-  # custom_components.resizer was removed in v1.4.0. Resizer is
-  # a static utility — call \Drupal\custom_components\Services\Resizer::resizer()
+  # drupal_kit.resizer was removed in v1.4.0. Resizer is
+  # a static utility — call \Drupal\drupal_kit\Services\Resizer::resizer()
   # directly. TwigExtension::getResizer does this.
-  custom_components.menu_active_trail_resolver:
-    class: Drupal\custom_components\Services\MenuActiveTrailResolver
+  drupal_kit.menu_active_trail_resolver:
+    class: Drupal\drupal_kit\Services\MenuActiveTrailResolver
     arguments:
       - "@menu.active_trail"
       - "@plugin.manager.menu.link"

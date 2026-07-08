@@ -1,10 +1,10 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\KernelTests\KernelTestBase;
-use Drupal\custom_components\Services\MenuTreeBuilder;
+use Drupal\drupal_kit\Services\MenuTreeBuilder;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
@@ -19,8 +19,8 @@ use Drupal\system\Entity\Menu;
  * MenuTreeBuilder coverage directly so the report reflects actual
  * branch coverage rather than facade-pass-through.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\MenuTreeBuilder
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\MenuTreeBuilder
+ * @group drupal_kit
  */
 class MenuTreeBuilderKernelTest extends KernelTestBase {
 
@@ -28,7 +28,7 @@ class MenuTreeBuilderKernelTest extends KernelTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'menu_link_content',
@@ -52,7 +52,7 @@ class MenuTreeBuilderKernelTest extends KernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('menu_link_content');
 
-    $this->builder = $this->container->get('custom_components.menu_tree_builder');
+    $this->builder = $this->container->get('drupal_kit.menu_tree_builder');
   }
 
   /**

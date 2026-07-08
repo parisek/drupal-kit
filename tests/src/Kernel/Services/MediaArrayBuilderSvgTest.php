@@ -1,13 +1,13 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\MediaArrayBuilderKernelTestBase;
+use Drupal\Tests\drupal_kit\Kernel\MediaArrayBuilderKernelTestBase;
 use Drupal\media\Entity\Media;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Services\MediaArrayBuilder
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\MediaArrayBuilder
+ * @group drupal_kit
  */
 class MediaArrayBuilderSvgTest extends MediaArrayBuilderKernelTestBase {
 

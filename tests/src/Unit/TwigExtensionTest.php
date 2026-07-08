@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit;
+namespace Drupal\Tests\drupal_kit\Unit;
 
-use Drupal\custom_components\TwigExtension;
+use Drupal\drupal_kit\TwigExtension;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Language\LanguageInterface;
@@ -17,8 +17,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * Tests for the TwigExtension.
  *
- * @coversDefaultClass \Drupal\custom_components\TwigExtension
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\TwigExtension
+ * @group drupal_kit
  */
 class TwigExtensionTest extends TestCase {
 
@@ -267,7 +267,7 @@ class TwigExtensionTest extends TestCase {
    * @covers ::getName
    */
   public function testGetNameIsTheServiceId(): void {
-    $this->assertSame('custom_components.twig_extension', $this->twigExtension->getName());
+    $this->assertSame('drupal_kit.twig_extension', $this->twigExtension->getName());
   }
 
   /**

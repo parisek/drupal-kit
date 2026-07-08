@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\custom_components;
+namespace Drupal\drupal_kit;
 
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Form\FormStateInterface;
@@ -68,7 +68,7 @@ abstract class ComponentBase extends BlockBase implements ContainerFactoryPlugin
   /**
    * The entity helper service.
    *
-   * @var \Drupal\custom_components\Services\EntityHelper
+   * @var \Drupal\drupal_kit\Services\EntityHelper
    */
   protected $entityHelper;
 
@@ -91,7 +91,7 @@ abstract class ComponentBase extends BlockBase implements ContainerFactoryPlugin
    *   The entity repository service.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory service.
-   * @param \Drupal\custom_components\Services\EntityHelper $entity_helper
+   * @param \Drupal\drupal_kit\Services\EntityHelper $entity_helper
    *   The entity helper service.
    */
   public function __construct(
@@ -130,7 +130,7 @@ abstract class ComponentBase extends BlockBase implements ContainerFactoryPlugin
       $container->get('language_manager'),
       $container->get('entity.repository'),
       $container->get('config.factory'),
-      $container->get('custom_components.entity_helper')
+      $container->get('drupal_kit.entity_helper')
     );
   }
 

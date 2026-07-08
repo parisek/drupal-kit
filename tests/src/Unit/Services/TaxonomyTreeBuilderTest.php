@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Services;
+namespace Drupal\Tests\drupal_kit\Unit\Services;
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -8,7 +8,7 @@ use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Url;
-use Drupal\custom_components\Services\TaxonomyTreeBuilder;
+use Drupal\drupal_kit\Services\TaxonomyTreeBuilder;
 use Drupal\taxonomy\TermInterface;
 use Drupal\taxonomy\TermStorageInterface;
 use PHPUnit\Framework\TestCase;
@@ -21,8 +21,8 @@ use PHPUnit\Framework\TestCase;
  * from EntityHelper; the kernel test EntityHelperTaxonomyTest
  * continues to assert on the same public contract end-to-end.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\TaxonomyTreeBuilder
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\TaxonomyTreeBuilder
+ * @group drupal_kit
  */
 class TaxonomyTreeBuilderTest extends TestCase {
 
@@ -43,7 +43,7 @@ class TaxonomyTreeBuilderTest extends TestCase {
   /**
    * The TaxonomyTreeBuilder under test.
    *
-   * @var \Drupal\custom_components\Services\TaxonomyTreeBuilder
+   * @var \Drupal\drupal_kit\Services\TaxonomyTreeBuilder
    */
   protected TaxonomyTreeBuilder $builder;
 

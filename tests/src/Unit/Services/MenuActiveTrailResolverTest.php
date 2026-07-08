@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Services;
+namespace Drupal\Tests\drupal_kit\Unit\Services;
 
 use Drupal\Core\Breadcrumb\Breadcrumb;
 use Drupal\Core\Breadcrumb\BreadcrumbBuilderInterface;
@@ -13,14 +13,14 @@ use Drupal\Core\Menu\MenuLinkInterface;
 use Drupal\Core\Menu\MenuLinkManagerInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Url;
-use Drupal\custom_components\Services\MenuActiveTrailResolver;
+use Drupal\drupal_kit\Services\MenuActiveTrailResolver;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Tests for the MenuActiveTrailResolver service.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\MenuActiveTrailResolver
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\MenuActiveTrailResolver
+ * @group drupal_kit
  */
 class MenuActiveTrailResolverTest extends TestCase {
 

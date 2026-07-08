@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Services;
+namespace Drupal\Tests\drupal_kit\Unit\Services;
 
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Cache\Context\CacheContextsManager;
@@ -17,11 +17,11 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\custom_components\Services\EntityHelper;
-use Drupal\custom_components\Services\MediaArrayBuilder;
-use Drupal\custom_components\Services\MenuActiveTrailResolver;
-use Drupal\custom_components\Services\MenuTreeBuilder;
-use Drupal\custom_components\Services\TaxonomyTreeBuilder;
+use Drupal\drupal_kit\Services\EntityHelper;
+use Drupal\drupal_kit\Services\MediaArrayBuilder;
+use Drupal\drupal_kit\Services\MenuActiveTrailResolver;
+use Drupal\drupal_kit\Services\MenuTreeBuilder;
+use Drupal\drupal_kit\Services\TaxonomyTreeBuilder;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -36,8 +36,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
  *   MediaArrayBuilder (real parsing is exercised by
  *   MediaArrayBuilderSvgTest).
  *
- * @coversDefaultClass \Drupal\custom_components\Services\EntityHelper
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\EntityHelper
+ * @group drupal_kit
  */
 class EntityHelperCacheAndSvgFacadeTest extends TestCase {
 
@@ -49,7 +49,7 @@ class EntityHelperCacheAndSvgFacadeTest extends TestCase {
   /**
    * Mocked MediaArrayBuilder for the SVG facade test.
    *
-   * @var \Drupal\custom_components\Services\MediaArrayBuilder&MockObject
+   * @var \Drupal\drupal_kit\Services\MediaArrayBuilder&MockObject
    */
   protected MockObject $builder;
 

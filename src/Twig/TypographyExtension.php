@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\custom_components\Twig;
+namespace Drupal\drupal_kit\Twig;
 
 use Drupal\Core\Extension\ExtensionPathResolver;
 use Drupal\Core\Theme\ThemeManagerInterface;

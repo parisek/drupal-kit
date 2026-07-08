@@ -1,13 +1,13 @@
 <?php
 
-namespace Drupal\custom_components;
+namespace Drupal\drupal_kit;
 
 use Twig\Extension\AbstractExtension;
 use Twig\Environment;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 use Drupal\Core\Locale\CountryManager;
-use Drupal\custom_components\Services\Resizer;
+use Drupal\drupal_kit\Services\Resizer;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
@@ -171,7 +171,7 @@ class TwigExtension extends AbstractExtension {
    * Gets a unique identifier for this Twig extension.
    */
   public function getName() {
-    return 'custom_components.twig_extension';
+    return 'drupal_kit.twig_extension';
   }
 
   /**
@@ -404,7 +404,7 @@ class TwigExtension extends AbstractExtension {
    * Generate resizer formats.
    *
    * Direct static call — Resizer is a static utility (no instance state,
-   * no constructor deps). The `custom_components.resizer` service entry
+   * no constructor deps). The `drupal_kit.resizer` service entry
    * was removed in v1.4.0.
    */
   public static function getResizer($image, ...$variants) {

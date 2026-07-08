@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel;
+namespace Drupal\Tests\drupal_kit\Kernel;
 
 use Drupal\Tests\media\Traits\MediaTypeCreationTrait;
 use Drupal\file\Entity\File;
@@ -13,7 +13,7 @@ use Drupal\media\Entity\Media;
  * EntityHelperFieldsKernelTestBase with the PNG + Media entity helpers
  * from MediaArrayBuilderKernelTestBase.
  *
- * @group custom_components
+ * @group drupal_kit
  */
 abstract class EntityHelperMediaFieldsKernelTestBase extends EntityHelperFieldsKernelTestBase {
 
@@ -23,7 +23,7 @@ abstract class EntityHelperMediaFieldsKernelTestBase extends EntityHelperFieldsK
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'field',

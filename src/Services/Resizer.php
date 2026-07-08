@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\custom_components\Services;
+namespace Drupal\drupal_kit\Services;
 
 use Drupal\file\FileInterface;
 use Drupal\image\Entity\ImageStyle;

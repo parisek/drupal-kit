@@ -1,21 +1,21 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Unit\Plugin\Filter;
+namespace Drupal\Tests\drupal_kit\Unit\Plugin\Filter;
 
-use Drupal\custom_components\Plugin\Filter\FilterYoutube;
+use Drupal\drupal_kit\Plugin\Filter\FilterYoutube;
 use Drupal\filter\FilterProcessResult;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @coversDefaultClass \Drupal\custom_components\Plugin\Filter\FilterYoutube
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Plugin\Filter\FilterYoutube
+ * @group drupal_kit
  */
 class FilterYoutubeTest extends TestCase {
 
   /**
    * The filter plugin instance under test.
    *
-   * @var \Drupal\custom_components\Plugin\Filter\FilterYoutube
+   * @var \Drupal\drupal_kit\Plugin\Filter\FilterYoutube
    */
   protected FilterYoutube $filter;
 
@@ -24,7 +24,7 @@ class FilterYoutubeTest extends TestCase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->filter = new FilterYoutube([], 'filter_youtube', ['provider' => 'custom_components']);
+    $this->filter = new FilterYoutube([], 'filter_youtube', ['provider' => 'drupal_kit']);
   }
 
   /**

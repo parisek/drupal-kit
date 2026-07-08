@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\Tests\custom_components\Kernel\Services;
+namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Tests\custom_components\Kernel\EntityHelperFieldsKernelTestBase;
+use Drupal\Tests\drupal_kit\Kernel\EntityHelperFieldsKernelTestBase;
 use Drupal\language\Entity\ConfigurableLanguage;
 
 /**
@@ -16,8 +16,8 @@ use Drupal\language\Entity\ConfigurableLanguage;
  * original-only config on the next, so the langcode argument was
  * silently ignored.
  *
- * @coversDefaultClass \Drupal\custom_components\Services\EntityHelper
- * @group custom_components
+ * @coversDefaultClass \Drupal\drupal_kit\Services\EntityHelper
+ * @group drupal_kit
  */
 class EntityHelperSelectFieldOptionsLanguageOverrideKernelTest extends EntityHelperFieldsKernelTestBase {
 
@@ -25,7 +25,7 @@ class EntityHelperSelectFieldOptionsLanguageOverrideKernelTest extends EntityHel
    * {@inheritdoc}
    */
   protected static $modules = [
-    'custom_components',
+    'drupal_kit',
     'system',
     'user',
     'field',
