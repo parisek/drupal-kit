@@ -1,5 +1,7 @@
 # Drupal Kit
 
+[![Packagist Version](https://img.shields.io/packagist/v/parisek/drupal-kit)](https://packagist.org/packages/parisek/drupal-kit)
+[![Packagist Downloads](https://img.shields.io/packagist/dt/parisek/drupal-kit)](https://packagist.org/packages/parisek/drupal-kit/stats)
 [![CI](https://github.com/parisek/drupal-kit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/parisek/drupal-kit/actions/workflows/ci.yml)
 [![Drupal](https://img.shields.io/badge/Drupal-10%20%7C%2011-0678BE?logo=drupal&logoColor=white)](https://www.drupal.org)
 [![PHPStan](https://img.shields.io/badge/PHPStan-level%208-2ecc40)](https://phpstan.org/)
@@ -9,6 +11,15 @@
 `parisek/drupal-kit` — base library module for [Drupal](https://www.drupal.org) sites built on the **PORTA** component pattern. Provides shared infrastructure (services, base classes, [Twig](https://twig.symfony.com/) extensions, image resizer) reused across projects. The [Drupal](https://www.drupal.org) counterpart of [`parisek/timber-kit`](https://github.com/parisek/timber-kit) (WordPress).
 
 Requires [PHP 8.3+](https://www.php.net/releases/8.3/) and [Drupal](https://www.drupal.org/about/10) 10 or 11.
+
+## Installation
+
+Published on [Packagist](https://packagist.org/packages/parisek/drupal-kit):
+
+```bash
+composer require parisek/drupal-kit
+drush en drupal_kit
+```
 
 ## What this module provides
 
@@ -109,7 +120,7 @@ DDEV is the canonical local environment, but the repo doesn't hard-depend on it 
 
 ## Releasing
 
-Tag-driven; the package is consumed straight from GitHub via a `vcs` repository entry (no Packagist). Version bumps follow Conventional Commits, the public-API surface and deprecation lifecycle are defined in [RELEASING.md](RELEASING.md) — read it before tagging.
+Tag-driven; published on [Packagist](https://packagist.org/packages/parisek/drupal-kit), which syncs tags automatically via the GitHub webhook. Version bumps follow Conventional Commits, the public-API surface and deprecation lifecycle are defined in [RELEASING.md](RELEASING.md) — read it before tagging.
 
 **Distribution scope:** `composer require` ships only the module files, `src/`, `templates/`, `composer.json`, `LICENSE` and `README.md` — everything development-only is `export-ignore`d in `.gitattributes`.
 
