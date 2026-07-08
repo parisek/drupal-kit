@@ -4,6 +4,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+- **Docs: Packagist is the distribution channel** — the package is now published as [`parisek/drupal-kit` on Packagist](https://packagist.org/packages/parisek/drupal-kit) with the GitHub auto-sync webhook. README gains Packagist version + downloads badges and an Installation section (`composer require parisek/drupal-kit`); RELEASING.md drops the `vcs` repository entry instructions in favour of a Packagist sync-verification step and documents that the auto-created GitHub release must not be duplicated manually. Tags up to v1.6.0 predate the package name and are skipped by Packagist — consumers of 1.x keep the old `vcs` route.
+
 ## [2.0.0] — 2026-07-08
 
 ### Changed

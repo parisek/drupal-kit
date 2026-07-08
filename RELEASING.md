@@ -1,6 +1,6 @@
 # Releasing `parisek/drupal-kit`
 
-Tag-driven release flow. The package is **not** on Packagist — consumers install it from the GitHub repo via a `vcs` repository entry in their `composer.json`, so Composer reads git tags directly from GitHub. No registry upload of any kind.
+Tag-driven release flow — the package is published on [Packagist](https://packagist.org/packages/parisek/drupal-kit) and Composer reads git tags via Packagist's auto-sync webhook. No manual registry upload.
 
 ## Prerequisites
 
@@ -46,11 +46,11 @@ git tag -a vX.Y.Z -m "vX.Y.Z: <one-line summary>"
 git push origin vX.Y.Z
 ```
 
-`-a` (annotated) is **mandatory** — lightweight tags lack the metadata Composer's VCS driver and GitHub's release UI expect. Use the actual `main` HEAD; never tag a feature branch.
+`-a` (annotated) is **mandatory** — lightweight tags lack the metadata Composer's VCS driver, Packagist and GitHub's release UI expect. Use the actual `main` HEAD; never tag a feature branch.
 
 ### 4. GitHub release
 
-Create a GitHub Release from the tag with notes derived from the matching CHANGELOG section (automated by `.github/workflows/release.yml` once that lands; until then):
+`.github/workflows/release.yml` fires automatically on the tag push, derives release notes from the matching CHANGELOG section + the PR list between tags, and marks the release Latest only when it's the highest semver. **Don't run `gh release create` manually** unless the workflow fails — you'd get a 422 conflict. If it does fail, check the Actions log and re-run it, or create the release by hand:
 
 ```bash
 gh release create vX.Y.Z --repo parisek/drupal-kit \
@@ -58,36 +58,27 @@ gh release create vX.Y.Z --repo parisek/drupal-kit \
   --notes "$(<release-notes.md)"
 ```
 
-### 5. Verify consumer resolution
-
-There is no registry sync to wait for — the tag is consumable the moment it's pushed. Verify from any consumer project (its `composer.json` must carry the `vcs` repository entry):
+### 5. Verify Packagist sync (~30s after tag push)
 
 ```bash
-composer update parisek/drupal-kit --dry-run
+sleep 30
+curl -s https://repo.packagist.org/p2/parisek/drupal-kit.json \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['packages']['parisek/drupal-kit'][0]['version'])"
 ```
 
-The dry run should offer `vX.Y.Z`. Consumers pin `"parisek/drupal-kit": "^X.Y"`.
+Should print `vX.Y.Z`. If not, check the [package page](https://packagist.org/packages/parisek/drupal-kit) "Last update" — if it lags more than a few minutes, the GitHub → Packagist webhook may be misconfigured.
 
 ### 6. Bump consumer projects
 
 - `drupal-base` and downstream Drupal sites (htdvere, …): `composer update parisek/drupal-kit` within the existing `^X.Y` constraint, or `composer require parisek/drupal-kit:^X.Y` on a minor/major jump.
-- Each consumer needs the repository entry once:
-
-  ```json
-  "repositories": {
-      "drupal_kit": {
-          "type": "vcs",
-          "url": "https://github.com/parisek/drupal-kit.git"
-      }
-  }
-  ```
+- Consumers that still carry the pre-Packagist `vcs` repository entry for this package should drop it — the package resolves from Packagist now. (Tags up to v1.6.0 are only reachable via the old `vcs` route; they predate the `parisek/drupal-kit` name, so Packagist skips them.)
 
 ## Gotchas
 
 - **Tag at the head of `main`.** Tagging a feature branch's HEAD before merge ships unmerged code. Always `git checkout main && git pull` first.
 - **Composer's `^X.Y` is permissive.** `^1.5` accepts `1.5.0` through anything below `2.0.0` — a constraint written before the actual tag is known still works, but write `^X.Y` matching the actual minor for clarity.
-- **Always annotated tags (`-a`).** Lightweight tags degrade version metadata for the VCS driver and GitHub releases.
-- **Don't reuse a tag number.** Consumers' Composer caches and lock files may already reference the old object; force-updating a pushed tag produces split-brain installs. Bump the patch instead.
+- **Always annotated tags (`-a`).** Lightweight tags degrade version metadata for Packagist and GitHub releases.
+- **Don't reuse a tag number that's already on Packagist.** Force-updating a synced tag won't refresh Packagist's cache, and consumers' Composer caches and lock files may already reference the old object — split-brain installs. Bump the patch instead.
 - **`[Unreleased]` must exist before tagging.** Future changes need a landing spot. Re-create it the moment you rename the previous one.
 - **No `composer.lock` in this repo — deliberate.** CI resolves fresh dependencies every run, which surfaces dependency drift early (that is how the `symfony/runtime` allow-plugins break was caught). Don't "fix" a red CI by committing a lock; fix the underlying drift.
 
