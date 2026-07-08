@@ -71,7 +71,7 @@ Should print `vX.Y.Z`. If not, check the [package page](https://packagist.org/pa
 ### 6. Bump consumer projects
 
 - `drupal-base` and downstream Drupal sites (htdvere, …): `composer update parisek/drupal-kit` within the existing `^X.Y` constraint, or `composer require parisek/drupal-kit:^X.Y` on a minor/major jump.
-- Consumers that still carry the pre-Packagist `vcs` repository entry for this package should drop it — the package resolves from Packagist now. (Tags up to v1.6.0 are only reachable via the old `vcs` route; they predate the `parisek/drupal-kit` name, so Packagist skips them.)
+- Consumers that still carry the pre-Packagist `vcs` repository entry for this package should drop it — the package resolves from Packagist now. Packagist serves every tag (including 1.x) under the canonical `parisek/drupal-kit` name regardless of the `parisek/custom-components` name inside the old tags' `composer.json`; note that 1.x still installs with the old `custom_components` machine name and the `drupal-custom-module` install path.
 
 ## Gotchas
 
