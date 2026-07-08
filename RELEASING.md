@@ -1,4 +1,4 @@
-# Releasing `parisek/custom-components`
+# Releasing `parisek/drupal-kit`
 
 Tag-driven release flow. The package is **not** on Packagist — consumers install it from the GitHub repo via a `vcs` repository entry in their `composer.json`, so Composer reads git tags directly from GitHub. No registry upload of any kind.
 
@@ -53,7 +53,7 @@ git push origin vX.Y.Z
 Create a GitHub Release from the tag with notes derived from the matching CHANGELOG section (automated by `.github/workflows/release.yml` once that lands; until then):
 
 ```bash
-gh release create vX.Y.Z --repo parisek/custom-components \
+gh release create vX.Y.Z --repo parisek/drupal-kit \
   --title "vX.Y.Z — <one-line summary>" \
   --notes "$(<release-notes.md)"
 ```
@@ -63,21 +63,21 @@ gh release create vX.Y.Z --repo parisek/custom-components \
 There is no registry sync to wait for — the tag is consumable the moment it's pushed. Verify from any consumer project (its `composer.json` must carry the `vcs` repository entry):
 
 ```bash
-composer update parisek/custom-components --dry-run
+composer update parisek/drupal-kit --dry-run
 ```
 
-The dry run should offer `vX.Y.Z`. Consumers pin `"parisek/custom-components": "^X.Y"`.
+The dry run should offer `vX.Y.Z`. Consumers pin `"parisek/drupal-kit": "^X.Y"`.
 
 ### 6. Bump consumer projects
 
-- `drupal-base` and downstream Drupal sites (htdvere, …): `composer update parisek/custom-components` within the existing `^X.Y` constraint, or `composer require parisek/custom-components:^X.Y` on a minor/major jump.
+- `drupal-base` and downstream Drupal sites (htdvere, …): `composer update parisek/drupal-kit` within the existing `^X.Y` constraint, or `composer require parisek/drupal-kit:^X.Y` on a minor/major jump.
 - Each consumer needs the repository entry once:
 
   ```json
   "repositories": {
       "custom_components": {
           "type": "vcs",
-          "url": "https://github.com/parisek/custom-components.git"
+          "url": "https://github.com/parisek/drupal-kit.git"
       }
   }
   ```

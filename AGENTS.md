@@ -4,14 +4,14 @@ Project instructions for AI coding assistants (Claude Code, Codex CLI, Cursor, C
 
 ## Overview
 
-`parisek/custom-components` is a Drupal module providing shared infrastructure (services, base classes, Twig extensions, image resizer) for sites built on the PORTA component pattern. Ships as a Composer package; consumers `composer require` + `drush en custom_components`.
+`parisek/drupal-kit` is a Drupal module providing shared infrastructure (services, base classes, Twig extensions, image resizer) for sites built on the PORTA component pattern. Ships as a Composer package; consumers `composer require` + `drush en custom_components`.
 
 Surface: `EntityHelper` facade (entity loading + field formatting), `MediaArrayBuilder` (Media/File array shapes), `MenuTreeBuilder` / `TaxonomyTreeBuilder` / `MenuActiveTrailResolver` (tree services), `Resizer` (static image variant builder), `ComponentBase` / `DisplayBase` (component plugins), `TwigExtension` / `TypographyExtension`, text-format filters.
 
 ## Configuration
 
 ```yaml
-PACKAGE_NAME: "parisek/custom-components"
+PACKAGE_NAME: "parisek/drupal-kit"
 PHP_REQUIRES: ">=8.3"
 DRUPAL_REQUIRES: "^10 || ^11"
 TESTS_DIR: "tests"
@@ -100,7 +100,7 @@ gh api graphql -f query='
       }
     }
   }
-' -F owner=parisek -F repo=custom-components -F number=N
+' -F owner=parisek -F repo=drupal-kit -F number=N
 
 # Resolve a thread (REST has no equivalent).
 gh api graphql -f query='

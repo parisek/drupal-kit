@@ -1,12 +1,12 @@
-# Custom Components
+# Drupal Kit
 
-[![CI](https://github.com/parisek/custom-components/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/parisek/custom-components/actions/workflows/ci.yml)
+[![CI](https://github.com/parisek/drupal-kit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/parisek/drupal-kit/actions/workflows/ci.yml)
 [![Drupal](https://img.shields.io/badge/Drupal-10%20%7C%2011-0678BE?logo=drupal&logoColor=white)](https://www.drupal.org)
-[![PHPStan](https://img.shields.io/badge/PHPStan-level%205-2ecc40)](https://phpstan.org/)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%208-2ecc40)](https://phpstan.org/)
 [![Coverage](https://img.shields.io/badge/Coverage-78%25-2ecc40)](.github/workflows/ci.yml)
 [![License: GPL-2.0-or-later](https://img.shields.io/badge/License-GPL--2.0--or--later-blue.svg)](https://spdx.org/licenses/GPL-2.0-or-later.html)
 
-Base library module for [Drupal](https://www.drupal.org) sites built on the **PORTA** component pattern. Provides shared infrastructure (services, base classes, [Twig](https://twig.symfony.com/) extensions, image resizer) reused across projects.
+`parisek/drupal-kit` — base library module for [Drupal](https://www.drupal.org) sites built on the **PORTA** component pattern. Provides shared infrastructure (services, base classes, [Twig](https://twig.symfony.com/) extensions, image resizer) reused across projects. The [Drupal](https://www.drupal.org) counterpart of [`parisek/timber-kit`](https://github.com/parisek/timber-kit) (WordPress).
 
 Requires [PHP 8.3+](https://www.php.net/releases/8.3/) and [Drupal](https://www.drupal.org/about/10) 10 or 11.
 
@@ -14,10 +14,13 @@ Requires [PHP 8.3+](https://www.php.net/releases/8.3/) and [Drupal](https://www.
 
 **Services**
 
-- `custom_components.entity_helper` — high-level entity loading and rendering helpers consumed by display plugins and Twig templates.
+- `custom_components.entity_helper` — high-level entity loading and rendering helpers consumed by display plugins and Twig templates. Facade over the three builders below.
+- `custom_components.media_array_builder` — builds the documented array shapes for Media and File entities (image, SVG, video, remote video, document, Lottie).
+- `custom_components.menu_tree_builder` — renders a menu into the documented item shape (active trail, `field_*` enrichment, subtree scoping via `params['root']`).
+- `custom_components.taxonomy_tree_builder` — builds nested taxonomy term trees.
 - `Drupal\custom_components\Services\Resizer` — static utility: image style + focal point + responsive variant generator. Call `Resizer::resizer($images, $variants)` directly.
 - `custom_components.menu_active_trail_resolver` — resolves the active menu trail accounting for entity references and aliases.
-- `custom_components.twig_extension` — registers Twig functions used by component templates.
+- `custom_components.twig_extension` — registers Twig functions used by component templates, including the typography-aware translation helpers `_xt` / `__t` / `_nt` / `_nxt` (translate, then pipe through `|typography`).
 - `custom_components.typography_twig_extension` — provides the `|typography` Twig filter; delegates to [`parisek/twig-typography`](https://github.com/parisek/twig-typography) and resolves typography config from `{active_theme}/static/typography.yml`.
 - `custom_components.route_subscriber` — alters routes for entity access edge cases.
 
@@ -56,7 +59,7 @@ Drupal core (enable via `drush en …`):
 
 Drupal core patches (apply via [`cweagans/composer-patches`](https://github.com/cweagans/composer-patches)):
 
-- [drupal.org#2466553](https://www.drupal.org/project/drupal/issues/2466553) — adds `menu.language_tree_manipulator` to Drupal core. When applied, `EntityHelper::getMenu()` filters menu links by the current content language. When absent, the filter step is silently skipped and menu items for all languages appear.
+- [drupal.org#2466553](https://www.drupal.org/project/drupal/issues/2466553) — adds `menu.language_tree_manipulator` to Drupal core. When applied, `EntityHelper::getMenu()` filters menu links by the current content language. When absent, the filter step is silently skipped and menu items for all languages appear — on multilingual sites the status report (`/admin/reports/status`) shows a warning so the gap is visible.
 
 ## Local development
 
@@ -114,6 +117,7 @@ Tag-driven; the package is consumed straight from GitHub via a `vcs` repository 
 
 Part of the **PORTA** ecosystem:
 
+- [`parisek/timber-kit`](https://github.com/parisek/timber-kit) — the WordPress counterpart: shared Timber/ACF infrastructure for PORTA themes.
 - [`parisek/twig-typography`](https://github.com/parisek/twig-typography) — framework-agnostic typography Twig extension that powers our `|typography` filter.
 
 ## License
