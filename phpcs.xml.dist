@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ruleset name="custom_components">
-  <description>Drupal coding standards for parisek/custom-components.</description>
+  <description>Drupal coding standards for parisek/drupal-kit.</description>
 
   <file>src</file>
   <file>tests</file>

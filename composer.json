@@ -1,8 +1,8 @@
 {
-    "name": "parisek/custom-components",
-    "description": "Provides functionality for components.",
+    "name": "parisek/drupal-kit",
+    "description": "Shared Drupal infrastructure for sites built on the PORTA component pattern: services, base classes, Twig extensions, image resizer.",
     "license": "GPL-2.0-or-later",
-    "type": "drupal-custom-module",
+    "type": "drupal-module",
     "require": {
         "php": ">=8.3",
         "drupal/components": "^3.2",

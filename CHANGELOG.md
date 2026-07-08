@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+- **BREAKING: package renamed `parisek/custom-components` → `parisek/drupal-kit`** — the GitHub repository moved to [parisek/drupal-kit](https://github.com/parisek/drupal-kit) (old URLs redirect) and `composer.json` `name` follows, mirroring the WordPress-side `parisek/timber-kit` naming. Existing installs must update their `composer.json` require entry (and, until the package lands on Packagist, the `vcs` repository URL). The Drupal module machine name stays `custom_components` in this change; it is renamed to `drupal_kit` separately before v2.0.0.
+- **BREAKING: Composer `type` changed `drupal-custom-module` → `drupal-module`** — the package is shared infrastructure distributed to multiple projects, not a site-local module, so `composer/installers` now places it in `web/modules/contrib/` instead of `web/modules/custom/`. Matches where the local dev symlink (`scripts/dev-link-module.sh`) and the kernel-test bootstrap already expected it.
+- **`composer.json` `description` rewritten** — from the placeholder "Provides functionality for components." to a sentence that describes the package for the Packagist search listing.
+- **README refreshed after 1.6.0** — PHPStan badge 5 → 8, CI badge points at the renamed repo, the Services list gains the three builders (`media_array_builder`, `menu_tree_builder`, `taxonomy_tree_builder`) and the `_xt` / `__t` / `_nt` / `_nxt` translation helpers, the core-patch note mentions the new status-report warning, and Related projects links `parisek/timber-kit`.
+
 ## [1.6.0] — 2026-07-07
 
 ### Added
