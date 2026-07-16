@@ -4,6 +4,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Fixed
+- **PHPStan drift: `DependencySerializationTrait` vs promoted `private readonly` plugin properties** — `FilterLinks` and `FilterTypography` injected their services as constructor-promoted `private readonly` properties; `FilterBase` carries `DependencySerializationTrait`, which supports neither private nor readonly properties ([#3110266](https://www.drupal.org/node/3110266)), and a newer `phpstan-drupal` rule now fails the analysis (4 errors) on every fresh install — exactly the drift the no-`composer.lock` policy (ADR 0001) is meant to surface. Both properties are now plain `protected`, with an inline comment explaining the constraint. Full suite (347 tests), PHPStan level 8 and phpcs green.
+
 ### Changed
 - **Docs: Packagist is the distribution channel** — the package is now published as [`parisek/drupal-kit` on Packagist](https://packagist.org/packages/parisek/drupal-kit) with the GitHub auto-sync webhook. README gains Packagist version + downloads badges and an Installation section (`composer require parisek/drupal-kit`); RELEASING.md drops the `vcs` repository entry instructions in favour of a Packagist sync-verification step and documents that the auto-created GitHub release must not be duplicated manually. Packagist serves every tag (including 1.x) under the canonical package name, so the `vcs` route is obsolete for all versions.
 

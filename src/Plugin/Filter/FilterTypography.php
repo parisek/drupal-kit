@@ -27,7 +27,10 @@ class FilterTypography extends FilterBase implements ContainerFactoryPluginInter
     array $configuration,
     $plugin_id,
     $plugin_definition,
-    private readonly TypographyExtension $typography,
+    // Not private/readonly: FilterBase carries
+    // DependencySerializationTrait, which supports neither
+    // (https://www.drupal.org/node/3110266).
+    protected TypographyExtension $typography,
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
   }

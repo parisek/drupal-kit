@@ -25,7 +25,10 @@ class FilterLinks extends FilterBase implements ContainerFactoryPluginInterface 
     array $configuration,
     $plugin_id,
     $plugin_definition,
-    private readonly RequestStack $requestStack,
+    // Not private/readonly: FilterBase carries
+    // DependencySerializationTrait, which supports neither
+    // (https://www.drupal.org/node/3110266).
+    protected RequestStack $requestStack,
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
   }
