@@ -81,6 +81,12 @@ path: the Drupal library rewrite. Weighed against that:
   `input: {app: 'src/main.js'}` emits `app.js` under the key `src/main.js` and
   the two basenames never meet. A library that outgrows one asset gets a
   logged warning rather than a silent half-rewrite.
+- The property is a declaration, not a discovery: `drupal_kit_vite_entry` on a
+  library whose asset is NOT that Vite entry will replace it with the manifest's
+  file. Nothing can verify the claim from the outside — the manifest records
+  inputs and outputs, not which library declared what — so the property means
+  "this asset IS that entry" and a wrong declaration is wrong the way a wrong
+  path in `js:` is wrong.
 - The resolved filename is cached with Drupal's library info, so a rebuilt
   bundle needs a cache rebuild before it is served — and a deploy that removes
   the previous hashed file serves 404s until then. `drush cr` after shipping

@@ -43,6 +43,13 @@ class ViteManifestTest extends TestCase {
   protected ?LoggerChannelFactoryInterface $logger = NULL;
 
   /**
+   * Extra fixture directories to remove in tearDown().
+   *
+   * @var string[]
+   */
+  protected array $extraDirs = [];
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -74,6 +81,12 @@ class ViteManifestTest extends TestCase {
       }
       @rmdir($this->tmpDir);
     }
+    foreach (array_reverse($this->extraDirs) as $dir) {
+      array_map('unlink', glob($dir . '/.vite/*') ?: []);
+      @rmdir($dir . '/.vite');
+      array_map('unlink', glob($dir . '/*') ?: []);
+      @rmdir($dir);
+    }
     if ($this->dotDir !== NULL && is_dir($this->dotDir)) {
       array_map('unlink', glob($this->dotDir . '/.vite/*') ?: []);
       @rmdir($this->dotDir . '/.vite');
@@ -82,7 +95,13 @@ class ViteManifestTest extends TestCase {
       @rmdir(dirname($this->dotDir));
     }
     if ($this->escapedDir !== NULL && is_dir($this->escapedDir)) {
-      array_map('unlink', glob($this->escapedDir . '/*') ?: []);
+      $it = new \RecursiveIteratorIterator(
+        new \RecursiveDirectoryIterator($this->escapedDir, \FilesystemIterator::SKIP_DOTS),
+        \RecursiveIteratorIterator::CHILD_FIRST,
+      );
+      foreach ($it as $item) {
+        $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
+      }
       @rmdir($this->escapedDir);
     }
     parent::tearDown();
@@ -199,10 +218,16 @@ class ViteManifestTest extends TestCase {
    * manifest sits beside its asset.
    */
   public function testLibraryWithoutOptInIsUntouched(): void {
+    // Everything a rewrite needs is in place EXCEPT the opt-in, so the
+    // assertion can only be explained by the opt-in guard. With the shared
+    // unrooted mock this passed even with that guard deleted, because
+    // extensionRoot() returned NULL long before it was reached.
+    $this->buildDistJs('script.BgkTswcn.min.js');
     $libraries = ['global' => ['js' => ['dist/js/script.js' => []]]];
     $before = $libraries;
-
-    $this->vite->alterLibraries($libraries, 'some_theme');
+    // Same library WITH the property is rewritten (asserted elsewhere), so
+    // the only difference here is the opt-in.
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
 
     $this->assertSame($before, $libraries);
   }
@@ -230,6 +255,26 @@ class ViteManifestTest extends TestCase {
     $factory = $this->createMock(LoggerChannelFactoryInterface::class);
     $factory->method('get')->willReturn($this->createMock(LoggerChannelInterface::class));
     return $factory;
+  }
+
+  /**
+   * Puts a usable manifest at $subDir under tmpDir.
+   *
+   * A path resolving there WOULD then be rewritten, which is what makes a
+   * "left alone" assertion mean something instead of passing for lack of
+   * anything to find.
+   */
+  protected function buildManifestAt(string $subDir, string $file = 'script.BgkTswcn.min.js'): void {
+    $dir = rtrim($this->tmpDir . '/' . ltrim($subDir, '/'), '/');
+    if (!is_dir($dir . '/.vite')) {
+      mkdir($dir . '/.vite', 0777, TRUE);
+    }
+    touch($dir . '/' . $file);
+    file_put_contents(
+      $dir . '/.vite/manifest.json',
+      json_encode([ViteManifest::DEFAULT_ENTRY_KEY => ['file' => $file]]),
+    );
+    $this->extraDirs[] = $dir;
   }
 
   /**
@@ -297,20 +342,23 @@ class ViteManifestTest extends TestCase {
    */
   public function testAbsoluteAndExternalPathsAreLeftAlone(): void {
     $this->buildDistJs('script.BgkTswcn.min.js');
-    $libraries = [
-      'global' => [
-        'drupal_kit_vite_entry' => TRUE,
-        'js' => [
-          '/themes/custom/x/dist/js/script.js' => [],
-          'https://cdn.example.com/script.js' => [],
-        ],
-      ],
-    ];
-    $before = $libraries;
+    // One at a time: with both declared, arity (two candidates) would explain
+    // the untouched library just as well as the path rules, and the test
+    // passed with both rules deleted.
+    // Without the guards these resolve to `<root>//themes/custom/x/dist/js`
+    // and `<root>/https:/cdn.example.com`; a manifest is planted at both so a
+    // missing guard rewrites instead of quietly finding nothing.
+    $this->buildManifestAt('/themes/custom/x/dist/js');
+    $this->buildManifestAt('/https:/cdn.example.com');
 
-    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+    foreach (['/themes/custom/x/dist/js/script.js', 'https://cdn.example.com/script.js'] as $path) {
+      $libraries = ['global' => ['drupal_kit_vite_entry' => TRUE, 'js' => [$path => []]]];
+      $before = $libraries;
 
-    $this->assertSame($before, $libraries);
+      $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+      $this->assertSame($before, $libraries, $path . ' is left alone');
+    }
   }
 
   /**
@@ -400,13 +448,20 @@ class ViteManifestTest extends TestCase {
    * the escaping path.
    */
   public function testParentRelativePathsAreLeftAlone(): void {
-    $this->buildDistJs('script.BgkTswcn.min.js');
-    $libraries = [
-      'global' => [
-        'drupal_kit_vite_entry' => TRUE,
-        'js' => ['../sibling/dist/js/script.js' => []],
-      ],
-    ];
+    // The escaped directory must hold a USABLE manifest, otherwise "nothing
+    // resolved there" explains the untouched library and the test says
+    // nothing about the traversal rule — it passed with the rule deleted.
+    $sibling = $this->tmpDir . '-sibling/dist/js';
+    mkdir($sibling . '/.vite', 0777, TRUE);
+    touch($sibling . '/script.BgkTswcn.min.js');
+    file_put_contents(
+      $sibling . '/.vite/manifest.json',
+      json_encode([ViteManifest::DEFAULT_ENTRY_KEY => ['file' => 'script.BgkTswcn.min.js']]),
+    );
+    $this->escapedDir = $this->tmpDir . '-sibling';
+
+    $relative = '../' . basename($this->tmpDir) . '-sibling/dist/js/script.js';
+    $libraries = ['global' => ['drupal_kit_vite_entry' => TRUE, 'js' => [$relative => []]]];
     $before = $libraries;
 
     $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
@@ -550,6 +605,131 @@ class ViteManifestTest extends TestCase {
     $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
 
     $this->assertArrayHasKey('..build/js/script.BgkTswcn.min.js', $libraries['global']['js']);
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * REGRESSION. `unset()` + append moved a rewritten asset to the end of the
+   * array, and Drupal emits a library's JS in array order. Rewriting only
+   * `vendor.js` therefore made it run AFTER `app.js`, inverting a dependency
+   * the library declared by position.
+   */
+  public function testRewritingOneAssetKeepsTheDeclaredOrder(): void {
+    $dir = $this->tmpDir . '/dist/js';
+    mkdir($dir . '/.vite', 0777, TRUE);
+    touch($dir . '/vendor.AAAAAAAA.min.js');
+    file_put_contents(
+      $dir . '/.vite/manifest.json',
+      json_encode(['src/js/vendor.js' => ['file' => 'vendor.AAAAAAAA.min.js']]),
+    );
+    $libraries = [
+      'global' => [
+        'drupal_kit_vite_entry' => ['dist/js/vendor.js' => 'src/js/vendor.js'],
+        'js' => ['dist/js/vendor.js' => [], 'dist/js/app.js' => []],
+      ],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame(
+      ['dist/js/vendor.AAAAAAAA.min.js', 'dist/js/app.js'],
+      array_keys($libraries['global']['js']),
+      'the rewritten asset keeps its position',
+    );
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * REGRESSION. Two map entries resolving to one built filename land on the
+   * same array key, and the second insert discards the first asset's options
+   * — the round-1 collapse, arriving through the map. An ambiguous plan is
+   * abandoned whole rather than applied in part.
+   */
+  public function testMapEntriesCollidingOnOneFilenameRewriteNothing(): void {
+    $dir = $this->tmpDir . '/dist/js';
+    mkdir($dir . '/.vite', 0777, TRUE);
+    touch($dir . '/bundle.AAAAAAAA.min.js');
+    file_put_contents(
+      $dir . '/.vite/manifest.json',
+      json_encode([
+        'src/js/a.js' => ['file' => 'bundle.AAAAAAAA.min.js'],
+        'src/js/b.js' => ['file' => 'bundle.AAAAAAAA.min.js'],
+      ]),
+    );
+    $libraries = [
+      'global' => [
+        'drupal_kit_vite_entry' => [
+          'dist/js/a.js' => 'src/js/a.js',
+          'dist/js/b.js' => 'src/js/b.js',
+        ],
+        'js' => ['dist/js/a.js' => ['weight' => -1], 'dist/js/b.js' => []],
+      ],
+    ];
+    $channel = $this->createMock(LoggerChannelInterface::class);
+    $channel->expects($this->once())->method('warning');
+    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $factory->method('get')->willReturn($channel);
+    $this->logger = $factory;
+    $before = $libraries;
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame($before, $libraries, 'neither asset is dropped');
+  }
+
+  /**
+   * @covers ::plannedRewrites
+   *
+   * The warning has to name the library and the property, or it sends a
+   * reader nowhere. Asserting only that `warning()` fired let a garbled
+   * message through.
+   */
+  public function testTheMultiAssetWarningNamesTheLibraryAndProperty(): void {
+    $this->buildDistJs('script.BgkTswcn.min.js');
+    touch($this->tmpDir . '/dist/js/vendor.js');
+    $channel = $this->createMock(LoggerChannelInterface::class);
+    $channel->expects($this->once())
+      ->method('warning')
+      ->with(
+        $this->stringContains('@prop'),
+        $this->callback(static fn (array $c): bool => ($c['@lib'] ?? NULL) === 'some_theme/global'
+          && ($c['@count'] ?? NULL) === 2
+          && ($c['@prop'] ?? NULL) === ViteManifest::LIBRARY_PROPERTY),
+      );
+    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $factory->method('get')->willReturn($channel);
+    $this->logger = $factory;
+    $libraries = [
+      'global' => [
+        'drupal_kit_vite_entry' => TRUE,
+        'js' => ['dist/js/vendor.js' => [], 'dist/js/script.js' => []],
+      ],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+  }
+
+  /**
+   * @covers ::isResolvablePath
+   *
+   * Drupal library paths are POSIX, so a backslash is malformed — and it
+   * would slip both other guards, carrying no `/`-delimited `..` segment and
+   * neither a leading slash nor a scheme.
+   */
+  public function testBackslashPathsAreRefused(): void {
+    // dirname() answers '.' for a backslash path on POSIX, so the manifest
+    // has to sit at the extension root for a missing guard to bite.
+    $this->buildManifestAt('');
+    $libraries = [
+      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['..\\up\\script.js' => []]],
+    ];
+    $before = $libraries;
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame($before, $libraries);
   }
 
 }
