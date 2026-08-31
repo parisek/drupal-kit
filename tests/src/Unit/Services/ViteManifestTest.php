@@ -55,6 +55,10 @@ class ViteManifestTest extends TestCase {
       array_map('unlink', glob($this->tmpDir . '/*.js') ?: []);
       array_map('unlink', glob($this->tmpDir . '/*.css') ?: []);
       @rmdir($this->tmpDir . '/.vite');
+      foreach (['/dist/js/.vite', '/dist/js', '/dist'] as $sub) {
+        array_map('unlink', glob($this->tmpDir . $sub . '/*') ?: []);
+        @rmdir($this->tmpDir . $sub);
+      }
       @rmdir($this->tmpDir);
     }
     if ($this->escapedDir !== NULL && is_dir($this->escapedDir)) {
@@ -179,6 +183,146 @@ class ViteManifestTest extends TestCase {
     $before = $libraries;
 
     $this->vite->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame($before, $libraries);
+  }
+
+  /**
+   * A resolver whose extension root is $this->tmpDir, with `dist/js` inside.
+   *
+   * Mirrors the real shape: the library declares `dist/js/script.js` relative
+   * to the extension, so the manifest is looked for at
+   * `<extension>/dist/js/.vite/manifest.json`.
+   */
+  protected function viteRootedAtTmpDir(): ViteManifest {
+    $resolver = $this->createMock(ExtensionPathResolver::class);
+    $resolver->method('getPath')->willReturn($this->tmpDir);
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturn(FALSE);
+
+    return new ViteManifest($resolver, $moduleHandler, '');
+  }
+
+  /**
+   * Creates `dist/js` under tmpDir holding $file and a manifest naming it.
+   */
+  protected function buildDistJs(string $file, ?string $key = NULL): string {
+    $dir = $this->tmpDir . '/dist/js';
+    mkdir($dir . '/.vite', 0777, TRUE);
+    touch($dir . '/' . $file);
+    file_put_contents(
+      $dir . '/.vite/manifest.json',
+      json_encode([($key ?? ViteManifest::DEFAULT_ENTRY_KEY) => ['file' => $file]]),
+    );
+    return $dir;
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * The path this class exists for: an opted-in library's declared asset is
+   * replaced by the hashed filename, in place, keeping its options.
+   */
+  public function testAlterLibrariesRewritesToHashedFile(): void {
+    $this->buildDistJs('script.BgkTswcn.min.js');
+    $libraries = [
+      'global' => [
+        'drupal_kit_vite_entry' => ViteManifest::DEFAULT_ENTRY_KEY,
+        'js' => ['dist/js/script.js' => ['preprocess' => FALSE]],
+      ],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame(
+      ['dist/js/script.BgkTswcn.min.js' => ['preprocess' => FALSE]],
+      $libraries['global']['js'],
+    );
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * `true` is shorthand for the default key, so the common case needs no
+   * literal in every consumer's libraries.yml.
+   */
+  public function testTrueOptsInWithTheDefaultKey(): void {
+    $this->buildDistJs('script.DeE43lKH.min.js');
+    $libraries = [
+      'global' => [
+        'drupal_kit_vite_entry' => TRUE,
+        'js' => ['dist/js/script.js' => []],
+      ],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertArrayHasKey('dist/js/script.DeE43lKH.min.js', $libraries['global']['js']);
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * A docroot-absolute or external path is not ours to resolve: joining it
+   * onto the extension root would name a file that does not exist.
+   */
+  public function testAbsoluteAndExternalPathsAreLeftAlone(): void {
+    $this->buildDistJs('script.BgkTswcn.min.js');
+    $libraries = [
+      'global' => [
+        'drupal_kit_vite_entry' => TRUE,
+        'js' => [
+          '/themes/custom/x/dist/js/script.js' => [],
+          'https://cdn.example.com/script.js' => [],
+        ],
+      ],
+    ];
+    $before = $libraries;
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame($before, $libraries);
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * Opted in, but the build never emitted a manifest — the declared asset is
+   * served unchanged. This is the shape every consumer has before it changes
+   * its build config.
+   */
+  public function testOptedInWithoutManifestKeepsDeclaredAsset(): void {
+    mkdir($this->tmpDir . '/dist/js', 0777, TRUE);
+    $libraries = [
+      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['dist/js/script.js' => []]],
+    ];
+    $before = $libraries;
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame($before, $libraries);
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * An extension whose path cannot be resolved (uninstalled, renamed) must
+   * leave every library alone rather than let the exception reach the asset
+   * pipeline — a broken lookup should cost the hashed filename, not the page.
+   */
+  public function testUnresolvableExtensionLeavesLibrariesAlone(): void {
+    $resolver = $this->createMock(ExtensionPathResolver::class);
+    $resolver->method('getPath')->willThrowException(new \RuntimeException('unknown extension'));
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturn(TRUE);
+    $vite = new ViteManifest($resolver, $moduleHandler, '');
+
+    $libraries = [
+      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['dist/js/script.js' => []]],
+    ];
+    $before = $libraries;
+
+    $vite->alterLibraries($libraries, 'gone_module');
 
     $this->assertSame($before, $libraries);
   }
