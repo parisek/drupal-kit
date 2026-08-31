@@ -3,6 +3,8 @@
 namespace Drupal\Tests\drupal_kit\Unit\Twig;
 
 use Drupal\Core\Extension\ExtensionPathResolver;
+use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Theme\ActiveTheme;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\drupal_kit\Twig\TypographyExtension;
@@ -33,6 +35,11 @@ class TypographyExtensionTest extends TestCase {
   protected ExtensionPathResolver $extensionPathResolver;
 
   /**
+   * Mock language manager.
+   */
+  protected LanguageManagerInterface $languageManager;
+
+  /**
    * Temp directory for fake theme paths.
    */
   protected string $tmpDir;
@@ -48,6 +55,8 @@ class TypographyExtensionTest extends TestCase {
 
     $this->themeManager = $this->createMock(ThemeManagerInterface::class);
     $this->extensionPathResolver = $this->createMock(ExtensionPathResolver::class);
+    $this->languageManager = $this->createMock(LanguageManagerInterface::class);
+    $this->setContentLanguage('en');
 
     $this->extension = new TypographyExtension(
       $this->themeManager,
@@ -55,7 +64,27 @@ class TypographyExtensionTest extends TestCase {
       // appRoot is empty here — the path resolver mock returns absolute tmpDir
       // paths, so no prefix is needed in tests. Production wires "%app.root%".
       '',
+      $this->languageManager,
     );
+  }
+
+  /**
+   * Make the language manager report $langcode as the content language.
+   */
+  protected function setContentLanguage(string $langcode): void {
+    $this->languageManager
+      ->method('getCurrentLanguage')
+      ->with(LanguageInterface::TYPE_CONTENT)
+      ->willReturn($this->mockLanguage($langcode));
+  }
+
+  /**
+   * A language mock reporting $langcode from getId().
+   */
+  protected function mockLanguage(string $langcode): LanguageInterface {
+    $language = $this->createMock(LanguageInterface::class);
+    $language->method('getId')->willReturn($langcode);
+    return $language;
   }
 
   /**
@@ -193,6 +222,72 @@ class TypographyExtensionTest extends TestCase {
     $this->extension->applyTypography('second');
     // Returns to theme_a — should hit cache.
     $this->extension->applyTypography('third');
+  }
+
+  /**
+   * @covers ::localeResolver
+   * @covers ::upstreamForActiveTheme
+   *
+   * The resolver must reach the upstream extension so its per-language tables
+   * apply. Czech is the sharpest probe available: its `languages:` entry sets
+   * low-9 reversed quotes where the language-neutral default is curled.
+   * Asserting the Czech opening quote proves the `languages:` layer ran —
+   * without a resolver `localeCandidates()` returns [] and the entry is never
+   * consulted, which is the defect this covers.
+   */
+  public function testContentLanguageReachesUpstreamPerLanguageTables(): void {
+    $this->pointAtFakeTheme();
+    $extension = $this->extensionForLanguages('cs');
+
+    $result = $extension->applyTypography('"ahoj"');
+
+    $this->assertStringContainsString("\xe2\x80\x9e", $result, 'Czech low-9 opening quote present');
+    $this->assertStringNotContainsString('"', $result, 'ASCII quotes replaced');
+  }
+
+  /**
+   * @covers ::localeResolver
+   * @covers ::upstreamForActiveTheme
+   *
+   * The resolver is read per `applyTypography()` call, not once at
+   * construction, so one cached upstream instance serves every language in a
+   * request. That is what lets the per-theme cache stay keyed on the theme
+   * alone with no language component. Asserted through behaviour — the same
+   * instance must typeset Czech and English differently across two calls —
+   * rather than by counting mock invocations.
+   */
+  public function testResolverIsReadPerCallSoOneInstanceServesEveryLanguage(): void {
+    $this->pointAtFakeTheme();
+    $extension = $this->extensionForLanguages('cs', 'en');
+
+    $czech = $extension->applyTypography('"ahoj"');
+    $english = $extension->applyTypography('"hello"');
+
+    $this->assertStringContainsString("\xe2\x80\x9e", $czech, 'Czech call gets low-9 opening quote');
+    $this->assertStringContainsString("\xe2\x80\x9c", $english, 'English call gets curled opening quote');
+    $this->assertStringNotContainsString("\xe2\x80\x9e", $english, 'English call does not get the Czech quote');
+  }
+
+  /**
+   * An extension whose content language returns $langcodes in call order.
+   *
+   * Built with its own mocks rather than the shared setUp() ones, whose
+   * getCurrentLanguage() is already stubbed to a fixed language.
+   */
+  protected function extensionForLanguages(string ...$langcodes): TypographyExtension {
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $languages = array_map([$this, 'mockLanguage'], $langcodes);
+    $stub = $languageManager->method('getCurrentLanguage');
+    count($languages) === 1
+      ? $stub->willReturn($languages[0])
+      : $stub->willReturnOnConsecutiveCalls(...$languages);
+
+    return new TypographyExtension(
+      $this->themeManager,
+      $this->extensionPathResolver,
+      '',
+      $languageManager,
+    );
   }
 
 }
