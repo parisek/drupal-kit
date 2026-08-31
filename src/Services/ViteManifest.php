@@ -47,6 +47,12 @@ use Drupal\Core\Extension\ModuleHandlerInterface;
  * narrower than "no-op until you rebuild": the trigger is a manifest FILE
  * being present beside the declared asset, not this build having produced it.
  *
+ * DEPLOY REQUIREMENT. The lookup runs while Drupal builds library info, and
+ * that result is cached. A rebuilt bundle is therefore NOT picked up until the
+ * library cache is rebuilt — and if the previous hashed file is gone, the
+ * cached name 404s until it is. Any deploy that ships new assets must clear
+ * caches (`drush cr`), which the deploy scripts on this stack already do.
+ *
  * @see \Drupal\drupal_kit\Services\ViteManifest::isUsableEntryFile()
  */
 class ViteManifest {
@@ -97,22 +103,40 @@ class ViteManifest {
         continue;
       }
 
+      // The property names ONE entry, so exactly one declared asset may match
+      // it — the one whose filename is the key's. Without this, every JS file
+      // in the library resolved the same key to the same hashed name and the
+      // rewrites overwrote each other: a library declaring `vendor.js` beside
+      // `script.js` silently lost one of them.
+      $entryName = basename($key);
+
       foreach ($library['js'] as $path => $options) {
-        // A path already carrying a scheme or a leading slash is not ours to
-        // resolve: it is external or docroot-absolute, and joining it onto the
-        // extension root would name a file that does not exist.
-        if ($path === '' || $path[0] === '/' || str_contains($path, '://')) {
+        // Not ours to resolve. A scheme or a leading slash means external or
+        // docroot-absolute; a `..` segment points outside the extension, where
+        // any manifest found belongs to a different build. Joining either onto
+        // the extension root would name a file that does not exist.
+        if ($path === '' || $path[0] === '/' || str_contains($path, '://') || str_contains($path, '..')) {
           continue;
         }
 
-        $dir = $root . '/' . ltrim(dirname($path), './');
+        if (basename($path) !== $entryName) {
+          continue;
+        }
+
+        // dirname() answers '.' for a bare filename, so branch rather than
+        // trimming: `ltrim($dir, './')` is a character mask, not a prefix
+        // strip, and it mangles a directory that legitimately starts with a
+        // dot (`.build/js` -> `build/js`, pointing at nothing).
+        $relDir = dirname($path);
+        $dir = $relDir === '.' ? $root : $root . '/' . $relDir;
+
         $file = $this->entryFile($dir, $key);
         if ($file === NULL || $file === basename($path)) {
           continue;
         }
 
         unset($library['js'][$path]);
-        $library['js'][dirname($path) . '/' . $file] = $options;
+        $library['js'][$relDir === '.' ? $file : $relDir . '/' . $file] = $options;
       }
     }
   }

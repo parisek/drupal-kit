@@ -75,6 +75,12 @@ path: the Drupal library rewrite. Weighed against that:
 - `isContentHashedEntryFile()` from the WordPress sibling is deliberately NOT
   ported. Its only job there is deciding when to omit the query, and Drupal
   offers no way to omit it, so the helper would be dead code.
+- The resolved filename is cached with Drupal's library info, so a rebuilt
+  bundle needs a cache rebuild before it is served — and a deploy that removes
+  the previous hashed file serves 404s until then. `drush cr` after shipping
+  assets is therefore mandatory, not hygiene. The contrib module carries the
+  same constraint; it is inherent to altering library info, not to this
+  implementation.
 - If a project later wants the dev server, this decision is cheap to reverse:
   drop the `drupal_kit_vite_entry` property and adopt the module's shape. The
   reader has no consumers beyond the libraries that opt in.

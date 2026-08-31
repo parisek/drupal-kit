@@ -31,6 +31,11 @@ class ViteManifestTest extends TestCase {
   protected ?string $escapedDir = NULL;
 
   /**
+   * Dot-prefixed build directory used by one test, removed in tearDown().
+   */
+  protected ?string $dotDir = NULL;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -60,6 +65,13 @@ class ViteManifestTest extends TestCase {
         @rmdir($this->tmpDir . $sub);
       }
       @rmdir($this->tmpDir);
+    }
+    if ($this->dotDir !== NULL && is_dir($this->dotDir)) {
+      array_map('unlink', glob($this->dotDir . '/.vite/*') ?: []);
+      @rmdir($this->dotDir . '/.vite');
+      array_map('unlink', glob($this->dotDir . '/*') ?: []);
+      @rmdir($this->dotDir);
+      @rmdir(dirname($this->dotDir));
     }
     if ($this->escapedDir !== NULL && is_dir($this->escapedDir)) {
       array_map('unlink', glob($this->escapedDir . '/*') ?: []);
@@ -325,6 +337,107 @@ class ViteManifestTest extends TestCase {
     $vite->alterLibraries($libraries, 'gone_module');
 
     $this->assertSame($before, $libraries);
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * REGRESSION. The loop applied the one manifest key to every JS file in the
+   * library, so each resolved the same hashed name and the rewrites overwrote
+   * each other — a library declaring `vendor.js` beside `script.js` came out
+   * with a single asset. Only the file the key names may be rewritten; every
+   * other one is left exactly as declared.
+   */
+  public function testOnlyTheNamedEntryIsRewrittenAndSiblingsSurvive(): void {
+    $this->buildDistJs('script.BgkTswcn.min.js');
+    touch($this->tmpDir . '/dist/js/vendor.js');
+    $libraries = [
+      'global' => [
+        'drupal_kit_vite_entry' => TRUE,
+        'js' => [
+          'dist/js/vendor.js' => ['weight' => -1],
+          'dist/js/script.js' => [],
+        ],
+      ],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame(
+      ['dist/js/vendor.js' => ['weight' => -1], 'dist/js/script.BgkTswcn.min.js' => []],
+      $libraries['global']['js'],
+    );
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * A `..` segment points outside the extension, where any manifest found
+   * belongs to a different build. Previously `ltrim($dir, './')` flattened
+   * `../x/script.js` to a lookup under `<extension>/x/` while still emitting
+   * the escaping path.
+   */
+  public function testParentRelativePathsAreLeftAlone(): void {
+    $this->buildDistJs('script.BgkTswcn.min.js');
+    $libraries = [
+      'global' => [
+        'drupal_kit_vite_entry' => TRUE,
+        'js' => ['../sibling/dist/js/script.js' => []],
+      ],
+    ];
+    $before = $libraries;
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame($before, $libraries);
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * A dot-prefixed directory must not be mangled. `ltrim($dir, './')` is a
+   * character mask, so `.build/js` became `build/js` — a lookup against a
+   * directory that does not exist, silently keeping the unhashed asset.
+   */
+  public function testDotPrefixedDirectoryResolves(): void {
+    $dir = $this->tmpDir . '/.build/js';
+    mkdir($dir . '/.vite', 0777, TRUE);
+    touch($dir . '/script.BgkTswcn.min.js');
+    file_put_contents(
+      $dir . '/.vite/manifest.json',
+      json_encode([ViteManifest::DEFAULT_ENTRY_KEY => ['file' => 'script.BgkTswcn.min.js']]),
+    );
+    $this->dotDir = $dir;
+    $libraries = [
+      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['.build/js/script.js' => []]],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertArrayHasKey('.build/js/script.BgkTswcn.min.js', $libraries['global']['js']);
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * A bare filename has dirname() '.', which must not leak a `./` prefix into
+   * the rewritten library path.
+   */
+  public function testBareFilenameRewritesWithoutDotPrefix(): void {
+    // setUp() already created tmpDir/.vite — the manifest for a bare filename
+    // lives there, so only the file and the record are needed.
+    touch($this->tmpDir . '/script.BgkTswcn.min.js');
+    file_put_contents(
+      $this->tmpDir . '/.vite/manifest.json',
+      json_encode([ViteManifest::DEFAULT_ENTRY_KEY => ['file' => 'script.BgkTswcn.min.js']]),
+    );
+    $libraries = [
+      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['script.js' => []]],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame(['script.BgkTswcn.min.js' => []], $libraries['global']['js']);
   }
 
 }
