@@ -5,19 +5,19 @@ All notable changes to this project are documented in this file. The format foll
 ## [Unreleased]
 
 ### Added
-- **`ViteManifest` resolves a content-hashed JS entry through `.vite/manifest.json`.** A library opts in with `drupal_kit_vite_entry` (the manifest key, or `true` for the default `src/js/script.js`) and keeps declaring its real dist path; `hook_library_info_alter()` swaps in the hashed filename when a usable manifest sits beside it. Ported from `StarterBase::themeScriptFile()` in parisek/timber-kit.
+- **`ViteManifest` resolves a content-hashed JS entry through `.vite/manifest.json`.** A library opts in with `vite_entry` (the manifest key, or `true` for the default `src/js/script.js`) and keeps declaring its real dist path; `hook_library_info_alter()` swaps in the hashed filename when a usable manifest sits beside it. Ported from `StarterBase::themeScriptFile()` in parisek/timber-kit.
 
   Why the entry needs a hash: lazy chunks always carried one, the entry did not, because `*.libraries.yml` names it by a fixed path and cache-busting came from Drupal's `?v=` instead. That covers the reference in the HTML but not the one the bundler emits inside a chunk — a module reachable from the entry graph and from a lazy chunk is hoisted into the entry, and the chunk imports it back as `./script.js`, unhashed and unqueried. Measured on the WordPress sibling (sloneek, 2026-08-17): 5 of 52 chunks imported the entry, `max-age` was 31536000, and a form silently stopped rendering with `does not provide an export named 'n'` — minified export names are positions in a table, so a stale entry can also answer with the wrong binding and no error.
 
   **This closes the correctness defect, not the double fetch.** `JsCollectionRenderer` appends a query to every unaggregated asset unconditionally, so the tag's URL and a chunk's own import remain two module identities — now with identical content. See ADR 0002, which also records why `drupal/vite` was not taken.
 
-  `drupal_kit_vite_entry` also accepts a map of asset path to manifest key, which a library declaring more than one JS asset needs; a bare key covering several assets is refused with a logged warning instead of rewriting one of them.
+  `vite_entry` also accepts a map of asset path to manifest key, which a library declaring more than one JS asset needs; a bare key covering several assets is refused with a logged warning instead of rewriting one of them.
 
   Rewrites keep their declared position (Drupal emits a library's JS in array order, and an unset-and-append moved the rewritten asset last), and a map whose entries resolve to one built filename is refused whole rather than dropping an asset.
 
   Two constraints worth stating: only the asset whose filename matches the key's is rewritten (the property names one entry, and applying the key to every JS file made the rewrites overwrite each other), and the resolved name is cached with Drupal's library info, so a deploy shipping new assets must run `drush cr`.
 
-  Backwards compatible by construction: no `drupal_kit_vite_entry`, or no manifest, and the declared path is served unchanged. Three guards on the manifest value (bare filename, `.js` suffix, present on disk), each ported from a reproduction rather than a hypothesis and each pinned by a mutation-verified test.
+  Backwards compatible by construction: no `vite_entry`, or no manifest, and the declared path is served unchanged. Three guards on the manifest value (bare filename, `.js` suffix, present on disk), each ported from a reproduction rather than a hypothesis and each pinned by a mutation-verified test.
 
 
 ### Fixed

@@ -301,7 +301,7 @@ class ViteManifestTest extends TestCase {
     $this->buildDistJs('script.BgkTswcn.min.js');
     $libraries = [
       'global' => [
-        'drupal_kit_vite_entry' => ViteManifest::DEFAULT_ENTRY_KEY,
+        'vite_entry' => ViteManifest::DEFAULT_ENTRY_KEY,
         'js' => ['dist/js/script.js' => ['preprocess' => FALSE]],
       ],
     ];
@@ -324,7 +324,7 @@ class ViteManifestTest extends TestCase {
     $this->buildDistJs('script.DeE43lKH.min.js');
     $libraries = [
       'global' => [
-        'drupal_kit_vite_entry' => TRUE,
+        'vite_entry' => TRUE,
         'js' => ['dist/js/script.js' => []],
       ],
     ];
@@ -352,7 +352,7 @@ class ViteManifestTest extends TestCase {
     $this->buildManifestAt('/https:/cdn.example.com');
 
     foreach (['/themes/custom/x/dist/js/script.js', 'https://cdn.example.com/script.js'] as $path) {
-      $libraries = ['global' => ['drupal_kit_vite_entry' => TRUE, 'js' => [$path => []]]];
+      $libraries = ['global' => ['vite_entry' => TRUE, 'js' => [$path => []]]];
       $before = $libraries;
 
       $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
@@ -371,7 +371,7 @@ class ViteManifestTest extends TestCase {
   public function testOptedInWithoutManifestKeepsDeclaredAsset(): void {
     mkdir($this->tmpDir . '/dist/js', 0777, TRUE);
     $libraries = [
-      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['dist/js/script.js' => []]],
+      'global' => ['vite_entry' => TRUE, 'js' => ['dist/js/script.js' => []]],
     ];
     $before = $libraries;
 
@@ -395,7 +395,7 @@ class ViteManifestTest extends TestCase {
     $vite = new ViteManifest($resolver, $moduleHandler, '', $this->nullLogger());
 
     $libraries = [
-      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['dist/js/script.js' => []]],
+      'global' => ['vite_entry' => TRUE, 'js' => ['dist/js/script.js' => []]],
     ];
     $before = $libraries;
 
@@ -419,7 +419,7 @@ class ViteManifestTest extends TestCase {
     touch($this->tmpDir . '/dist/js/vendor.js');
     $libraries = [
       'global' => [
-        'drupal_kit_vite_entry' => TRUE,
+        'vite_entry' => TRUE,
         'js' => [
           'dist/js/vendor.js' => ['weight' => -1],
           'dist/js/script.js' => [],
@@ -461,7 +461,7 @@ class ViteManifestTest extends TestCase {
     $this->escapedDir = $this->tmpDir . '-sibling';
 
     $relative = '../' . basename($this->tmpDir) . '-sibling/dist/js/script.js';
-    $libraries = ['global' => ['drupal_kit_vite_entry' => TRUE, 'js' => [$relative => []]]];
+    $libraries = ['global' => ['vite_entry' => TRUE, 'js' => [$relative => []]]];
     $before = $libraries;
 
     $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
@@ -486,7 +486,7 @@ class ViteManifestTest extends TestCase {
     );
     $this->dotDir = $dir;
     $libraries = [
-      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['.build/js/script.js' => []]],
+      'global' => ['vite_entry' => TRUE, 'js' => ['.build/js/script.js' => []]],
     ];
 
     $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
@@ -509,7 +509,7 @@ class ViteManifestTest extends TestCase {
       json_encode([ViteManifest::DEFAULT_ENTRY_KEY => ['file' => 'script.BgkTswcn.min.js']]),
     );
     $libraries = [
-      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['script.js' => []]],
+      'global' => ['vite_entry' => TRUE, 'js' => ['script.js' => []]],
     ];
 
     $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
@@ -536,7 +536,7 @@ class ViteManifestTest extends TestCase {
     );
     $libraries = [
       'global' => [
-        'drupal_kit_vite_entry' => 'src/main.js',
+        'vite_entry' => 'src/main.js',
         'js' => ['dist/js/app.js' => []],
       ],
     ];
@@ -566,7 +566,7 @@ class ViteManifestTest extends TestCase {
     );
     $libraries = [
       'global' => [
-        'drupal_kit_vite_entry' => [
+        'vite_entry' => [
           'dist/js/script.js' => 'src/js/script.js',
           'dist/js/admin.js' => 'src/js/admin.js',
         ],
@@ -599,7 +599,7 @@ class ViteManifestTest extends TestCase {
     );
     $this->dotDir = $dir;
     $libraries = [
-      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['..build/js/script.js' => []]],
+      'global' => ['vite_entry' => TRUE, 'js' => ['..build/js/script.js' => []]],
     ];
 
     $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
@@ -625,7 +625,7 @@ class ViteManifestTest extends TestCase {
     );
     $libraries = [
       'global' => [
-        'drupal_kit_vite_entry' => ['dist/js/vendor.js' => 'src/js/vendor.js'],
+        'vite_entry' => ['dist/js/vendor.js' => 'src/js/vendor.js'],
         'js' => ['dist/js/vendor.js' => [], 'dist/js/app.js' => []],
       ],
     ];
@@ -660,7 +660,7 @@ class ViteManifestTest extends TestCase {
     );
     $libraries = [
       'global' => [
-        'drupal_kit_vite_entry' => [
+        'vite_entry' => [
           'dist/js/a.js' => 'src/js/a.js',
           'dist/js/b.js' => 'src/js/b.js',
         ],
@@ -703,7 +703,7 @@ class ViteManifestTest extends TestCase {
     $this->logger = $factory;
     $libraries = [
       'global' => [
-        'drupal_kit_vite_entry' => TRUE,
+        'vite_entry' => TRUE,
         'js' => ['dist/js/vendor.js' => [], 'dist/js/script.js' => []],
       ],
     ];
@@ -723,7 +723,7 @@ class ViteManifestTest extends TestCase {
     // has to sit at the extension root for a missing guard to bite.
     $this->buildManifestAt('');
     $libraries = [
-      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['..\\up\\script.js' => []]],
+      'global' => ['vite_entry' => TRUE, 'js' => ['..\\up\\script.js' => []]],
     ];
     $before = $libraries;
 
@@ -743,7 +743,7 @@ class ViteManifestTest extends TestCase {
 
     foreach ([123, FALSE, ''] as $value) {
       $libraries = [
-        'global' => ['drupal_kit_vite_entry' => $value, 'js' => ['dist/js/script.js' => []]],
+        'global' => ['vite_entry' => $value, 'js' => ['dist/js/script.js' => []]],
       ];
       $before = $libraries;
 
@@ -763,7 +763,7 @@ class ViteManifestTest extends TestCase {
     $this->buildDistJs('script.BgkTswcn.min.js');
     $libraries = [
       'global' => [
-        'drupal_kit_vite_entry' => [
+        'vite_entry' => [
           'dist/js/script.js' => 'src/js/script.js',
           'dist/js/absent.js' => 'src/js/absent.js',
           'dist/js/script.js.map' => 123,
@@ -792,7 +792,7 @@ class ViteManifestTest extends TestCase {
       json_encode([ViteManifest::DEFAULT_ENTRY_KEY => ['file' => 'script.js']]),
     );
     $libraries = [
-      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['dist/js/script.js' => ['weight' => 2]]],
+      'global' => ['vite_entry' => TRUE, 'js' => ['dist/js/script.js' => ['weight' => 2]]],
     ];
     $before = $libraries;
 
@@ -808,7 +808,7 @@ class ViteManifestTest extends TestCase {
    */
   public function testLibraryWithoutJsIsSkipped(): void {
     $libraries = [
-      'global' => ['drupal_kit_vite_entry' => TRUE, 'css' => ['theme' => ['dist/css/style.css' => []]]],
+      'global' => ['vite_entry' => TRUE, 'css' => ['theme' => ['dist/css/style.css' => []]]],
     ];
     $before = $libraries;
 

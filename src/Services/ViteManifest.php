@@ -66,7 +66,7 @@ class ViteManifest {
    * `Vite::chunk()` is `$manifest[$file]` or throw. Neither scans a manifest
    * looking for an `isEntry` record, because a manifest holds one record per
    * input and nothing orders them. A library overrides it per entry with
-   * `drupal_kit_vite_entry`.
+   * `vite_entry`.
    */
   public const DEFAULT_ENTRY_KEY = 'src/js/script.js';
 
@@ -79,7 +79,7 @@ class ViteManifest {
    *
    * @code
    * global:
-   *   drupal_kit_vite_entry: true
+   *   vite_entry: true
    *   js:
    *     dist/js/script.js: { preprocess: false, attributes: { type: module } }
    * @endcode
@@ -89,12 +89,12 @@ class ViteManifest {
    *
    * @code
    * global:
-   *   drupal_kit_vite_entry:
+   *   vite_entry:
    *     dist/js/script.js: src/js/script.js
    *     dist/js/admin.js: src/js/admin.js
    * @endcode
    */
-  public const LIBRARY_PROPERTY = 'drupal_kit_vite_entry';
+  public const LIBRARY_PROPERTY = 'vite_entry';
 
   public function __construct(
     private readonly ExtensionPathResolver $extensionPathResolver,

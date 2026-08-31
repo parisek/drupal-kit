@@ -81,7 +81,17 @@ path: the Drupal library rewrite. Weighed against that:
   `input: {app: 'src/main.js'}` emits `app.js` under the key `src/main.js` and
   the two basenames never meet. A library that outgrows one asset gets a
   logged warning rather than a silent half-rewrite.
-- The property is a declaration, not a discovery: `drupal_kit_vite_entry` on a
+- The property is named `vite_entry`, unprefixed. Drupal reserves nothing here:
+  core reads only `css`, `dependencies`, `deprecated`, `drupalSettings`,
+  `header`, `js`, `license`, `moved_files`, `remote` and `version` from a
+  library, and `LibraryDiscoveryParser` does not reject the keys it does not
+  know — which is also how `drupal/vite` gets its own `vite:` key. Two names
+  were rejected: `vite` collides with that module head-on, and `manifest`
+  describes the file the value points INTO rather than the value itself, which
+  is a Vite input path (`vite_entry: src/js/script.js`), and would sit
+  confusingly beside that module's own `vite.manifest` sub-key in a project
+  running both.
+- The property is a declaration, not a discovery: `vite_entry` on a
   library whose asset is NOT that Vite entry will replace it with the manifest's
   file. Nothing can verify the claim from the outside — the manifest records
   inputs and outputs, not which library declared what — so the property means
@@ -94,7 +104,7 @@ path: the Drupal library rewrite. Weighed against that:
   same constraint; it is inherent to altering library info, not to this
   implementation.
 - If a project later wants the dev server, this decision is cheap to reverse:
-  drop the `drupal_kit_vite_entry` property and adopt the module's shape. The
+  drop the `vite_entry` property and adopt the module's shape. The
   reader has no consumers beyond the libraries that opt in.
 
 [vite]: https://www.drupal.org/project/vite
