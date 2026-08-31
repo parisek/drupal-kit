@@ -277,7 +277,10 @@ class TypographyExtensionTest extends TestCase {
   protected function extensionForLanguages(string ...$langcodes): TypographyExtension {
     $languageManager = $this->createMock(LanguageManagerInterface::class);
     $languages = array_map([$this, 'mockLanguage'], $langcodes);
-    $stub = $languageManager->method('getCurrentLanguage');
+    // Constrain the argument: without it these tests pass just as happily
+    // against TYPE_INTERFACE, which is the choice they exist to pin.
+    $stub = $languageManager->method('getCurrentLanguage')
+      ->with(LanguageInterface::TYPE_CONTENT);
     count($languages) === 1
       ? $stub->willReturn($languages[0])
       : $stub->willReturnOnConsecutiveCalls(...$languages);
@@ -288,6 +291,42 @@ class TypographyExtensionTest extends TestCase {
       '',
       $languageManager,
     );
+  }
+
+  /**
+   * @covers ::applyTypography
+   * @covers ::upstreamForActiveTheme
+   *
+   * An explicit language wins over the negotiated one. A caller that knows the
+   * language of the exact string — a text filter gets it as `process()`'s
+   * second argument — is more accurate than negotiation, and the two diverge
+   * on mixed-language views, explicitly rendered translations, mail and cron.
+   */
+  public function testExplicitLanguageOverridesTheNegotiatedOne(): void {
+    $this->pointAtFakeTheme();
+    // Negotiation says English; the caller says Czech and must win.
+    $extension = $this->extensionForLanguages('en');
+
+    $result = $extension->applyTypography('"ahoj"', [], TRUE, 'cs');
+
+    $this->assertStringContainsString("\xe2\x80\x9e", $result, 'Czech low-9 quote from the explicit language');
+  }
+
+  /**
+   * @covers ::applyTypography
+   *
+   * Both languages must remain reachable from one instance — pinning one must
+   * not poison the cache for the negotiated path.
+   */
+  public function testExplicitAndNegotiatedLanguagesCoexist(): void {
+    $this->pointAtFakeTheme();
+    $extension = $this->extensionForLanguages('en', 'en');
+
+    $pinned = $extension->applyTypography('"ahoj"', [], TRUE, 'cs');
+    $negotiated = $extension->applyTypography('"hello"');
+
+    $this->assertStringContainsString("\xe2\x80\x9e", $pinned, 'pinned call is Czech');
+    $this->assertStringContainsString("\xe2\x80\x9c", $negotiated, 'negotiated call is still English');
   }
 
 }

@@ -34,6 +34,8 @@ class TypographyExtension extends AbstractExtension {
    * Per-theme cache of upstream extensions. Keyed by theme machine name.
    *
    * @var array<string, \Parisek\Twig\TypographyExtension>
+   *
+   * Keyed by theme name plus an explicit language, if one was pinned.
    */
   private array $cache = [];
 
@@ -66,33 +68,45 @@ class TypographyExtension extends AbstractExtension {
    *   Optional per-call overrides for PHP_Typography settings.
    * @param bool $useDefaults
    *   Whether to load the upstream Settings(true) defaults.
+   * @param string|null $langcode
+   *   Typeset in this language instead of the negotiated content language.
+   *   For a caller that KNOWS the language of the exact string it is handing
+   *   over — a text filter receives it as `process()`'s second argument — that
+   *   is the accurate answer, and negotiation is only a default for callers
+   *   with nothing better. They diverge on mixed-language views, an explicitly
+   *   rendered translation, mail, cron and queue workers. Empty string is
+   *   treated as absent.
    *
    * @return mixed
    *   Filtered string, or the original render array.
    */
-  public function applyTypography(mixed $string, array $arguments = [], bool $useDefaults = TRUE): mixed {
+  public function applyTypography(mixed $string, array $arguments = [], bool $useDefaults = TRUE, ?string $langcode = NULL): mixed {
     if (\is_array($string)) {
       return $string;
     }
-    return $this->upstreamForActiveTheme()->applyTypography($string, $arguments, $useDefaults);
+    return $this->upstreamForActiveTheme($langcode)->applyTypography($string, $arguments, $useDefaults);
   }
 
   /**
    * Gets (and lazily builds) the upstream extension for the active theme.
    */
-  private function upstreamForActiveTheme(): UpstreamTypographyExtension {
+  private function upstreamForActiveTheme(?string $langcode = NULL): UpstreamTypographyExtension {
     $themeName = $this->themeManager->getActiveTheme()->getName();
-    if (!isset($this->cache[$themeName])) {
+    // An explicit language pins its own instance. The default one keeps a
+    // resolver read per call, so it still serves every negotiated language
+    // from a single entry — only pinned languages add entries, one each.
+    $cacheKey = $themeName . '|' . ($langcode ?? '');
+    if (!isset($this->cache[$cacheKey])) {
       $themePath = $this->extensionPathResolver->getPath('theme', $themeName);
       $path = \rtrim($this->appRoot, '/') . '/' . \ltrim($themePath, '/') . '/static/typography.yml';
       $parsed = \file_exists($path) ? Yaml::parseFile($path) : NULL;
       $config = \is_array($parsed) ? $parsed : [];
-      $this->cache[$themeName] = new UpstreamTypographyExtension(
+      $this->cache[$cacheKey] = new UpstreamTypographyExtension(
         $config,
-        $this->localeResolver(),
+        $langcode !== NULL ? static fn (): string => $langcode : $this->localeResolver(),
       );
     }
-    return $this->cache[$themeName];
+    return $this->cache[$cacheKey];
   }
 
   /**
