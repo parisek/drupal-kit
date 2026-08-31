@@ -6,6 +6,7 @@ namespace Drupal\drupal_kit\Services;
 
 use Drupal\Core\Extension\ExtensionPathResolver;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 
 /**
  * Resolves a Vite-built JS entry through the build's `.vite/manifest.json`.
@@ -71,6 +72,27 @@ class ViteManifest {
 
   /**
    * The library property that opts a library in and names its manifest key.
+   *
+   * Two shapes. `TRUE` or a bare key covers a library with exactly ONE
+   * resolvable JS asset — the common case, and unambiguous whatever the asset
+   * and the key are called:
+   *
+   * @code
+   * global:
+   *   drupal_kit_vite_entry: true
+   *   js:
+   *     dist/js/script.js: { preprocess: false, attributes: { type: module } }
+   * @endcode
+   *
+   * A map states which asset carries which key, which is required once a
+   * library declares more than one:
+   *
+   * @code
+   * global:
+   *   drupal_kit_vite_entry:
+   *     dist/js/script.js: src/js/script.js
+   *     dist/js/admin.js: src/js/admin.js
+   * @endcode
    */
   public const LIBRARY_PROPERTY = 'drupal_kit_vite_entry';
 
@@ -78,6 +100,7 @@ class ViteManifest {
     private readonly ExtensionPathResolver $extensionPathResolver,
     private readonly ModuleHandlerInterface $moduleHandler,
     private readonly string $appRoot,
+    private readonly LoggerChannelFactoryInterface $logger,
   ) {}
 
   /**
@@ -94,51 +117,113 @@ class ViteManifest {
       return;
     }
 
-    foreach ($libraries as &$library) {
-      $key = $library[self::LIBRARY_PROPERTY] ?? NULL;
-      if ($key === TRUE) {
-        $key = self::DEFAULT_ENTRY_KEY;
-      }
-      if (!is_string($key) || $key === '' || empty($library['js'])) {
+    foreach ($libraries as $name => &$library) {
+      $entry = $library[self::LIBRARY_PROPERTY] ?? NULL;
+      if ($entry === NULL || empty($library['js'])) {
         continue;
       }
 
-      // The property names ONE entry, so exactly one declared asset may match
-      // it — the one whose filename is the key's. Without this, every JS file
-      // in the library resolved the same key to the same hashed name and the
-      // rewrites overwrote each other: a library declaring `vendor.js` beside
-      // `script.js` silently lost one of them.
-      $entryName = basename($key);
+      // An explicit map states which declared asset carries which manifest
+      // key. `TRUE` or a bare key means "the one JS asset in this library".
+      $map = \is_array($entry) ? $entry : NULL;
+      $key = $entry === TRUE ? self::DEFAULT_ENTRY_KEY : (\is_string($entry) && $entry !== '' ? $entry : NULL);
 
-      foreach ($library['js'] as $path => $options) {
-        // Not ours to resolve. A scheme or a leading slash means external or
-        // docroot-absolute; a `..` segment points outside the extension, where
-        // any manifest found belongs to a different build. Joining either onto
-        // the extension root would name a file that does not exist.
-        if ($path === '' || $path[0] === '/' || str_contains($path, '://') || str_contains($path, '..')) {
-          continue;
+      if ($map !== NULL) {
+        foreach ($map as $path => $mappedKey) {
+          $path = (string) $path;
+          if (\is_string($mappedKey) && $mappedKey !== '' && isset($library['js'][$path]) && $this->isResolvablePath($path)) {
+            $this->rewriteAsset($library, $root, $path, $mappedKey);
+          }
         }
-
-        if (basename($path) !== $entryName) {
-          continue;
-        }
-
-        // dirname() answers '.' for a bare filename, so branch rather than
-        // trimming: `ltrim($dir, './')` is a character mask, not a prefix
-        // strip, and it mangles a directory that legitimately starts with a
-        // dot (`.build/js` -> `build/js`, pointing at nothing).
-        $relDir = dirname($path);
-        $dir = $relDir === '.' ? $root : $root . '/' . $relDir;
-
-        $file = $this->entryFile($dir, $key);
-        if ($file === NULL || $file === basename($path)) {
-          continue;
-        }
-
-        unset($library['js'][$path]);
-        $library['js'][$relDir === '.' ? $file : $relDir . '/' . $file] = $options;
+        continue;
       }
+
+      if ($key === NULL) {
+        continue;
+      }
+
+      // Which asset does a single key belong to? Matching the key's basename
+      // against the declared one looked obvious and is wrong: Vite names its
+      // output from the input's map KEY, not its filename, so a build with
+      // `rollupOptions.input: {app: 'src/main.js'}` emits `app.js` for the
+      // manifest key `src/main.js` and the two basenames never meet. That
+      // rule silently rewrote nothing for every such build.
+      //
+      // A library carrying exactly one resolvable JS asset has no ambiguity,
+      // so the key belongs to it whatever either is called. More than one and
+      // there is a real choice to make — applying the key to each of them is
+      // what collapsed several assets onto one filename — so the map form
+      // above is required, and a warning says so rather than degrading in
+      // silence.
+      // array_keys() answers int for a numeric-looking key, so normalise
+      // before the string-typed helpers ever see one.
+      $candidates = array_values(array_filter(
+        array_map('strval', array_keys($library['js'])),
+        fn (string $path): bool => $this->isResolvablePath($path),
+      ));
+
+      if (\count($candidates) !== 1) {
+        if ($candidates !== []) {
+          $this->logger->get('drupal_kit')->warning(
+            'Library @lib opted into Vite manifest resolution with a single key but declares @count resolvable JS assets. Map each asset to its own key to have them rewritten: `@prop: { "path/to/asset.js": "src/js/entry.js" }`.',
+            ['@lib' => $extension . '/' . $name, '@count' => \count($candidates), '@prop' => self::LIBRARY_PROPERTY],
+          );
+        }
+        continue;
+      }
+
+      $this->rewriteAsset($library, $root, $candidates[0], $key);
     }
+  }
+
+  /**
+   * Swaps one declared asset for the hashed filename the manifest records.
+   *
+   * @param array<string, mixed> $library
+   *   The library definition, modified in place.
+   * @param string $root
+   *   Absolute path to the extension's own directory.
+   * @param string $path
+   *   The asset path as declared in the library, relative to $root.
+   * @param string $key
+   *   Manifest key naming this asset's Vite input.
+   */
+  private function rewriteAsset(array &$library, string $root, string $path, string $key): void {
+    // dirname() answers '.' for a bare filename, so branch rather than
+    // trimming: `ltrim($dir, './')` is a character mask, not a prefix strip,
+    // and it mangles a directory that legitimately starts with a dot
+    // (`.build/js` -> `build/js`, pointing at nothing).
+    $relDir = \dirname($path);
+    $dir = $relDir === '.' ? $root : $root . '/' . $relDir;
+
+    $file = $this->entryFile($dir, $key);
+    if ($file === NULL || $file === \basename($path)) {
+      return;
+    }
+
+    $options = $library['js'][$path];
+    unset($library['js'][$path]);
+    $library['js'][$relDir === '.' ? $file : $relDir . '/' . $file] = $options;
+  }
+
+  /**
+   * Is this declared path one this extension can resolve a manifest for?
+   *
+   * A scheme or a leading slash means external or docroot-absolute; a `..`
+   * SEGMENT points outside the extension, where any manifest found belongs to
+   * a different build. Joining either onto the extension root would name a
+   * file that does not exist.
+   *
+   * The traversal test is per segment, not `str_contains($path, '..')`: two
+   * dots are legal inside a name, and the substring form rejected honest
+   * paths like `..build/js/script.js` and `foo..bar/js/script.js`.
+   */
+  private function isResolvablePath(string $path): bool {
+    if ($path === '' || $path[0] === '/' || \str_contains($path, '://')) {
+      return FALSE;
+    }
+
+    return !\in_array('..', \explode('/', $path), TRUE);
   }
 
   /**

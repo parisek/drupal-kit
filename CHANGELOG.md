@@ -11,6 +11,8 @@ All notable changes to this project are documented in this file. The format foll
 
   **This closes the correctness defect, not the double fetch.** `JsCollectionRenderer` appends a query to every unaggregated asset unconditionally, so the tag's URL and a chunk's own import remain two module identities — now with identical content. See ADR 0002, which also records why `drupal/vite` was not taken.
 
+  `drupal_kit_vite_entry` also accepts a map of asset path to manifest key, which a library declaring more than one JS asset needs; a bare key covering several assets is refused with a logged warning instead of rewriting one of them.
+
   Two constraints worth stating: only the asset whose filename matches the key's is rewritten (the property names one entry, and applying the key to every JS file made the rewrites overwrite each other), and the resolved name is cached with Drupal's library info, so a deploy shipping new assets must run `drush cr`.
 
   Backwards compatible by construction: no `drupal_kit_vite_entry`, or no manifest, and the declared path is served unchanged. Three guards on the manifest value (bare filename, `.js` suffix, present on disk), each ported from a reproduction rather than a hypothesis and each pinned by a mutation-verified test.

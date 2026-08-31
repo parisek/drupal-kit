@@ -75,6 +75,12 @@ path: the Drupal library rewrite. Weighed against that:
 - `isContentHashedEntryFile()` from the WordPress sibling is deliberately NOT
   ported. Its only job there is deciding when to omit the query, and Drupal
   offers no way to omit it, so the helper would be dead code.
+- A bare key covers a library with one JS asset; more than one needs the map
+  form. Picking the asset by comparing its filename to the key's was tried and
+  is wrong: Vite names its output from the input map's KEY, so
+  `input: {app: 'src/main.js'}` emits `app.js` under the key `src/main.js` and
+  the two basenames never meet. A library that outgrows one asset gets a
+  logged warning rather than a silent half-rewrite.
 - The resolved filename is cached with Drupal's library info, so a rebuilt
   bundle needs a cache rebuild before it is served — and a deploy that removes
   the previous hashed file serves 404s until then. `drush cr` after shipping

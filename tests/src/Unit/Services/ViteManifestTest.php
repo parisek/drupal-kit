@@ -4,6 +4,8 @@ namespace Drupal\Tests\drupal_kit\Unit\Services;
 
 use Drupal\Core\Extension\ExtensionPathResolver;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\drupal_kit\Services\ViteManifest;
 use PHPUnit\Framework\TestCase;
 
@@ -36,6 +38,11 @@ class ViteManifestTest extends TestCase {
   protected ?string $dotDir = NULL;
 
   /**
+   * Logger for viteRootedAtTmpDir(), when a test asserts on it.
+   */
+  protected ?LoggerChannelFactoryInterface $logger = NULL;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -48,6 +55,7 @@ class ViteManifestTest extends TestCase {
       $this->createMock(ExtensionPathResolver::class),
       $this->createMock(ModuleHandlerInterface::class),
       '',
+      $this->nullLogger(),
     );
   }
 
@@ -212,7 +220,16 @@ class ViteManifestTest extends TestCase {
     $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
     $moduleHandler->method('moduleExists')->willReturn(FALSE);
 
-    return new ViteManifest($resolver, $moduleHandler, '');
+    return new ViteManifest($resolver, $moduleHandler, '', $this->logger ?? $this->nullLogger());
+  }
+
+  /**
+   * A logger factory whose channel swallows everything.
+   */
+  protected function nullLogger(): LoggerChannelFactoryInterface {
+    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $factory->method('get')->willReturn($this->createMock(LoggerChannelInterface::class));
+    return $factory;
   }
 
   /**
@@ -327,7 +344,7 @@ class ViteManifestTest extends TestCase {
     $resolver->method('getPath')->willThrowException(new \RuntimeException('unknown extension'));
     $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
     $moduleHandler->method('moduleExists')->willReturn(TRUE);
-    $vite = new ViteManifest($resolver, $moduleHandler, '');
+    $vite = new ViteManifest($resolver, $moduleHandler, '', $this->nullLogger());
 
     $libraries = [
       'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['dist/js/script.js' => []]],
@@ -345,10 +362,11 @@ class ViteManifestTest extends TestCase {
    * REGRESSION. The loop applied the one manifest key to every JS file in the
    * library, so each resolved the same hashed name and the rewrites overwrote
    * each other — a library declaring `vendor.js` beside `script.js` came out
-   * with a single asset. Only the file the key names may be rewritten; every
-   * other one is left exactly as declared.
+   * with a single asset. A bare key now covers only a library with ONE
+   * resolvable asset; more than one is a real choice the map form has to make,
+   * and the warning says so instead of degrading in silence.
    */
-  public function testOnlyTheNamedEntryIsRewrittenAndSiblingsSurvive(): void {
+  public function testSeveralAssetsUnderOneKeyAreRefused(): void {
     $this->buildDistJs('script.BgkTswcn.min.js');
     touch($this->tmpDir . '/dist/js/vendor.js');
     $libraries = [
@@ -361,12 +379,16 @@ class ViteManifestTest extends TestCase {
       ],
     ];
 
+    $channel = $this->createMock(LoggerChannelInterface::class);
+    $channel->expects($this->once())->method('warning');
+    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $factory->method('get')->willReturn($channel);
+    $this->logger = $factory;
+    $before = $libraries;
+
     $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
 
-    $this->assertSame(
-      ['dist/js/vendor.js' => ['weight' => -1], 'dist/js/script.BgkTswcn.min.js' => []],
-      $libraries['global']['js'],
-    );
+    $this->assertSame($before, $libraries, 'nothing is rewritten and nothing is lost');
   }
 
   /**
@@ -438,6 +460,96 @@ class ViteManifestTest extends TestCase {
     $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
 
     $this->assertSame(['script.BgkTswcn.min.js' => []], $libraries['global']['js']);
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * REGRESSION. Vite names its output from the input map's KEY, not the source
+   * filename, so `rollupOptions.input: {app: 'src/main.js'}` emits `app.js`
+   * under the manifest key `src/main.js`. The basename-matching rule this
+   * replaces compared `app.js` with `main.js`, never matched, and silently
+   * rewrote nothing for every build shaped that way.
+   */
+  public function testEntryWhoseOutputNameDiffersFromItsSourceIsRewritten(): void {
+    $dir = $this->tmpDir . '/dist/js';
+    mkdir($dir . '/.vite', 0777, TRUE);
+    touch($dir . '/app.BgkTswcn.min.js');
+    file_put_contents(
+      $dir . '/.vite/manifest.json',
+      json_encode(['src/main.js' => ['file' => 'app.BgkTswcn.min.js']]),
+    );
+    $libraries = [
+      'global' => [
+        'drupal_kit_vite_entry' => 'src/main.js',
+        'js' => ['dist/js/app.js' => []],
+      ],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame(['dist/js/app.BgkTswcn.min.js' => []], $libraries['global']['js']);
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * The map form states which asset carries which key, so a library holding
+   * several entries keeps them all — the case a single key has to refuse.
+   */
+  public function testMapFormRewritesEachAssetUnderItsOwnKey(): void {
+    $dir = $this->tmpDir . '/dist/js';
+    mkdir($dir . '/.vite', 0777, TRUE);
+    touch($dir . '/script.AAAAAAAA.min.js');
+    touch($dir . '/admin.BBBBBBBB.min.js');
+    file_put_contents(
+      $dir . '/.vite/manifest.json',
+      json_encode([
+        'src/js/script.js' => ['file' => 'script.AAAAAAAA.min.js'],
+        'src/js/admin.js' => ['file' => 'admin.BBBBBBBB.min.js'],
+      ]),
+    );
+    $libraries = [
+      'global' => [
+        'drupal_kit_vite_entry' => [
+          'dist/js/script.js' => 'src/js/script.js',
+          'dist/js/admin.js' => 'src/js/admin.js',
+        ],
+        'js' => ['dist/js/script.js' => [], 'dist/js/admin.js' => ['weight' => 1]],
+      ],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame(
+      ['dist/js/script.AAAAAAAA.min.js' => [], 'dist/js/admin.BBBBBBBB.min.js' => ['weight' => 1]],
+      $libraries['global']['js'],
+    );
+  }
+
+  /**
+   * @covers ::isResolvablePath
+   *
+   * REGRESSION. Two dots are legal inside a directory name. Testing the whole
+   * path with `str_contains($path, '..')` rejected `..build/js/script.js`,
+   * which traverses nothing — the traversal test has to look at segments.
+   */
+  public function testDirectoryNameContainingTwoDotsIsNotMistakenForTraversal(): void {
+    $dir = $this->tmpDir . '/..build/js';
+    mkdir($dir . '/.vite', 0777, TRUE);
+    touch($dir . '/script.BgkTswcn.min.js');
+    file_put_contents(
+      $dir . '/.vite/manifest.json',
+      json_encode([ViteManifest::DEFAULT_ENTRY_KEY => ['file' => 'script.BgkTswcn.min.js']]),
+    );
+    $this->dotDir = $dir;
+    $libraries = [
+      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['..build/js/script.js' => []]],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertArrayHasKey('..build/js/script.BgkTswcn.min.js', $libraries['global']['js']);
   }
 
 }
