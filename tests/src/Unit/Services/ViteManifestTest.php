@@ -732,4 +732,89 @@ class ViteManifestTest extends TestCase {
     $this->assertSame($before, $libraries);
   }
 
+  /**
+   * @covers ::plannedRewrites
+   *
+   * A property that is neither TRUE, a non-empty string, nor a map says
+   * nothing usable. It must be ignored rather than coerced into a key.
+   */
+  public function testMalformedPropertyValueIsIgnored(): void {
+    $this->buildDistJs('script.BgkTswcn.min.js');
+
+    foreach ([123, FALSE, ''] as $value) {
+      $libraries = [
+        'global' => ['drupal_kit_vite_entry' => $value, 'js' => ['dist/js/script.js' => []]],
+      ];
+      $before = $libraries;
+
+      $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+      $this->assertSame($before, $libraries, var_export($value, TRUE) . ' is ignored');
+    }
+  }
+
+  /**
+   * @covers ::plannedRewrites
+   *
+   * Map entries that name nothing usable are skipped individually — a typo in
+   * one row must not cost the rows around it.
+   */
+  public function testUnusableMapRowsAreSkippedWithoutLosingTheRest(): void {
+    $this->buildDistJs('script.BgkTswcn.min.js');
+    $libraries = [
+      'global' => [
+        'drupal_kit_vite_entry' => [
+          'dist/js/script.js' => 'src/js/script.js',
+          'dist/js/absent.js' => 'src/js/absent.js',
+          'dist/js/script.js.map' => 123,
+        ],
+        'js' => ['dist/js/script.js' => []],
+      ],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame(['dist/js/script.BgkTswcn.min.js' => []], $libraries['global']['js']);
+  }
+
+  /**
+   * @covers ::plannedRewrites
+   *
+   * A manifest naming exactly what the library already declares is a no-op,
+   * not a rewrite to the same key — the case of an unhashed build.
+   */
+  public function testManifestNamingTheDeclaredFileChangesNothing(): void {
+    $dir = $this->tmpDir . '/dist/js';
+    mkdir($dir . '/.vite', 0777, TRUE);
+    touch($dir . '/script.js');
+    file_put_contents(
+      $dir . '/.vite/manifest.json',
+      json_encode([ViteManifest::DEFAULT_ENTRY_KEY => ['file' => 'script.js']]),
+    );
+    $libraries = [
+      'global' => ['drupal_kit_vite_entry' => TRUE, 'js' => ['dist/js/script.js' => ['weight' => 2]]],
+    ];
+    $before = $libraries;
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame($before, $libraries);
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * A library declaring no JS at all is skipped before anything is read.
+   */
+  public function testLibraryWithoutJsIsSkipped(): void {
+    $libraries = [
+      'global' => ['drupal_kit_vite_entry' => TRUE, 'css' => ['theme' => ['dist/css/style.css' => []]]],
+    ];
+    $before = $libraries;
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame($before, $libraries);
+  }
+
 }
