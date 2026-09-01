@@ -158,12 +158,40 @@ function drupal_kit_theme() {
  * only exists once simple_sitemap is installed.
  */
 function drupal_kit_simple_sitemap_links_alter(array &$links, object $sitemap): void {
-  $front = (string) \Drupal::config('system.site')->get('page.front');
+  $language_manager = \Drupal::languageManager();
+  $default = (string) \Drupal::config('system.site')->get('page.front');
+
+  // `page.front` is translatable, so the answer is a map, not a value. Reading
+  // the config once would apply whatever language generation happened to run
+  // in to every link — see FrontPageSitemapFilter::matchingLangcodes().
+  //
+  // Only a multilingual site is asked for overrides. Without the language
+  // module there are none to find, and the single untranslated value is the
+  // whole map — which is also the shape the monolingual path needs.
+  $fronts = [LanguageInterface::LANGCODE_NOT_SPECIFIED => $default];
+
+  if ($language_manager->isMultilingual()) {
+    foreach (array_keys($language_manager->getLanguages()) as $langcode) {
+      try {
+        $override = $language_manager
+          ->getLanguageConfigOverride($langcode, 'system.site')
+          ->get('page.front');
+      }
+      catch (\Throwable) {
+        // An override store that cannot answer is not a reason to stop
+        // filtering; the untranslated value still describes this language.
+        $override = NULL;
+      }
+      $fronts[$langcode] = (string) ($override ?? $default);
+    }
+  }
 
   foreach ($links as $key => $link) {
-    $path = (string) ($link['meta']['path'] ?? '');
-    if (FrontPageSitemapFilter::isFrontDuplicate($path, $front)) {
+    $filtered = FrontPageSitemapFilter::filterLink($link, $fronts);
+    if ($filtered === NULL) {
       unset($links[$key]);
+      continue;
     }
+    $links[$key] = $filtered;
   }
 }
