@@ -9,6 +9,8 @@ All notable changes to this project are documented in this file. The format foll
 
   **`page.front` is translatable, so the filter is per language.** A site can point each language at its own node; asking `system.site` once and applying that answer to every link deleted the node matching the generation-time language while leaving the other language's duplicate in place. The hook now builds a langcode → front-page map, judges each link by its own `langcode`, and prunes `alternate_urls` per language — a surviving link must not re-advertise the withheld URL through its `hreflang` block.
 
+  **Which entry survives is decided by what the page declares canonical, not by preference.** Metatag ships `canonical_url: '[site:url]'` for the front page as its own default, and a site that disables that group falls back to the `global` group's `[current-page:url-with-query:…]`, which on `/` resolves to `/` as well — so on any consumer running Metatag, keeping `/` agrees with the page. On a site without Metatag core declares the node's alias instead, and the two disagree; that limitation is recorded in ADR 0003 rather than argued away.
+
   **The hook is unconditional**, against `AGENTS.md`'s opt-in default. It only runs where simple_sitemap is installed and only fires on the configured front page, so "always on" means "on exactly where the defect is"; and a flag defaulting to off would not reach the nineteen sites that have the defect and have not noticed. Reasoning, and the narrow precedent it sets, in ADR 0003.
 
 ### Fixed
