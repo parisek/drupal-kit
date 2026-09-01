@@ -13,6 +13,7 @@ use Drupal\Core\Entity\EntityPublishedInterface;
 use Drupal\Core\Entity\TranslatableInterface;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\drupal_kit\Services\FrontPageSitemapFilter;
 
 /**
  * Implements hook_module_implements_alter().
@@ -139,6 +140,64 @@ function drupal_kit_theme() {
       ],
     ],
   ];
+}
+
+/**
+ * Implements hook_simple_sitemap_links_alter().
+ *
+ * Drops the front page's node path from the sitemap.
+ *
+ * `system.site` points page.front at a node, and that node usually has no path
+ * alias, so simple_sitemap lists the same page twice: once as `/` and once as
+ * `/node/N`. The second 301s to the first through the redirect module's route
+ * normalizer, handing crawlers a redirect to a page the file already contains.
+ *
+ * The hook is inert on sites without simple_sitemap, which is why the module
+ * is not a dependency: nothing invokes this. The sitemap argument is typed
+ * loosely for the same reason, so the signature does not name a class that
+ * only exists once simple_sitemap is installed.
+ */
+function drupal_kit_simple_sitemap_links_alter(array &$links, object $sitemap): void {
+  $language_manager = \Drupal::languageManager();
+
+  // getEditable(), not get(). `\Drupal::config()` returns the IMMUTABLE object,
+  // which already has the active language's override applied — so on a site
+  // whose current config language overrides page.front, the "untranslated"
+  // fallback would silently be that language's value, and every language
+  // without its own override would inherit it. getEditable() reads the stored
+  // value. (ConfigFactory::doGet(), $immutable.)
+  $stored = (string) \Drupal::configFactory()
+    ->getEditable('system.site')
+    ->get('page.front');
+
+  // `page.front` is translatable, so the answer is a map, not a value. Asking
+  // once and applying that answer to every link is what the first version did
+  // — see FrontPageSitemapFilter::matchingLangcodes().
+  $fronts = [];
+
+  if ($language_manager->isMultilingual()) {
+    foreach (array_keys($language_manager->getLanguages()) as $langcode) {
+      $override = $language_manager
+        ->getLanguageConfigOverride($langcode, 'system.site')
+        ->get('page.front');
+      $fronts[$langcode] = (string) ($override ?? $stored);
+    }
+  }
+  else {
+    // No language module, so there are no overrides to find and the stored
+    // value is the whole map. The key is the langcode a link carries when
+    // simple_sitemap did not attribute it to a language.
+    $fronts[LanguageInterface::LANGCODE_NOT_SPECIFIED] = $stored;
+  }
+
+  foreach ($links as $key => $link) {
+    $filtered = FrontPageSitemapFilter::filterLink($link, $fronts);
+    if ($filtered === NULL) {
+      unset($links[$key]);
+      continue;
+    }
+    $links[$key] = $filtered;
+  }
 }
 
 /**
