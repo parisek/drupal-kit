@@ -61,15 +61,34 @@ class FrontPageSitemapLinksAlterKernelTest extends KernelTestBase {
   }
 
   /**
-   * A site whose front page is not a node keeps every entry.
+   * A site whose front page is the site root keeps every entry.
    */
-  public function testNothingIsRemovedWhenFrontIsNotNodePath(): void {
+  public function testNothingIsRemovedWhenFrontIsSiteRoot(): void {
     \Drupal::configFactory()->getEditable('system.site')->set('page.front', '/')->save();
     $links = ['a' => $this->link('node/9'), 'b' => $this->link('about')];
 
     drupal_kit_simple_sitemap_links_alter($links, new \stdClass());
 
     $this->assertSame(['a', 'b'], array_keys($links));
+  }
+
+  /**
+   * A front page pointing at an aliased path drops that path, not a node.
+   *
+   * The page.front setting does not have to name a node. When it names an
+   * aliased route the same duplicate arises, and node entries have to survive.
+   */
+  public function testAliasedFrontPathIsRemovedAndNodesSurvive(): void {
+    \Drupal::configFactory()->getEditable('system.site')->set('page.front', '/about')->save();
+    $links = [
+      'a' => $this->link(''),
+      'b' => $this->link('about'),
+      'c' => $this->link('node/9'),
+    ];
+
+    drupal_kit_simple_sitemap_links_alter($links, new \stdClass());
+
+    $this->assertSame(['a', 'c'], array_keys($links));
   }
 
   /**
