@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-09-01
+
 ### Added
 - **`ViteManifest` resolves a content-hashed JS entry through `.vite/manifest.json`.** A library opts in with `vite_entry` (the manifest key, or `true` for the default `src/js/script.js`) and keeps declaring its real dist path; `hook_library_info_alter()` swaps in the hashed filename when a usable manifest sits beside it. Ported from `StarterBase::themeScriptFile()` in parisek/timber-kit.
 
@@ -35,6 +37,8 @@ All notable changes to this project are documented in this file. The format foll
   **This changes rendered output on multilingual sites and on any monolingual site whose language has a `languages:` entry — review pages before deploying.** Two regression tests pin the contract (Czech low-9 quotes reach the output; one instance typesets Czech and English differently across consecutive calls); both fail against the pre-fix constructor call.
 - **Bumped the `parisek/twig-typography` floor from `^1.2` to `^1.3`** — the `languages:` layer this change depends on does not exist before 1.3, where the resolver argument would be accepted and silently ignored.
 
+- **Docs: Packagist is the distribution channel** — the package is now published as [`parisek/drupal-kit` on Packagist](https://packagist.org/packages/parisek/drupal-kit) with the GitHub auto-sync webhook. README gains Packagist version + downloads badges and an Installation section (`composer require parisek/drupal-kit`); RELEASING.md drops the `vcs` repository entry instructions in favour of a Packagist sync-verification step and documents that the auto-created GitHub release must not be duplicated manually. Packagist serves every tag (including 1.x) under the canonical package name, so the `vcs` route is obsolete for all versions.
+
 ### Fixed
 - **The sitemap no longer lists the front page twice** — `system.site` points `page.front` at a node, and simple_sitemap listed that page as both `/` and the node's own URL. Where the redirect module's route normalizer is enabled the second answers 301, so the file handed crawlers a redirect to a page it already contained. `drupal_kit_simple_sitemap_links_alter()` drops the duplicate and keeps `/`, which is what Drupal itself declares canonical on the front page.
 
@@ -46,9 +50,6 @@ All notable changes to this project are documented in this file. The format foll
 
 - **`merge_resizer()` supports optional per-viewport images** — ported from timber-kit's `StarterBase::twig_merge_resizer()` after the OPOP page-header case (optional mobile mascot variant) exposed two defects in the original implementation. (1) Empty groups are now dropped before the last-group detection: an unfilled optional image field makes `Resizer` return `[]`, and keeping it as the "last" group filtered the remaining (desktop) group down to media-qualified variants — producing a `<picture>` with no unconditional `<img>` fallback at all. (2) The non-last-group filter switches `isset($image['media'])` → `!empty(...)`: `Resizer` sets `media` to `''` for tuples without a breakpoint (and omits the key on the appended original image), so `isset()` leaked fallback-shaped desktop entries into the merged set ahead of the mobile entries, shadowing the mobile image on every viewport. Net effect: `merge_resizer(desktop, mobile)` keeps one call shape whether or not the optional image is filled — no `{% if %}` branching in templates. Two regression unit tests pin the contract (empty-group drop preserves the fallback; empty-media desktop entries are filtered when a mobile group follows). Consumers with a hand-mirrored copy in their theme's `static/index.php` (styleguide runs without Drupal) must apply the same change — done in `opopcz` and `drupal-base`.
 - **PHPStan drift: `DependencySerializationTrait` vs promoted `private readonly` plugin properties** — `FilterLinks` and `FilterTypography` injected their services as constructor-promoted `private readonly` properties; `FilterBase` carries `DependencySerializationTrait`, which supports neither private nor readonly properties ([#3110266](https://www.drupal.org/node/3110266)), and a newer `phpstan-drupal` rule now fails the analysis (4 errors) on every fresh install — exactly the drift the no-`composer.lock` policy (ADR 0001) is meant to surface. Both properties are now plain `protected`, with an inline comment explaining the constraint. Full suite (347 tests), PHPStan level 8 and phpcs green.
-
-### Changed
-- **Docs: Packagist is the distribution channel** — the package is now published as [`parisek/drupal-kit` on Packagist](https://packagist.org/packages/parisek/drupal-kit) with the GitHub auto-sync webhook. README gains Packagist version + downloads badges and an Installation section (`composer require parisek/drupal-kit`); RELEASING.md drops the `vcs` repository entry instructions in favour of a Packagist sync-verification step and documents that the auto-created GitHub release must not be duplicated manually. Packagist serves every tag (including 1.x) under the canonical package name, so the `vcs` route is obsolete for all versions.
 
 ## [2.0.0] — 2026-07-08
 
