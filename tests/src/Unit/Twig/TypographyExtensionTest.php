@@ -359,4 +359,32 @@ class TypographyExtensionTest extends TestCase {
     ];
   }
 
+  /**
+   * @covers ::applyTypography
+   *
+   * The other half of the guard: narrowing it to numbers and booleans must
+   * not have cost a Stringable its typesetting. Without this the scalar tests
+   * above pass just as happily against `if (!is_string()) return`, which
+   * would silently stop typesetting every TranslatableMarkup on the site.
+   */
+  public function testStringableProseIsStillTypeset(): void {
+    $prose = new class() implements \Stringable {
+
+      /**
+       * {@inheritdoc}
+       */
+      public function __toString(): string {
+        return 'Ahoj "svete" a k tomu';
+      }
+
+    };
+
+    $this->pointAtFakeTheme();
+
+    $out = (string) $this->extension->applyTypography($prose);
+
+    $this->assertNotSame((string) $prose, $out, 'the filter must have changed something');
+    $this->assertStringNotContainsString('"svete"', $out, 'straight quotes must be replaced');
+  }
+
 }

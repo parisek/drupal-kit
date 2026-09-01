@@ -5,7 +5,9 @@ All notable changes to this project are documented in this file. The format foll
 ## [Unreleased]
 
 ### Fixed
-- **`|typography` no longer fatals on a non-string value** — the upstream filter's signature is `Stringable|string|null`, and only arrays were guarded, so an int reached it and raised a `TypeError`: a 500 on the whole page rather than a filter that declined. Non-string, non-Stringable values now pass through untouched. Passing through rather than casting is deliberate — typography is for prose, and a number gains nothing from a non-breaking space.
+- **`|typography` no longer fatals on a number or a boolean** — the upstream filter's signature is `Stringable|string|null`, and only arrays were guarded, so an int reached it and raised a `TypeError`: a 500 on the whole page rather than a filter that declined. Ints, floats and booleans now pass through untouched, alongside the render arrays that already did. Passing through rather than casting is deliberate — typography is for prose, a number gains nothing from a non-breaking space, and the value keeps its type for arithmetic or a chained filter further down the template.
+
+  The list stops there on purpose, and an object still reaches upstream. This filter is registered `is_safe => ['html']`, so what it returns is printed unescaped; passing an arbitrary object through would extend that promise to a value the extension never inspected, and Drupal prints an object carrying a `toString()` method raw. An object reaching a typography filter is a template defect and stays loud.
 
   Found while migrating a site off its local `custom_components` copy, whose filter cast silently: a branch count piped through `|typography` rendered there and took two pages down here. Every consumer moving to this package is one such call away from the same page, so the tolerance belongs in the filter rather than in a rule each site has to remember.
 
