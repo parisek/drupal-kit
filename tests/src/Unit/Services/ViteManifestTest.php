@@ -75,7 +75,9 @@ class ViteManifestTest extends TestCase {
       array_map('unlink', glob($this->tmpDir . '/*.js') ?: []);
       array_map('unlink', glob($this->tmpDir . '/*.css') ?: []);
       @rmdir($this->tmpDir . '/.vite');
-      foreach (['/dist/js/.vite', '/dist/js', '/dist'] as $sub) {
+      // Deepest first: unlink() cannot remove a directory, so a nested
+      // fixture dir must be gone before its parent is swept.
+      foreach (['/dist/js/.vite', '/dist/js/assets', '/dist/js', '/dist'] as $sub) {
         array_map('unlink', glob($this->tmpDir . $sub . '/*') ?: []);
         @rmdir($this->tmpDir . $sub);
       }
@@ -983,6 +985,62 @@ class ViteManifestTest extends TestCase {
       $before,
       $libraries,
       'an ambiguous plan is abandoned whole, so no options set is lost',
+    );
+  }
+
+  /**
+   * @covers ::isUsableEntryFile
+   *
+   * REGRESSION. Allowing a subdirectory reopened a hole the bare-filename
+   * rule had closed by accident: `is_file()` follows symlinks, so a `assets`
+   * link pointing outside the build satisfies every string check and still
+   * resolves elsewhere. Containment is now asserted with realpath().
+   */
+  public function testSymlinkedSubdirectoryEscapingTheBuildIsRefused(): void {
+    $outside = sys_get_temp_dir() . '/drupal_kit_vite_outside_' . uniqid();
+    mkdir($outside, 0777, TRUE);
+    touch($outside . '/payload.js');
+    $this->escapedDir = $outside;
+
+    symlink($outside, $this->tmpDir . '/assets');
+    $this->writeManifest('assets/payload.js');
+
+    $this->assertNull($this->vite->entryFile($this->tmpDir));
+
+    @unlink($this->tmpDir . '/assets');
+  }
+
+  /**
+   * @covers ::alterLibraries
+   *
+   * The subdirectory acceptance proven end to end rather than on
+   * entryFile() alone: the rewritten library keeps the `assets/` segment, so
+   * the emitted asset path is the one the build actually produced.
+   */
+  public function testSubdirectoryEntrySurvivesTheLibraryRewrite(): void {
+    mkdir($this->tmpDir . '/dist/js/assets', 0777, TRUE);
+    touch($this->tmpDir . '/dist/js/assets/script-BgkTswcn.js');
+    $this->extraDirs[] = $this->tmpDir . '/dist/js/assets';
+    mkdir($this->tmpDir . '/dist/js/.vite', 0777, TRUE);
+    file_put_contents(
+      $this->tmpDir . '/dist/js/.vite/manifest.json',
+      json_encode([
+        ViteManifest::DEFAULT_ENTRY_KEY => ['file' => 'assets/script-BgkTswcn.js'],
+      ]),
+    );
+
+    $libraries = [
+      'main' => [
+        ViteManifest::LIBRARY_PROPERTY => TRUE,
+        'js' => ['dist/js/script.js' => ['weight' => -1]],
+      ],
+    ];
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame(
+      ['dist/js/assets/script-BgkTswcn.js' => ['weight' => -1]],
+      $libraries['main']['js'],
     );
   }
 

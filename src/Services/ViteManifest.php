@@ -293,7 +293,10 @@ class ViteManifest {
    *   Manifest key — the source path Vite was given as its input.
    *
    * @return string|null
-   *   Filename inside $dir, never a path; NULL to keep the declared asset.
+   *   A path relative to $dir and resolving inside it — usually a bare
+   *   filename, but Vite's default `entryFileNames` puts the entry under
+   *   `assets/`, so a single subdirectory segment is normal. NULL keeps the
+   *   declared asset.
    */
   public function entryFile(string $dir, string $key = self::DEFAULT_ENTRY_KEY): ?string {
     // is_readable() rather than is_file() alone: an unreadable file passes
@@ -367,9 +370,14 @@ class ViteManifest {
    *   `file` value says. `{"src/js/script.js":{"file":"style.css"}}` beside an
    *   existing `style.css` resolves to the stylesheet, which would then be
    *   served as a script.
-   * - PRESENT ON DISK. A manifest naming a missing file is worse than no
-   *   manifest: it serves a guaranteed 404 where the declared path still
-   *   worked.
+   * - PRESENT ON DISK, AND REALLY INSIDE $dir. A manifest naming a missing
+   *   file is worse than no manifest: it serves a guaranteed 404 where the
+   *   declared path still worked. The containment half is separate from the
+   *   lexical test above, because `is_file()` follows symlinks: with
+   *   `$dir/assets` linked outside the build, `assets/payload.js` satisfies
+   *   every string check and still resolves elsewhere. The old bare-filename
+   *   rule blocked that by accident; allowing subdirectories means saying so
+   *   on purpose, which is what `realpath()` does here.
    */
   private function isUsableEntryFile(string $file, string $dir): bool {
     if (!$this->isResolvablePath($file)) {
@@ -384,7 +392,17 @@ class ViteManifest {
       return FALSE;
     }
 
-    return is_file($dir . '/' . $file);
+    $path = $dir . '/' . $file;
+    if (!is_file($path)) {
+      return FALSE;
+    }
+
+    $real = realpath($path);
+    $realDir = realpath($dir);
+
+    return $real !== FALSE
+      && $realDir !== FALSE
+      && str_starts_with($real, rtrim($realDir, '/') . '/');
   }
 
   /**
