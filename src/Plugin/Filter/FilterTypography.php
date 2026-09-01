@@ -53,7 +53,11 @@ class FilterTypography extends FilterBase implements ContainerFactoryPluginInter
   public function process($text, $langcode) {
     $result = new FilterProcessResult($text);
 
-    $text = $this->typography->applyTypography($text);
+    // Drupal hands the filter the language of the exact text being processed,
+    // which is more accurate than the negotiated content language whenever the
+    // two differ — mixed-language views, an explicitly rendered translation,
+    // mail, cron. Passing it through is the whole reason the parameter exists.
+    $text = $this->typography->applyTypography($text, [], TRUE, $langcode !== '' ? $langcode : NULL);
 
     $html_dom = Html::load($text);
     $blockquote = $html_dom->getElementsByTagName('blockquote');
