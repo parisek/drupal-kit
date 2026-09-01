@@ -81,9 +81,32 @@ class TypographyExtension extends AbstractExtension {
    *   Filtered string, or the original render array.
    */
   public function applyTypography(mixed $string, array $arguments = [], bool $useDefaults = TRUE, ?string $langcode = NULL): mixed {
-    if (\is_array($string)) {
+    // Numbers and booleans are returned untouched. The upstream filter is
+    // typed `Stringable|string|null`, so an int — a branch count, a year, a
+    // price piped through `|typography` in a template — raised a TypeError
+    // and took the whole page down with a 500.
+    //
+    // Found migrating a site off its local `custom_components` copy, whose
+    // filter cast silently: a branch count rendered fine there and fataled
+    // here. Every site moving to this package is one such call away from the
+    // same page, so tolerance for the demonstrated case belongs in the
+    // filter, not in a rule each consumer has to remember.
+    //
+    // Passing through, rather than casting and typesetting, is deliberate:
+    // typography is for prose. A number gains nothing from a non-breaking
+    // space, and pass-through keeps the value's type for arithmetic or a
+    // chained filter further down the template.
+    //
+    // The list is deliberately NOT "anything upstream cannot accept". This
+    // filter is registered `is_safe => ['html']`, so whatever it returns is
+    // printed unescaped. Passing an arbitrary object through would hand that
+    // promise to a value this extension never inspected — Drupal prints an
+    // object carrying a `toString()` method raw. An object reaching a
+    // typography filter is a template defect, and it stays loud.
+    if (\is_array($string) || \is_int($string) || \is_float($string) || \is_bool($string)) {
       return $string;
     }
+
     return $this->upstreamForActiveTheme($langcode)->applyTypography($string, $arguments, $useDefaults);
   }
 
