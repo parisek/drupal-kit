@@ -13,6 +13,9 @@ services:
     arguments: ["@theme.manager", "@extension.path.resolver", "%app.root%", "@language_manager"]
     tags:
       - { name: twig.extension }
+  drupal_kit.vite_manifest:
+    class: Drupal\drupal_kit\Services\ViteManifest
+    arguments: ["@extension.path.resolver", "@module_handler", "%app.root%", "@logger.factory"]
   drupal_kit.entity_helper:
     class: Drupal\drupal_kit\Services\EntityHelper
     arguments:

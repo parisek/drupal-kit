@@ -140,3 +140,17 @@ function drupal_kit_theme() {
     ],
   ];
 }
+
+/**
+ * Implements hook_library_info_alter().
+ *
+ * Rewrites a library's JS asset to the content-hashed filename Vite recorded
+ * in `.vite/manifest.json`, for libraries that opt in with
+ * `vite_entry`. A library without the property, or a build with no
+ * manifest, is left exactly as declared.
+ *
+ * @see \Drupal\drupal_kit\Services\ViteManifest
+ */
+function drupal_kit_library_info_alter(array &$libraries, $extension) {
+  \Drupal::service('drupal_kit.vite_manifest')->alterLibraries($libraries, $extension);
+}
