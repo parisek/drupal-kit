@@ -817,4 +817,173 @@ class ViteManifestTest extends TestCase {
     $this->assertSame($before, $libraries);
   }
 
+  /**
+   * @covers ::isUsableEntryFile
+   *
+   * REGRESSION. Vite's own default `entryFileNames` is
+   * `assets/[name]-[hash].js`, so a stock config emits a `file` carrying a
+   * subdirectory. The first guard was `basename($file) !== $file`, which
+   * rejected every such build — silently, since nothing logged. Only this
+   * skeleton's flattened `entryFileNames` reached the happy path, so the
+   * feature looked healthy here while doing nothing downstream.
+   */
+  public function testVitesDefaultAssetsSubdirectoryIsAccepted(): void {
+    mkdir($this->tmpDir . '/assets', 0777, TRUE);
+    touch($this->tmpDir . '/assets/script-BgkTswcn.js');
+    $this->extraDirs[] = $this->tmpDir . '/assets';
+    $this->writeManifest('assets/script-BgkTswcn.js');
+
+    $this->assertSame(
+      'assets/script-BgkTswcn.js',
+      $this->vite->entryFile($this->tmpDir),
+    );
+  }
+
+  /**
+   * @covers ::isUsableEntryFile
+   *
+   * A subdirectory is allowed; escaping the built directory still is not.
+   * The relaxation must not have reopened traversal.
+   */
+  public function testSubdirectoryRelaxationStillRefusesTraversal(): void {
+    $this->writeManifest('../script.BgkTswcn.js');
+    touch(dirname($this->tmpDir) . '/script.BgkTswcn.js');
+
+    $this->assertNull($this->vite->entryFile($this->tmpDir));
+
+    @unlink(dirname($this->tmpDir) . '/script.BgkTswcn.js');
+  }
+
+  /**
+   * @covers ::isUsableEntryFile
+   *
+   * `#` and `?` are legal in a POSIX filename and pass every filesystem
+   * check, but a browser reads them as a fragment or query — so the file
+   * validated on disk is not the file the page requests. `%` goes too: a
+   * server may decode `%2e%2e` back into traversal after this guard ran.
+   */
+  public function testUrlSignificantCharactersAreRefused(): void {
+    foreach (['script.js#.js', 'script.js?.js', 'script%2e.js'] as $name) {
+      touch($this->tmpDir . '/' . $name);
+      $this->writeManifest($name);
+
+      $this->assertNull(
+        $this->vite->entryFile($this->tmpDir),
+        $name . ' must not be served',
+      );
+
+      @unlink($this->tmpDir . '/' . $name);
+    }
+  }
+
+  /**
+   * @covers ::entryFile
+   *
+   * REGRESSION. Every failure branch returned NULL in silence, so an opted-in
+   * library kept its declared path and could serve a 404 with nothing in the
+   * log to explain it. Each distinct failure now warns exactly once.
+   *
+   * @dataProvider provideUnusableManifests
+   */
+  public function testEveryManifestFailureWarns(callable $arrange): void {
+    $channel = $this->createMock(LoggerChannelInterface::class);
+    $channel->expects($this->once())->method('warning');
+    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $factory->method('get')->willReturn($channel);
+
+    $arrange($this);
+
+    $vite = new ViteManifest(
+      $this->createMock(ExtensionPathResolver::class),
+      $this->createMock(ModuleHandlerInterface::class),
+      '',
+      $factory,
+    );
+
+    $this->assertNull($vite->entryFile($this->tmpDir));
+  }
+
+  /**
+   * Manifest states that must each produce exactly one warning.
+   */
+  public static function provideUnusableManifests(): array {
+    return [
+      'missing manifest' => [
+        static function (self $t): void {},
+      ],
+      'malformed JSON' => [
+        static function (self $t): void {
+          file_put_contents($t->tmpDir . '/.vite/manifest.json', '{not json');
+        },
+      ],
+      'key absent' => [
+        static function (self $t): void {
+          file_put_contents(
+            $t->tmpDir . '/.vite/manifest.json',
+            json_encode(['src/js/other.js' => ['file' => 'other.abcdefgh.js']]),
+          );
+        },
+      ],
+      'file absent from disk' => [
+        static function (self $t): void {
+          $t->writeManifest('script.BgkTswcn.min.js');
+        },
+      ],
+      'file is not a script' => [
+        static function (self $t): void {
+          touch($t->tmpDir . '/style.css');
+          $t->writeManifest('style.css');
+        },
+      ],
+    ];
+  }
+
+  /**
+   * @covers ::plannedRewrites
+   *
+   * REGRESSION. The collision test compared rewrite targets only. A pair whose
+   * manifest already names the declared file is a no-op, skipped before
+   * `$rewrites` is built — so a rewrite landing on that same untouched
+   * filename looked unique, and then overwrote the untouched asset's options
+   * during the rebuild. The test is now the final key set.
+   */
+  public function testRewriteCollidingWithAnUntouchedAssetIsRefused(): void {
+    touch($this->tmpDir . '/bundle.ABC.js');
+    file_put_contents(
+      $this->tmpDir . '/.vite/manifest.json',
+      json_encode([
+        'src/js/a.js' => ['file' => 'bundle.ABC.js'],
+        'src/js/b.js' => ['file' => 'bundle.ABC.js'],
+      ]),
+    );
+
+    $libraries = [
+      'main' => [
+        ViteManifest::LIBRARY_PROPERTY => [
+          'a.js' => 'src/js/a.js',
+          'bundle.ABC.js' => 'src/js/b.js',
+        ],
+        'js' => [
+          'a.js' => ['weight' => -1],
+          'bundle.ABC.js' => ['weight' => 1],
+        ],
+      ],
+    ];
+
+    $channel = $this->createMock(LoggerChannelInterface::class);
+    $channel->expects($this->once())->method('warning');
+    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $factory->method('get')->willReturn($channel);
+    $this->logger = $factory;
+    $before = $libraries;
+
+    $this->viteRootedAtTmpDir()->alterLibraries($libraries, 'some_theme');
+
+    $this->assertSame(
+      $before,
+      $libraries,
+      'an ambiguous plan is abandoned whole, so no options set is lost',
+    );
+  }
+
 }

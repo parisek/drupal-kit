@@ -220,12 +220,24 @@ class ViteManifest {
       $rewrites[$path] = $relDir === '.' ? $file : $relDir . '/' . $file;
     }
 
-    // Two keys resolving to one output filename would land on the same array
-    // key, and the second insert would discard the first asset's options —
-    // the collapse this class already fixed once, arriving through the map.
-    // An ambiguous plan is abandoned whole rather than applied in part.
-    if (\count(array_unique($rewrites)) !== \count($rewrites)) {
-      $this->warn('Library @lib maps two JS assets onto the same built filename; no Vite rewrite applied. Check that each `@prop` key names a different Vite input.', [
+    // Two assets landing on one output filename would share an array key, and
+    // the second insert would discard the first asset's options — the collapse
+    // this class already fixed once, arriving through the map. An ambiguous
+    // plan is abandoned whole rather than applied in part.
+    //
+    // The test is the FINAL key set, not the rewrite targets alone. Comparing
+    // only `$rewrites` missed a collision against an asset that is not being
+    // rewritten: a no-op pair (`$file === basename($path)`) is skipped by the
+    // loop above and never enters `$rewrites`, so a rewrite landing on that
+    // same untouched filename looked unique and silently overwrote it.
+    $final = [];
+    foreach (\array_keys($library['js']) as $path) {
+      $path = (string) $path;
+      $final[] = $rewrites[$path] ?? $path;
+    }
+
+    if (\count(\array_unique($final)) !== \count($final)) {
+      $this->warn('Library @lib would place two JS assets at the same built filename; no Vite rewrite applied. Check that each `@prop` key names a different Vite input, and that no rewrite lands on an asset the library already declares.', [
         '@lib' => $label,
         '@prop' => self::LIBRARY_PROPERTY,
       ]);
@@ -287,35 +299,70 @@ class ViteManifest {
     // is_readable() rather than is_file() alone: an unreadable file passes
     // is_file() and then makes file_get_contents() emit a warning on its way
     // to the same fallback.
+    // Every branch below warns before returning NULL. Silence was the first
+    // version's real defect: a library that opted in kept its declared path,
+    // so a build whose manifest was missing, stale or unreadable served a
+    // guaranteed 404 — or, worse, an old fixed filename that still existed,
+    // recreating the very cache bug this class fixes. An opt-in that cannot
+    // do its job has to say so.
     $manifest = $dir . '/.vite/manifest.json';
     if (!is_readable($manifest)) {
+      $this->warn('Vite manifest @path is missing or unreadable; the declared asset path is kept and may 404. Build the theme, or drop the `@prop` opt-in.', [
+        '@path' => $manifest,
+        '@prop' => self::LIBRARY_PROPERTY,
+      ]);
       return NULL;
     }
 
     $decoded = json_decode((string) file_get_contents($manifest), TRUE);
     if (!is_array($decoded)) {
+      $this->warn('Vite manifest @path is not valid JSON; the declared asset path is kept and may 404.', [
+        '@path' => $manifest,
+      ]);
       return NULL;
     }
 
     $record = $decoded[$key] ?? NULL;
     if (!is_array($record)) {
+      $this->warn('Vite manifest @path has no usable record for key @key. Check that `@prop` names a Vite input, for example `src/js/script.js`.', [
+        '@path' => $manifest,
+        '@key' => $key,
+        '@prop' => self::LIBRARY_PROPERTY,
+      ]);
       return NULL;
     }
 
     $file = $record['file'] ?? '';
+    if (!is_string($file) || !$this->isUsableEntryFile($file, $dir)) {
+      $this->warn('Vite manifest @path maps @key to @file, which is not a usable script inside the built directory — it escapes the directory, carries a URL-significant character, is not a .js file, or is absent from disk. The declared asset path is kept and may 404.', [
+        '@path' => $manifest,
+        '@key' => $key,
+        '@file' => is_string($file) ? $file : \gettype($file),
+      ]);
+      return NULL;
+    }
 
-    return is_string($file) && $this->isUsableEntryFile($file, $dir) ? $file : NULL;
+    return $file;
   }
 
   /**
    * Is this manifest `file` value safe to serve as the library's script?
    *
-   * Three checks, each answering a reproduction rather than a hypothesis —
-   * they are ported from the WordPress sibling, where each was demonstrated:
+   * Four checks, each answering a reproduction rather than a hypothesis:
    *
-   * - A BARE FILENAME. `is_file()` happily resolves `../elsewhere/other.js`,
-   *   so a `file` carrying a separator escapes the directory this method
-   *   documents itself as returning a name inside.
+   * - RESOLVABLE, NOT BARE. `is_file()` happily resolves
+   *   `../elsewhere/other.js`, so a `file` that escapes $dir must be refused.
+   *   The check is `isResolvablePath()` — the same per-segment traversal test
+   *   the declared library paths get — and NOT `basename($file) !== $file`,
+   *   which the first version used. That was too strict: Vite's own default
+   *   `entryFileNames` is `assets/[name]-[hash].js`, so a stock config
+   *   produces `assets/script-BgkTswcn.js` and every such build was rejected
+   *   silently. Only this skeleton's flattened `entryFileNames` ever passed.
+   * - URL-SAFE. `#` and `?` are legal in a POSIX filename and would pass every
+   *   filesystem check, but a browser reads them as a fragment or query: the
+   *   file validated on disk is then not the file requested. Percent signs go
+   *   too, since a server may decode `%2e%2e` back into traversal after this
+   *   guard has run.
    * - A `.js` SUFFIX. The key decides which RECORD is read, not what its
    *   `file` value says. `{"src/js/script.js":{"file":"style.css"}}` beside an
    *   existing `style.css` resolves to the stylesheet, which would then be
@@ -325,7 +372,11 @@ class ViteManifest {
    *   worked.
    */
   private function isUsableEntryFile(string $file, string $dir): bool {
-    if ($file === '' || basename($file) !== $file) {
+    if (!$this->isResolvablePath($file)) {
+      return FALSE;
+    }
+
+    if (\strpbrk($file, "#?%") !== FALSE) {
       return FALSE;
     }
 
