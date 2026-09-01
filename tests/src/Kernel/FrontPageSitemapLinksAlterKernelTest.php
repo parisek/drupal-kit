@@ -63,7 +63,7 @@ class FrontPageSitemapLinksAlterKernelTest extends KernelTestBase {
   /**
    * A site whose front page is not a node keeps every entry.
    */
-  public function testNothingIsRemovedWhenFrontIsNotANode(): void {
+  public function testNothingIsRemovedWhenFrontIsNotNodePath(): void {
     \Drupal::configFactory()->getEditable('system.site')->set('page.front', '/')->save();
     $links = ['a' => $this->link('node/9'), 'b' => $this->link('about')];
 
@@ -75,7 +75,7 @@ class FrontPageSitemapLinksAlterKernelTest extends KernelTestBase {
   /**
    * Links without a meta path are left alone rather than tripping the hook.
    *
-   * simple_sitemap builds meta itself, but the hook runs after every other
+   * Simple_sitemap builds meta itself, but the hook runs after every other
    * implementation, so it must tolerate whatever they left behind.
    */
   public function testLinksWithoutMetaPathAreUntouched(): void {
