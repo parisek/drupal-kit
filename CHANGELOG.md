@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+- **`|typography` now typesets per language** — `TypographyExtension` hands the upstream `Parisek\Twig\TypographyExtension` a locale resolver, so the `languages:` tables shipped by `parisek/twig-typography` ^1.3 (quote style, dash convention, single-character word spacing, …) actually apply. Without a resolver the upstream `localeCandidates()` returns `[]` and that whole layer is inert: only the language-neutral house defaults ever ran, so Czech content was typeset with English curled quotes (`“ahoj”`, not `„ahoj“`) and lost the non-breaking space after single-letter prepositions that Czech typography requires. Ported from `StarterBase::typography_locale_resolver()` in parisek/timber-kit, the WordPress-side sibling.
+
+  The resolver reports the **content** language (`LanguageInterface::TYPE_CONTENT`), not the interface language. The two diverge exactly where it matters — an editor whose account language is Czech previewing an English node would otherwise get Czech typography applied to English prose. Drupal falls back to the interface language when content language negotiation is not configured, so monolingual sites are unaffected. Same distinction timber-kit documents for `get_locale()` vs `determine_locale()`.
+
+  **`FilterTypography` now forwards its own `$langcode`.** Drupal hands a text filter the language of the exact text being processed, and `process()` was discarding it — harmless while no language layer existed, wrong the moment one did: the filter would have typeset with the negotiated content language instead, which differs on mixed-language views, an explicitly rendered translation, mail and cron. `applyTypography()` takes an optional fourth argument for it; an empty langcode falls back to negotiation. A pinned language gets its own cache entry, so the negotiated path is unaffected.
+
+  Note for direct instantiators: the constructor takes a fourth required argument. Container consumers are unaffected; the release doctrine excludes container-wired constructor signatures from the public API.
+
+  Exposed as the overridable `protected TypographyExtension::localeResolver()` for sites whose language detection does not go through `language_manager`. The closure is evaluated per `applyTypography()` call rather than once at construction, so one cached upstream instance still serves every language in a request and the per-theme cache needs no language component.
+
+  **This changes rendered output on multilingual sites and on any monolingual site whose language has a `languages:` entry — review pages before deploying.** Two regression tests pin the contract (Czech low-9 quotes reach the output; one instance typesets Czech and English differently across consecutive calls); both fail against the pre-fix constructor call.
+- **Bumped the `parisek/twig-typography` floor from `^1.2` to `^1.3`** — the `languages:` layer this change depends on does not exist before 1.3, where the resolver argument would be accepted and silently ignored.
+
 ### Fixed
 - **The sitemap no longer lists the front page twice** — `system.site` points `page.front` at a node, and simple_sitemap listed that page as both `/` and the node's own URL. Where the redirect module's route normalizer is enabled the second answers 301, so the file handed crawlers a redirect to a page it already contained. `drupal_kit_simple_sitemap_links_alter()` drops the duplicate and keeps `/`, which is what Drupal itself declares canonical on the front page.
 

@@ -138,4 +138,40 @@ class FilterTypographyTest extends TestCase {
     $this->assertInstanceOf(FilterTypography::class, $instance);
   }
 
+  /**
+   * @covers ::process
+   *
+   * Drupal hands the filter the language of the exact text being processed,
+   * which beats the negotiated content language whenever the two differ —
+   * mixed-language views, an explicitly rendered translation, mail, cron.
+   * Passing it through is the whole reason the parameter exists.
+   */
+  public function testProcessForwardsItsLangcodeToTypography(): void {
+    $typography = $this->createMock(TypographyExtension::class);
+    $typography->expects($this->once())
+      ->method('applyTypography')
+      ->with('<p>hi</p>', [], TRUE, 'cs')
+      ->willReturnArgument(0);
+    $filter = new FilterTypography([], 'filter_typography', ['provider' => 'drupal_kit'], $typography);
+
+    $filter->process('<p>hi</p>', 'cs');
+  }
+
+  /**
+   * @covers ::process
+   *
+   * An empty langcode carries no information, so it must not pin a language —
+   * it falls back to the negotiated one rather than being passed on verbatim.
+   */
+  public function testEmptyLangcodeFallsBackToNegotiation(): void {
+    $typography = $this->createMock(TypographyExtension::class);
+    $typography->expects($this->once())
+      ->method('applyTypography')
+      ->with('<p>hi</p>', [], TRUE, NULL)
+      ->willReturnArgument(0);
+    $filter = new FilterTypography([], 'filter_typography', ['provider' => 'drupal_kit'], $typography);
+
+    $filter->process('<p>hi</p>', '');
+  }
+
 }

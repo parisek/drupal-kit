@@ -10,7 +10,7 @@ services:
       - { name: twig.extension }
   drupal_kit.typography_twig_extension:
     class: Drupal\drupal_kit\Twig\TypographyExtension
-    arguments: ["@theme.manager", "@extension.path.resolver", "%app.root%"]
+    arguments: ["@theme.manager", "@extension.path.resolver", "%app.root%", "@language_manager"]
     tags:
       - { name: twig.extension }
   drupal_kit.entity_helper:
