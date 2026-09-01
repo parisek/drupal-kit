@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Fixed
+- **`|typography` no longer fatals on a non-string value** — the upstream filter's signature is `Stringable|string|null`, and only arrays were guarded, so an int reached it and raised a `TypeError`: a 500 on the whole page rather than a filter that declined. Non-string, non-Stringable values now pass through untouched. Passing through rather than casting is deliberate — typography is for prose, and a number gains nothing from a non-breaking space.
+
+  Found while migrating a site off its local `custom_components` copy, whose filter cast silently: a branch count piped through `|typography` rendered there and took two pages down here. Every consumer moving to this package is one such call away from the same page, so the tolerance belongs in the filter rather than in a rule each site has to remember.
+
 ## [2.1.0] — 2026-09-01
 
 ### Added

@@ -329,4 +329,34 @@ class TypographyExtensionTest extends TestCase {
     $this->assertStringContainsString("\xe2\x80\x9c", $negotiated, 'negotiated call is still English');
   }
 
+  /**
+   * @covers ::applyTypography
+   *
+   * REGRESSION. The upstream filter's signature is `Stringable|string|null`,
+   * and only arrays were guarded, so an int reached it and raised a TypeError
+   * — a 500 on the whole page, not a filter that declined.
+   *
+   * Found migrating a real site: a branch count piped through `|typography`
+   * had worked against the local `custom_components` copy, which cast, and
+   * took two pages down against this package.
+   *
+   * @dataProvider provideNonStringValues
+   */
+  public function testNonStringValuesPassThroughUntouched(mixed $value): void {
+    $this->assertSame($value, $this->extension->applyTypography($value));
+  }
+
+  /**
+   * Values a template can pipe into `|typography` that are not text.
+   */
+  public static function provideNonStringValues(): array {
+    return [
+      'int' => [77],
+      'zero' => [0],
+      'float' => [1.5],
+      'true' => [TRUE],
+      'false' => [FALSE],
+    ];
+  }
+
 }

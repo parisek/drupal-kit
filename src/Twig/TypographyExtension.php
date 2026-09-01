@@ -81,9 +81,25 @@ class TypographyExtension extends AbstractExtension {
    *   Filtered string, or the original render array.
    */
   public function applyTypography(mixed $string, array $arguments = [], bool $useDefaults = TRUE, ?string $langcode = NULL): mixed {
-    if (\is_array($string)) {
+    // Anything the upstream filter cannot accept is returned untouched rather
+    // than forwarded. Its signature is `Stringable|string|null`, so an int or
+    // a float — a branch count, a year, a price piped through `|typography`
+    // in a template — used to raise a TypeError and take the whole page down
+    // with a 500.
+    //
+    // Found migrating htdvere off its local `custom_components` copy, whose
+    // filter cast silently: `{{ content.map_box.branch_count|typography }}`
+    // rendered fine there and fataled here. Every site moving to this package
+    // is one such call away from the same page, so tolerance belongs in the
+    // filter, not in a rule each consumer has to remember.
+    //
+    // Passing through, rather than casting and typesetting, is deliberate:
+    // typography is for prose. A number gains nothing from a non-breaking
+    // space and can only be harmed by one.
+    if (!\is_string($string) && !($string instanceof \Stringable) && $string !== NULL) {
       return $string;
     }
+
     return $this->upstreamForActiveTheme($langcode)->applyTypography($string, $arguments, $useDefaults);
   }
 
