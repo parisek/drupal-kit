@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.1.1] — 2026-09-01
+
 ### Fixed
 - **`|typography` no longer fatals on a number or a boolean** — the upstream filter's signature is `Stringable|string|null`, and only arrays were guarded, so an int reached it and raised a `TypeError`: a 500 on the whole page rather than a filter that declined. Ints, floats and booleans now pass through untouched, alongside the render arrays that already did. Passing through rather than casting is deliberate — typography is for prose, a number gains nothing from a non-breaking space, and the value keeps its type for arithmetic or a chained filter further down the template.
 
