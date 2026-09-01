@@ -92,12 +92,12 @@ class FrontPageSitemapFilter {
    *   URL in another language's `hreflang` block re-advertises exactly the URL
    *   this filter exists to withhold.
    *
-   * @param array $link
+   * @param array<string, mixed> $link
    *   One simple_sitemap link.
    * @param array<string, string> $fronts
    *   Configured front page per langcode.
    *
-   * @return array|null
+   * @return array<string, mixed>|null
    *   The rewritten link, or NULL when it should be dropped entirely.
    */
   public static function filterLink(array $link, array $fronts): ?array {

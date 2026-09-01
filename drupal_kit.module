@@ -159,31 +159,35 @@ function drupal_kit_theme() {
  */
 function drupal_kit_simple_sitemap_links_alter(array &$links, object $sitemap): void {
   $language_manager = \Drupal::languageManager();
-  $default = (string) \Drupal::config('system.site')->get('page.front');
 
-  // `page.front` is translatable, so the answer is a map, not a value. Reading
-  // the config once would apply whatever language generation happened to run
-  // in to every link — see FrontPageSitemapFilter::matchingLangcodes().
-  //
-  // Only a multilingual site is asked for overrides. Without the language
-  // module there are none to find, and the single untranslated value is the
-  // whole map — which is also the shape the monolingual path needs.
-  $fronts = [LanguageInterface::LANGCODE_NOT_SPECIFIED => $default];
+  // getEditable(), not get(). `\Drupal::config()` returns the IMMUTABLE object,
+  // which already has the active language's override applied — so on a site
+  // whose current config language overrides page.front, the "untranslated"
+  // fallback would silently be that language's value, and every language
+  // without its own override would inherit it. getEditable() reads the stored
+  // value. (ConfigFactory::doGet(), $immutable.)
+  $stored = (string) \Drupal::configFactory()
+    ->getEditable('system.site')
+    ->get('page.front');
+
+  // `page.front` is translatable, so the answer is a map, not a value. Asking
+  // once and applying that answer to every link is what the first version did
+  // — see FrontPageSitemapFilter::matchingLangcodes().
+  $fronts = [];
 
   if ($language_manager->isMultilingual()) {
     foreach (array_keys($language_manager->getLanguages()) as $langcode) {
-      try {
-        $override = $language_manager
-          ->getLanguageConfigOverride($langcode, 'system.site')
-          ->get('page.front');
-      }
-      catch (\Throwable) {
-        // An override store that cannot answer is not a reason to stop
-        // filtering; the untranslated value still describes this language.
-        $override = NULL;
-      }
-      $fronts[$langcode] = (string) ($override ?? $default);
+      $override = $language_manager
+        ->getLanguageConfigOverride($langcode, 'system.site')
+        ->get('page.front');
+      $fronts[$langcode] = (string) ($override ?? $stored);
     }
+  }
+  else {
+    // No language module, so there are no overrides to find and the stored
+    // value is the whole map. The key is the langcode a link carries when
+    // simple_sitemap did not attribute it to a language.
+    $fronts[LanguageInterface::LANGCODE_NOT_SPECIFIED] = $stored;
   }
 
   foreach ($links as $key => $link) {
