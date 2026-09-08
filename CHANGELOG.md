@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Fixed
+- **`ViteManifest` no longer asks for a theme named `core`** (#118) — Drupal runs `hook_library_info_alter()` for the `core` pseudo-extension, which is neither a module nor a theme. `extensionRoot()` decided the type as module-else-theme, so every library-discovery cache rebuild asked the resolver for a theme called `core`. The resolver reports the miss with `trigger_error()`, a warning rather than an exception, so the `catch (\Throwable)` beside it never ran and the NULL it returned reached `dirname()`. Two log entries per rebuild, and a red error box on a site with error display on.
+
+  `extensionRoot()` now returns NULL for `core` before deciding a type. `LibraryDiscoveryParser::buildByExtension()` carries the same module-else-theme rule and the same single exception, and every other extension name reaches core's own `getPath()` call before this hook runs, so mirroring core covers the whole class of names that can arrive here.
+
+  Found on htdvere. The entries follow the cache rebuild rather than any route, so warming the cache with one page moves the warning to the next one and it reads as route-specific until you look twice.
+
 ## [2.1.1] — 2026-09-01
 
 ### Fixed
