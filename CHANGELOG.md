@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.1.2] — 2026-09-09
+
 ### Fixed
 - **`ViteManifest` no longer asks for a theme named `core`** (#118) — Drupal runs `hook_library_info_alter()` for the `core` pseudo-extension, which is neither a module nor a theme. `extensionRoot()` decided the type as module-else-theme, so every library-discovery cache rebuild asked the resolver for a theme called `core`. The resolver reports the miss with `trigger_error()`, a warning rather than an exception, so the `catch (\Throwable)` beside it never ran and the NULL it returned reached `dirname()`. Two log entries per rebuild, and a red error box on a site with error display on.
 
