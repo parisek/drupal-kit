@@ -1044,4 +1044,58 @@ class ViteManifestTest extends TestCase {
     );
   }
 
+  /**
+   * The `core` pseudo-extension must not reach the path resolver.
+   *
+   * Drupal runs the alter hook for `core`, which is neither a module nor a
+   * theme. Asking the resolver for a theme of that name raised an E_USER
+   * warning and, through the NULL it returned, a dirname() deprecation.
+   *
+   * The assertion is on a call that must not happen. A NULL comes back either
+   * way, so the return value cannot tell the fix from the defect.
+   *
+   * @covers ::alterLibraries
+   */
+  public function testCoreNeverReachesThePathResolver(): void {
+    $resolver = $this->createMock(ExtensionPathResolver::class);
+    $resolver->expects($this->never())->method('getPath');
+
+    $vite = new ViteManifest(
+      $resolver,
+      $this->createMock(ModuleHandlerInterface::class),
+      '',
+      $this->nullLogger(),
+    );
+
+    $libraries = ['global' => ['vite_entry' => TRUE, 'js' => ['dist/js/script.js' => []]]];
+    $expected = $libraries;
+    $vite->alterLibraries($libraries, 'core');
+
+    $this->assertSame($expected, $libraries);
+  }
+
+  /**
+   * A real extension still reaches the resolver.
+   *
+   * Guards the guard: returning early for every name would silence the
+   * warning and stop every rewrite with it.
+   *
+   * @covers ::alterLibraries
+   */
+  public function testRealExtensionStillReachesThePathResolver(): void {
+    $resolver = $this->createMock(ExtensionPathResolver::class);
+    $resolver->expects($this->once())
+      ->method('getPath')
+      ->with('module', 'drupal_kit')
+      ->willReturn($this->tmpDir);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->with('drupal_kit')->willReturn(TRUE);
+
+    $vite = new ViteManifest($resolver, $moduleHandler, '', $this->nullLogger());
+
+    $libraries = ['global' => ['vite_entry' => TRUE, 'js' => ['dist/js/script.js' => []]]];
+    $vite->alterLibraries($libraries, 'drupal_kit');
+  }
+
 }

@@ -407,8 +407,22 @@ class ViteManifest {
 
   /**
    * Absolute path to the extension's own directory, or NULL if unknown.
+   *
+   * Drupal runs hook_library_info_alter() for `core`, which is neither a
+   * module nor a theme, so the module-else-theme rule below asks for a theme
+   * named `core` and the resolver reports the miss with trigger_error(). That
+   * is a warning, not an exception, so the catch below never sees it.
+   *
+   * LibraryDiscoveryParser::buildByExtension() carries the same rule and the
+   * same single exception for `core`; this mirrors it deliberately. Every
+   * other name reaches core's own getPath() call first, so a name that is
+   * neither cannot arrive here.
    */
   private function extensionRoot(string $extension): ?string {
+    if ($extension === 'core') {
+      return NULL;
+    }
+
     $type = $this->moduleHandler->moduleExists($extension) ? 'module' : 'theme';
 
     try {
