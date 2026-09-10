@@ -17,6 +17,8 @@ All notable changes to this project are documented in this file. The format foll
 
   The install path is not assumed. `drupal_kit_locale_translation_projects_alter()` rebuilds the server pattern from the extension list, so a consumer whose `installer-paths` put the module outside `modules/contrib` still gets its translations instead of a project reported as checked with nothing imported.
 
+  The scanner that guards the catalogue is held to account by its own test. It unescapes per quote style — a single-quoted PHP literal knows only `\'` and `\\`, so running the double-quoted rules over one turns a literal backslash-n into a newline and silently renames the string — and it reads a `context` key written either way. A shape it cannot read is a false green: the parity check reports a complete catalogue while the string ships untranslated.
+
   A consumer still overrides any string in Admin → Translate interface. A shipped translation is a default, not a lock.
 
 - **A Scheduler publish or unpublish date is announced on the entity page** (#121) — `drupal_kit_page_attachments_alter()` already says *This page has not been published yet, only privileged users can see it.* When [Scheduler](https://www.drupal.org/project/scheduler) holds that page for a date, the message stopped short: it said the content was invisible, not that a date was set and cron would act on it. An editor could not tell a planned article from a forgotten draft without opening the edit form. Scheduler names the date once, in the message after the entity form is saved, so an editor who opens the page a week later saw nothing.

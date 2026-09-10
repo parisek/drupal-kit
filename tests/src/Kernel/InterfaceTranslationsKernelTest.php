@@ -54,12 +54,21 @@ class InterfaceTranslationsKernelTest extends KernelTestBase {
     $this->installSchema('locale', ['locale_file', 'locales_location', 'locales_source', 'locales_target']);
     ConfigurableLanguage::createFromLangcode('cs')->save();
 
-    // The procedural locale.translation.inc is deprecated in 11.4; these are
-    // the services that replace it.
-    $projects = $this->container->get(LocaleProjectRepository::class)->getAll();
-    $this->assertArrayHasKey('drupal_kit', $projects, 'The module is its own translation project.');
-
-    $source = $this->container->get(LocaleSource::class)->sourceBuild($projects['drupal_kit'], 'cs');
+    // locale.translation.inc is deprecated in 11.4 and replaced by these
+    // services — which only exist from 11.4. composer.json promises
+    // ^10 || ^11, so on anything older the services are the ones missing
+    // and the deprecated functions are what spans the whole range.
+    if ($this->container->has(LocaleProjectRepository::class)) {
+      $projects = $this->container->get(LocaleProjectRepository::class)->getAll();
+      $this->assertArrayHasKey('drupal_kit', $projects, 'The module is its own translation project.');
+      $source = $this->container->get(LocaleSource::class)->sourceBuild($projects['drupal_kit'], 'cs');
+    }
+    else {
+      $this->container->get('module_handler')->loadInclude('locale', 'inc', 'locale.translation');
+      $projects = locale_translation_get_projects();
+      $this->assertArrayHasKey('drupal_kit', $projects, 'The module is its own translation project.');
+      $source = locale_translation_source_build($projects['drupal_kit'], 'cs');
+    }
     $this->assertArrayHasKey('local', $source->files, 'A local file is offered.');
     $this->assertFileExists($this->root . '/' . $source->files['local']->uri);
   }
@@ -106,6 +115,61 @@ class InterfaceTranslationsKernelTest extends KernelTestBase {
       'somewhere/else/drupal_kit/translations/%language.po',
       $projects['drupal_kit']['info']['interface translation server pattern'],
     );
+  }
+
+  /**
+   * The scanner reads the string shapes that really occur.
+   *
+   * Every assertion below is a shape a review found the scanner mishandling,
+   * or one it was never asked about. A missed shape is a false green: the
+   * parity check reports a complete catalogue while the string ships
+   * untranslated, which is the failure this whole test class exists to stop.
+   */
+  public function testTheScannerReadsRealStringShapes(): void {
+    $cases = [
+      "t('plain')" => ['plain' => 'plain'],
+      't("double quoted")' => ['double quoted' => 'double quoted'],
+      '$this->t(\'method call\')' => ['method call' => 'method call'],
+      'new TranslatableMarkup("markup")' => ['markup' => 'markup'],
+      '@Translation("annotation")' => ['annotation' => 'annotation'],
+      // An apostrophe is the reason a double-quoted literal gets written.
+      't("it\'s done")' => ["it's done" => "it's done"],
+      // Escapes, per quote style. A single-quoted PHP literal knows only
+      // \' and \\; everything else is two characters, backslash included.
+      "t('say \\'hi\\'')" => ["say 'hi'" => "say 'hi'"],
+      "t('Wrapper\\ ID')" => ['Wrapper\ ID' => 'Wrapper\ ID'],
+      't("a \\"q\\" b")' => ['a "q" b' => 'a "q" b'],
+      't("line\\nbreak")' => ["line\nbreak" => "line\nbreak"],
+    ];
+
+    foreach ($cases as $code => $expected) {
+      $this->assertSame($expected, $this->extractStrings("<?php $code;"), "Scanning: $code");
+    }
+  }
+
+  /**
+   * A context keeps a string apart, in either quote style.
+   *
+   * Locale identifies a string by source and context together, so the same
+   * word under two contexts is two entries. A context the scanner cannot
+   * read collapses them into one, and the catalogue looks complete while an
+   * entry is missing.
+   */
+  public function testTheScannerReadsContextsInBothQuoteStyles(): void {
+    $single = "\$this->t('Wrapper ID', [], ['context' => 'Review context']);";
+    $double = '$this->t("Wrapper ID", [], ["context" => "Review context"]);';
+
+    foreach ([$single, $double] as $code) {
+      $this->assertSame(
+        ["Review context\x04Wrapper ID" => 'Wrapper ID'],
+        $this->extractStrings("<?php $code"),
+        "Scanning: $code",
+      );
+    }
+
+    // Same word, two contexts, two entries — never one.
+    $both = "<?php \$this->t('Wrapper ID'); \$this->t('Wrapper ID', [], ['context' => 'Review context']);";
+    $this->assertCount(2, $this->extractStrings($both));
   }
 
   /**
@@ -193,30 +257,49 @@ class InterfaceTranslationsKernelTest extends KernelTestBase {
       if (str_contains($file->getPathname(), '/tests/') || str_contains($file->getPathname(), '/vendor/')) {
         continue;
       }
-      $code = file_get_contents($file->getPathname());
-
-      // t('…'), $this->t('…'), new TranslatableMarkup('…'), in either
-      // quote style. Drupal's own coding standard prefers single quotes,
-      // but nothing enforces it on a string that contains an apostrophe.
-      preg_match_all("/(?:TranslatableMarkup|->t|[^a-zA-Z_>]t)\(\s*(['\"])((?:(?!\\1)[^\\\\]|\\\\.)*)\\1(.*?)\)/s", $code, $matches, PREG_SET_ORDER);
-      foreach ($matches as $match) {
-        $source = stripcslashes($match[2]);
-        $context = preg_match("/'context'\s*=>\s*'([^']+)'/", $match[3], $ctx) ? $ctx[1] : '';
-        $strings[$this->key($source, $context)] = $source;
-      }
-
-      // @Translation("…") inside a plugin annotation. These live in a
-      // docblock, so no PHP-level scan sees them, and locale extracts them
-      // all the same: a filter's title and description reach the text-format
-      // admin page.
-      preg_match_all('/@Translation\(\s*"((?:[^"\\\\]|\\\\.)*)"/', $code, $matches, PREG_SET_ORDER);
-      foreach ($matches as $match) {
-        $source = str_replace(['\\"', '\\\\'], ['"', '\\'], $match[1]);
-        $strings[$this->key($source, '')] = $source;
-      }
+      $strings += $this->extractStrings(file_get_contents($file->getPathname()));
     }
 
     return array_diff($strings, self::CORE_OWNED);
+  }
+
+  /**
+   * The translatable strings in one chunk of PHP, keyed by context and text.
+   *
+   * Pure, so testTheScannerReadsRealStringShapes can hold it to account.
+   * A scanner that quietly misses a shape reports a complete catalogue over
+   * an incomplete one, which is worse than having no check at all.
+   */
+  protected function extractStrings(string $code): array {
+    $strings = [];
+
+    // t('…'), $this->t('…'), new TranslatableMarkup('…'), in either quote
+    // style. Drupal's standard prefers single quotes, but nothing enforces
+    // it on a string that contains an apostrophe.
+    preg_match_all("/(?:TranslatableMarkup|->t|[^a-zA-Z_>]t)\\(\\s*(['\"])((?:(?!\\1)[^\\\\]|\\\\.)*)\\1(.*?)\\)/s", $code, $matches, PREG_SET_ORDER);
+    foreach ($matches as $match) {
+      // Unescape the way PHP does for that quote style, and no further. A
+      // single-quoted literal knows only \' and \\, so running the
+      // double-quoted rules over it turns a literal backslash-n into a
+      // newline and silently renames the string.
+      $source = $match[1] === "'"
+        ? str_replace(["\\'", '\\\\'], ["'", '\\'], $match[2])
+        : stripcslashes($match[2]);
+      $context = preg_match("/['\"]context['\"]\\s*=>\\s*['\"]([^'\"]+)['\"]/", $match[3], $ctx) ? $ctx[1] : '';
+      $strings[$this->key($source, $context)] = $source;
+    }
+
+    // @Translation("…") inside a plugin annotation. These live in a
+    // docblock, so no PHP-level scan sees them, and locale extracts them
+    // all the same: a filter's title and description reach the text-format
+    // admin page.
+    preg_match_all('/@Translation\\(\\s*"((?:[^"\\\\]|\\\\.)*)"/', $code, $matches, PREG_SET_ORDER);
+    foreach ($matches as $match) {
+      $source = str_replace(['\\"', '\\\\'], ['"', '\\'], $match[1]);
+      $strings[$this->key($source, '')] = $source;
+    }
+
+    return $strings;
   }
 
   /**
