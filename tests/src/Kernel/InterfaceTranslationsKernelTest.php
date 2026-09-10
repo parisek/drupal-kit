@@ -66,18 +66,44 @@ class InterfaceTranslationsKernelTest extends KernelTestBase {
 
   /**
    * The path comes from the extension list, not from the info file.
+   *
+   * Asserting the hook's output against the same extension list the hook
+   * reads proves nothing: on a normal checkout the module really is at
+   * modules/contrib, so hardcoding that literal passes too. The stub below
+   * moves the module somewhere else, which only the real lookup follows.
    */
   public function testTheServerPatternFollowsTheRealModulePath(): void {
-    $path = $this->container->get('extension.list.module')->getPath('drupal_kit');
-
     $projects = [];
     $this->container->get('module_handler')->invoke('drupal_kit', 'locale_translation_projects_alter', [&$projects]);
     $this->assertSame([], $projects, 'An unknown project is left alone.');
 
-    $projects = ['drupal_kit' => ['info' => ['interface translation server pattern' => 'wrong/path/%language.po']]];
+    $this->container->set('extension.list.module', new class($this->container->get('extension.list.module')) {
+
+      /**
+       * Wraps the real extension list.
+       */
+      public function __construct(protected $inner) {}
+
+      /**
+       * Reports a different path for this module, the real one for others.
+       */
+      public function getPath($name): string {
+        return $name === 'drupal_kit' ? 'somewhere/else/drupal_kit' : $this->inner->getPath($name);
+      }
+
+      /**
+       * Everything else goes to the real list unchanged.
+       */
+      public function __call($method, $arguments) {
+        return $this->inner->$method(...$arguments);
+      }
+
+    });
+
+    $projects = ['drupal_kit' => ['info' => ['interface translation server pattern' => 'modules/contrib/drupal_kit/translations/%language.po']]];
     $this->container->get('module_handler')->invoke('drupal_kit', 'locale_translation_projects_alter', [&$projects]);
     $this->assertSame(
-      $path . '/translations/%language.po',
+      'somewhere/else/drupal_kit/translations/%language.po',
       $projects['drupal_kit']['info']['interface translation server pattern'],
     );
   }
@@ -169,11 +195,13 @@ class InterfaceTranslationsKernelTest extends KernelTestBase {
       }
       $code = file_get_contents($file->getPathname());
 
-      // t('…'), $this->t('…'), new TranslatableMarkup('…').
-      preg_match_all("/(?:TranslatableMarkup|->t|[^a-zA-Z_>]t)\(\s*'((?:[^'\\\\]|\\\\.)*)'(.*?)\)/s", $code, $matches, PREG_SET_ORDER);
+      // t('…'), $this->t('…'), new TranslatableMarkup('…'), in either
+      // quote style. Drupal's own coding standard prefers single quotes,
+      // but nothing enforces it on a string that contains an apostrophe.
+      preg_match_all("/(?:TranslatableMarkup|->t|[^a-zA-Z_>]t)\(\s*(['\"])((?:(?!\\1)[^\\\\]|\\\\.)*)\\1(.*?)\)/s", $code, $matches, PREG_SET_ORDER);
       foreach ($matches as $match) {
-        $source = str_replace(["\\'", '\\\\'], ["'", '\\'], $match[1]);
-        $context = preg_match("/'context'\s*=>\s*'([^']+)'/", $match[2], $ctx) ? $ctx[1] : '';
+        $source = stripcslashes($match[2]);
+        $context = preg_match("/'context'\s*=>\s*'([^']+)'/", $match[3], $ctx) ? $ctx[1] : '';
         $strings[$this->key($source, $context)] = $source;
       }
 
@@ -202,9 +230,19 @@ class InterfaceTranslationsKernelTest extends KernelTestBase {
     $reader->open();
 
     $entries = [];
+    $duplicates = [];
     while ($item = $reader->readItem()) {
-      $entries[$this->key($item->getSource(), $item->getContext())] = $item->getTranslation();
+      $key = $this->key($item->getSource(), $item->getContext());
+      if (isset($entries[$key])) {
+        $duplicates[] = $key;
+      }
+      $entries[$key] = $item->getTranslation();
     }
+
+    // A repeated msgid is a fatal error to msgfmt, and silently the last
+    // one wins in an array. Without this the catalogue could be invalid
+    // and every assertion below would still pass.
+    $this->assertSame([], $duplicates, "Repeated entries in $langcode.po.");
 
     return $entries;
   }
