@@ -13,9 +13,6 @@ msgstr ""
 "Language: cs\n"
 "Plural-Forms: nplurals=3; plural=((n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2);\n"
 
-msgid "Advanced"
-msgstr "Rozšířené"
-
 msgid "Wrapper ID"
 msgstr "ID obalu"
 
@@ -45,12 +42,6 @@ msgstr "Naplánované skrytí: @date."
 
 msgid "Drupal Kit: menu language filtering"
 msgstr "Drupal Kit: filtrování menu podle jazyka"
-
-msgid "Available"
-msgstr "Dostupné"
-
-msgid "Not available"
-msgstr "Nedostupné"
 
 msgid "The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>."
 msgstr "Služba <code>menu.language_tree_manipulator</code> chybí, takže menu sestavená modulem Drupal Kit se nefiltrují podle aktuálního jazyka obsahu — objeví se odkazy ze všech jazyků. Službu přináší patch jádra Drupalu z <a href=\":url\">issue #2466553</a>."

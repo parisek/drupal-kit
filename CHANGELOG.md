@@ -13,6 +13,10 @@ All notable changes to this project are documented in this file. The format foll
 
   Seven strings carry `['context' => 'Abbreviated weekday']` and their entries carry the matching `msgctxt`, so they do not collide with the unqualified `Mon` that core already translates.
 
+  Three generic words the module emits — `Advanced`, `Available`, `Not available` — are deliberately **not** translated here. Locale stores a string globally by source and context rather than per project, and core emits the same three untagged, so shipping a translation for them would overwrite core's on every import and flip back on the next core update. Core already translates them.
+
+  The install path is not assumed. `drupal_kit_locale_translation_projects_alter()` rebuilds the server pattern from the extension list, so a consumer whose `installer-paths` put the module outside `modules/contrib` still gets its translations instead of a project reported as checked with nothing imported.
+
   A consumer still overrides any string in Admin → Translate interface. A shipped translation is a default, not a lock.
 
 - **A Scheduler publish or unpublish date is announced on the entity page** (#121) — `drupal_kit_page_attachments_alter()` already says *This page has not been published yet, only privileged users can see it.* When [Scheduler](https://www.drupal.org/project/scheduler) holds that page for a date, the message stopped short: it said the content was invisible, not that a date was set and cron would act on it. An editor could not tell a planned article from a forgotten draft without opening the edit form. Scheduler names the date once, in the message after the entity form is saved, so an editor who opens the page a week later saw nothing.

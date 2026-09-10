@@ -13,9 +13,6 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Advanced"
-msgstr "Erweitert"
-
 msgid "Wrapper ID"
 msgstr "Wrapper-ID"
 
@@ -45,12 +42,6 @@ msgstr "Geplante Depublizierung: @date."
 
 msgid "Drupal Kit: menu language filtering"
 msgstr "Drupal Kit: Sprachfilterung des Menüs"
-
-msgid "Available"
-msgstr "Verfügbar"
-
-msgid "Not available"
-msgstr "Nicht verfügbar"
 
 msgid "The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>."
 msgstr "Der Dienst <code>menu.language_tree_manipulator</code> fehlt, daher werden von Drupal Kit erstellte Menüs nicht nach der aktuellen Inhaltssprache gefiltert — Links aus allen Sprachen erscheinen. Der Dienst kommt mit dem Drupal-Core-Patch aus <a href=\":url\">Issue #2466553</a>."

@@ -13,9 +13,6 @@ msgstr ""
 "Language: pl\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-msgid "Advanced"
-msgstr "Zaawansowane"
-
 msgid "Wrapper ID"
 msgstr "ID kontenera"
 
@@ -45,12 +42,6 @@ msgstr "Zaplanowane cofnięcie publikacji: @date."
 
 msgid "Drupal Kit: menu language filtering"
 msgstr "Drupal Kit: filtrowanie menu według języka"
-
-msgid "Available"
-msgstr "Dostępne"
-
-msgid "Not available"
-msgstr "Niedostępne"
 
 msgid "The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>."
 msgstr "Brakuje usługi <code>menu.language_tree_manipulator</code>, więc menu budowane przez Drupal Kit nie są filtrowane według bieżącego języka treści — pojawią się odnośniki ze wszystkich języków. Usługę dostarcza łatka rdzenia Drupala z <a href=\":url\">zgłoszenia #2466553</a>."
