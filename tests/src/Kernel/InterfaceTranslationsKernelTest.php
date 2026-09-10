@@ -4,6 +4,8 @@ namespace Drupal\Tests\drupal_kit\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\language\Entity\ConfigurableLanguage;
+use Drupal\locale\LocaleProjectRepository;
+use Drupal\locale\LocaleSource;
 
 /**
  * Coverage for the shipped .po files and the project declaration.
@@ -51,11 +53,12 @@ class InterfaceTranslationsKernelTest extends KernelTestBase {
     $this->installSchema('locale', ['locale_file', 'locales_location', 'locales_source', 'locales_target']);
     ConfigurableLanguage::createFromLangcode('cs')->save();
 
-    $this->container->get('module_handler')->loadInclude('locale', 'inc', 'locale.translation');
-    $projects = locale_translation_get_projects();
+    // The procedural locale.translation.inc is deprecated in 11.4; these are
+    // the services that replace it.
+    $projects = $this->container->get(LocaleProjectRepository::class)->getAll();
     $this->assertArrayHasKey('drupal_kit', $projects, 'The module is its own translation project.');
 
-    $source = locale_translation_source_build($projects['drupal_kit'], 'cs');
+    $source = $this->container->get(LocaleSource::class)->sourceBuild($projects['drupal_kit'], 'cs');
     $this->assertArrayHasKey('local', $source->files, 'A local file is offered.');
     $this->assertFileExists($this->root . '/' . $source->files['local']->uri);
   }
@@ -164,11 +167,23 @@ class InterfaceTranslationsKernelTest extends KernelTestBase {
         continue;
       }
       $code = file_get_contents($file->getPathname());
+
+      // t('…'), $this->t('…'), new TranslatableMarkup('…').
       preg_match_all("/(?:TranslatableMarkup|->t|[^a-zA-Z_>]t)\(\s*'((?:[^'\\\\]|\\\\.)*)'(.*?)\)/s", $code, $matches, PREG_SET_ORDER);
       foreach ($matches as $match) {
         $source = str_replace(["\\'", '\\\\'], ["'", '\\'], $match[1]);
         $context = preg_match("/'context'\s*=>\s*'([^']+)'/", $match[2], $ctx) ? $ctx[1] : '';
         $strings[$this->key($source, $context)] = $source;
+      }
+
+      // @Translation("…") inside a plugin annotation. These live in a
+      // docblock, so no PHP-level scan sees them, and locale extracts them
+      // all the same: a filter's title and description reach the text-format
+      // admin page.
+      preg_match_all('/@Translation\(\s*"((?:[^"\\\\]|\\\\.)*)"/', $code, $matches, PREG_SET_ORDER);
+      foreach ($matches as $match) {
+        $source = str_replace(['\\"', '\\\\'], ['"', '\\'], $match[1]);
+        $strings[$this->key($source, '')] = $source;
       }
     }
 

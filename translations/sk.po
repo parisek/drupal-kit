@@ -46,6 +46,37 @@ msgstr "Drupal Kit: filtrovanie menu podľa jazyka"
 msgid "The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>."
 msgstr "Služba <code>menu.language_tree_manipulator</code> chýba, takže menu zostavené modulom Drupal Kit sa nefiltrujú podľa aktuálneho jazyka obsahu — objavia sa odkazy zo všetkých jazykov. Službu prináša patch jadra Drupalu z <a href=\":url\">issue #2466553</a>."
 
+
+msgid "Typography Filter"
+msgstr "Filter typografie"
+
+msgid "Help format typography"
+msgstr "Pomáha so sadzbou textu"
+
+msgid "Links Filter"
+msgstr "Filter odkazov"
+
+msgid "Remove target blank from internal links and add them to external links"
+msgstr "Odoberie target blank z interných odkazov a pridá ho k externým"
+
+msgid "Image Filter"
+msgstr "Filter obrázkov"
+
+msgid "Help format responsive images with native lazyloading"
+msgstr "Pomáha so sadzbou responzívnych obrázkov s natívnym lazyloadingom"
+
+msgid "Youtube Filter"
+msgstr "Filter YouTube"
+
+msgid "Embed youtube"
+msgstr "Vloží video z YouTube"
+
+msgid "Table Filter"
+msgstr "Filter tabuliek"
+
+msgid "Help format responsive tables"
+msgstr "Pomáha so sadzbou responzívnych tabuliek"
+
 msgctxt "Abbreviated weekday"
 msgid "Mon"
 msgstr "Po"

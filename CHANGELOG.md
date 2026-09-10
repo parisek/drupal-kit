@@ -7,7 +7,7 @@ All notable changes to this project are documented in this file. The format foll
 ### Added
 - **The module ships its own interface translations** (#123) — every string is wrapped in `t()` or `TranslatableMarkup`, so it was translatable in principle. In practice nobody translated it and every site showed English, including the message above an unpublished page on a site whose default language is Czech, and the abbreviated weekday names in `EntityHelper::getOfficeHours()`, which are user-facing content on a contact page rather than an admin screen.
 
-  `drupal_kit.info.yml` now declares the module as its own translation project, and `translations/` carries `cs.po`, `sk.po`, `de.po` and `pl.po` covering all 21 strings. Drupal's locale module picks them up on `drush locale:update`.
+  `drupal_kit.info.yml` now declares the module as its own translation project, and `translations/` carries `cs.po`, `sk.po`, `de.po` and `pl.po` covering the 28 strings the module owns. Drupal's locale module picks them up on `drush locale:update`.
 
   The server pattern ends `%language.po`, with no closing percent. `%language` is the whole placeholder — `%language%.po` resolves to `cs%.po`, a file that does not exist, and the import then reports the project as checked while silently importing nothing.
 

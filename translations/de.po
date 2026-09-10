@@ -46,6 +46,37 @@ msgstr "Drupal Kit: Sprachfilterung des Menüs"
 msgid "The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>."
 msgstr "Der Dienst <code>menu.language_tree_manipulator</code> fehlt, daher werden von Drupal Kit erstellte Menüs nicht nach der aktuellen Inhaltssprache gefiltert — Links aus allen Sprachen erscheinen. Der Dienst kommt mit dem Drupal-Core-Patch aus <a href=\":url\">Issue #2466553</a>."
 
+
+msgid "Typography Filter"
+msgstr "Typografie-Filter"
+
+msgid "Help format typography"
+msgstr "Hilft bei der Typografie"
+
+msgid "Links Filter"
+msgstr "Link-Filter"
+
+msgid "Remove target blank from internal links and add them to external links"
+msgstr "Entfernt target blank aus internen Links und fügt es externen hinzu"
+
+msgid "Image Filter"
+msgstr "Bild-Filter"
+
+msgid "Help format responsive images with native lazyloading"
+msgstr "Hilft bei responsiven Bildern mit nativem Lazyloading"
+
+msgid "Youtube Filter"
+msgstr "YouTube-Filter"
+
+msgid "Embed youtube"
+msgstr "Bettet ein YouTube-Video ein"
+
+msgid "Table Filter"
+msgstr "Tabellen-Filter"
+
+msgid "Help format responsive tables"
+msgstr "Hilft bei responsiven Tabellen"
+
 msgctxt "Abbreviated weekday"
 msgid "Mon"
 msgstr "Mo"
