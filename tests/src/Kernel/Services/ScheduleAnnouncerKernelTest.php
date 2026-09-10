@@ -38,13 +38,17 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
 
   /**
    * A publish date, fixed so the assertions can name it.
+   *
+   * Far enough out that it stays a future date for the life of the test.
+   * A past date is held in place only by Scheduler's default of refusing
+   * one, which is a setting and not something this test is about.
    */
-  protected const PUBLISH_ON = 1789200000;
+  protected const PUBLISH_ON = 2100000000;
 
   /**
    * An unpublish date, later than the publish date.
    */
-  protected const UNPUBLISH_ON = 1792000000;
+  protected const UNPUBLISH_ON = 2200000000;
 
   /**
    * The service under test (real service from container).

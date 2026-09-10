@@ -116,8 +116,13 @@ class ScheduleAnnouncer {
       //
       // bundle() returns the entity type id for a type without bundles,
       // which is what getEnabledTypes() returns in that case too.
-      $enabled = $manager->getEnabledTypes($entity_type_id, $process);
-      if (!in_array($entity->bundle(), $enabled, TRUE)) {
+      //
+      // Both sides become strings before the strict compare.
+      // getEnabledTypes() returns array_keys(), and PHP turns an all-digit
+      // array key into an int, so a bundle named '2024' would otherwise
+      // never match itself.
+      $enabled = array_map('strval', $manager->getEnabledTypes($entity_type_id, $process));
+      if (!in_array((string) $entity->bundle(), $enabled, TRUE)) {
         continue;
       }
 

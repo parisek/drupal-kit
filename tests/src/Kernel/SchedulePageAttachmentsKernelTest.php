@@ -42,8 +42,12 @@ class SchedulePageAttachmentsKernelTest extends KernelTestBase {
 
   /**
    * A publish date, fixed so the assertion can name it.
+   *
+   * Far enough out that it stays a future date for the life of the test.
+   * A past date is held in place only by Scheduler's default of refusing
+   * one, which is a setting and not something this test is about.
    */
-  protected const PUBLISH_ON = 1789200000;
+  protected const PUBLISH_ON = 2100000000;
 
   /**
    * {@inheritdoc}
