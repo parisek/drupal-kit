@@ -63,6 +63,13 @@ function drupal_kit_page_attachments_alter(array &$page) {
       );
     }
   }
+
+  // Scheduler is optional and says nothing on a site without it. Where it
+  // runs, this names the date the message above leaves out. The order is
+  // deliberate: the page is not published yet, and here is when it will be.
+  foreach (\Drupal::service('drupal_kit.schedule_announcer')->getMessages($entity) as $message) {
+    \Drupal::messenger()->addWarning($message);
+  }
 }
 
 /**

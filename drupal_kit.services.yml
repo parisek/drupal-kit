@@ -39,6 +39,14 @@ services:
         "@drupal_kit.menu_tree_builder",
         "@drupal_kit.media_array_builder",
       ]
+  drupal_kit.schedule_announcer:
+    class: Drupal\drupal_kit\Services\ScheduleAnnouncer
+    arguments:
+      # Optional — NULL without the scheduler module, which is the whole
+      # opt-in: no module, no messages, no class ever resolved.
+      - "@?scheduler.manager"
+      - "@date.formatter"
+      - "@current_user"
   drupal_kit.taxonomy_tree_builder:
     class: Drupal\drupal_kit\Services\TaxonomyTreeBuilder
     arguments:
