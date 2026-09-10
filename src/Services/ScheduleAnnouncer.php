@@ -5,10 +5,9 @@ namespace Drupal\drupal_kit\Services;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\FieldableEntityInterface;
-use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\scheduler\SchedulerManager;
 
 /**
  * Says when Scheduler will publish or unpublish an entity.
@@ -27,15 +26,28 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
  */
 class ScheduleAnnouncer {
 
-  use StringTranslationTrait;
+  /**
+   * Scheduler's processes, and the base field holding each one's date.
+   */
+  protected const FIELDS = [
+    'publish' => 'publish_on',
+    'unpublish' => 'unpublish_on',
+  ];
 
   /**
-   * Scheduler's base fields, and the message each one produces.
+   * Constructs the announcer.
+   *
+   * @param \Drupal\scheduler\SchedulerManager|null $schedulerManager
+   *   Scheduler's manager, or NULL when the module is not installed. The
+   *   service is wired with "@?scheduler.manager", so PHP never resolves the
+   *   class name on a site without Scheduler.
+   * @param \Drupal\Core\Datetime\DateFormatterInterface $dateFormatter
+   *   Formats the dates for reading.
+   * @param \Drupal\Core\Session\AccountInterface $currentUser
+   *   The account the schedule is being shown to.
    */
-  protected const FIELDS = ['publish_on', 'unpublish_on'];
-
   public function __construct(
-    protected readonly ModuleHandlerInterface $moduleHandler,
+    protected readonly ?SchedulerManager $schedulerManager,
     protected readonly DateFormatterInterface $dateFormatter,
     protected readonly AccountInterface $currentUser,
   ) {}
@@ -50,48 +62,90 @@ class ScheduleAnnouncer {
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup[]
    *   Publish first, then unpublish. Empty whenever there is nothing to say:
    *   Scheduler is absent, the entity type does not use it, no date is set,
-   *   or the viewer may not edit the entity.
+   *   the bundle no longer schedules, or the viewer may not read the
+   *   schedule.
    */
   public function getMessages(?EntityInterface $entity): array {
-    if (!$entity instanceof FieldableEntityInterface || !$this->moduleHandler->moduleExists('scheduler')) {
+    // Held locally so the helpers can be told it is not NULL.
+    $manager = $this->schedulerManager;
+    if (!$entity instanceof FieldableEntityInterface || !$manager) {
       return [];
     }
 
-    // Scheduler adds its fields per bundle, so most entities lack them.
-    $dates = [];
-    foreach (self::FIELDS as $field) {
-      if ($entity->hasField($field) && !$entity->get($field)->isEmpty()) {
-        $dates[$field] = (int) $entity->get($field)->value;
-      }
-    }
-
-    if (!$dates) {
-      return [];
-    }
-
-    // An unpublish_on date leaves the entity published, so an anonymous
-    // visitor reaches the page. The schedule is editorial information.
-    //
-    // The check is edit access, not a permission name: Scheduler names its
-    // permission per entity type ('schedule publishing of nodes', of media,
-    // of taxonomy terms), and this runs for every entity the hook handles.
-    if (!$entity->access('update', $this->currentUser)) {
+    $dates = $this->scheduledDates($entity, $manager);
+    if (!$dates || !$this->mayReadSchedule($entity, $manager)) {
       return [];
     }
 
     $messages = [];
-    if (isset($dates['publish_on'])) {
+    if (isset($dates['publish'])) {
       $messages[] = new TranslatableMarkup('Scheduler publishes this content on @date.', [
-        '@date' => $this->dateFormatter->format($dates['publish_on'], 'long'),
+        '@date' => $this->dateFormatter->format($dates['publish'], 'long'),
       ]);
     }
-    if (isset($dates['unpublish_on'])) {
+    if (isset($dates['unpublish'])) {
       $messages[] = new TranslatableMarkup('Scheduler unpublishes this content on @date.', [
-        '@date' => $this->dateFormatter->format($dates['unpublish_on'], 'long'),
+        '@date' => $this->dateFormatter->format($dates['unpublish'], 'long'),
       ]);
     }
 
     return $messages;
+  }
+
+  /**
+   * The dates cron will actually act on, keyed by Scheduler process.
+   *
+   * @return array<string, int>
+   *   Timestamps keyed by 'publish' and 'unpublish'; either may be absent.
+   */
+  protected function scheduledDates(FieldableEntityInterface $entity, SchedulerManager $manager): array {
+    $entity_type_id = $entity->getEntityTypeId();
+    $dates = [];
+
+    foreach (self::FIELDS as $process => $field) {
+      // Scheduler adds its base fields to a whole entity type, so an entity
+      // type it does not cover at all is the case this guards.
+      if (!$entity->hasField($field) || $entity->get($field)->isEmpty()) {
+        continue;
+      }
+
+      // A date left behind on a bundle whose scheduling was switched off is
+      // not a schedule. Scheduler's presave and cron both skip the bundle
+      // and the value sits there forever, so announcing it would promise
+      // something that never happens.
+      //
+      // bundle() returns the entity type id for a type without bundles,
+      // which is what getEnabledTypes() returns in that case too.
+      $enabled = $manager->getEnabledTypes($entity_type_id, $process);
+      if (!in_array($entity->bundle(), $enabled, TRUE)) {
+        continue;
+      }
+
+      $dates[$process] = (int) $entity->get($field)->value;
+    }
+
+    return $dates;
+  }
+
+  /**
+   * Whether this account may read the entity's schedule.
+   *
+   * An unpublish_on date leaves the entity published, so an anonymous visitor
+   * reaches the page. The schedule is editorial information.
+   *
+   * Edit access answers it for the common case: whoever may change the
+   * schedule may know it. Scheduler also grants a read-only role its own
+   * "view scheduled" permission, named per entity type, and such a reviewer
+   * has no edit rights at all.
+   */
+  protected function mayReadSchedule(EntityInterface $entity, SchedulerManager $manager): bool {
+    if ($entity->access('update', $this->currentUser)) {
+      return TRUE;
+    }
+
+    $permission = $manager->permissionName($entity->getEntityTypeId(), 'view');
+
+    return $this->currentUser->hasPermission($permission);
   }
 
 }

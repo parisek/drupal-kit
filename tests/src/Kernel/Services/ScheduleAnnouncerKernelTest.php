@@ -37,6 +37,16 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
   ];
 
   /**
+   * A publish date, fixed so the assertions can name it.
+   */
+  protected const PUBLISH_ON = 1789200000;
+
+  /**
+   * An unpublish date, later than the publish date.
+   */
+  protected const UNPUBLISH_ON = 1792000000;
+
+  /**
    * The service under test (real service from container).
    */
   protected ScheduleAnnouncer $announcer;
@@ -58,7 +68,10 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
     $this->installConfig(['system', 'filter', 'node', 'scheduler']);
 
     $type = NodeType::create(['type' => 'article', 'name' => 'Article']);
-    // Scheduler only adds its fields to a type that opts in.
+    // Scheduler adds publish_on and unpublish_on to the whole node entity
+    // type, not to the bundles that opt in. The opt-in decides whether its
+    // presave and cron act on the bundle, which is what the announcer has
+    // to honour.
     $type->setThirdPartySetting('scheduler', 'publish_enable', TRUE);
     $type->setThirdPartySetting('scheduler', 'unpublish_enable', TRUE);
     $type->save();
@@ -94,11 +107,12 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
    * @covers ::getMessages
    */
   public function testPublishDateIsAnnounced(): void {
-    $node = $this->createArticle(['status' => 0, 'publish_on' => 1789200000]);
+    $node = $this->createArticle(['status' => 0, 'publish_on' => self::PUBLISH_ON]);
 
     $messages = $this->announce($node);
-    $this->assertCount(1, $messages);
-    $this->assertStringContainsString('publishes this content', $messages[0]);
+    $this->assertSame([
+      'Scheduler publishes this content on ' . $this->longDate(self::PUBLISH_ON) . '.',
+    ], $messages);
   }
 
   /**
@@ -107,11 +121,12 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
    * @covers ::getMessages
    */
   public function testUnpublishDateIsAnnounced(): void {
-    $node = $this->createArticle(['unpublish_on' => 1789200000]);
+    $node = $this->createArticle(['unpublish_on' => self::PUBLISH_ON]);
 
     $messages = $this->announce($node);
-    $this->assertCount(1, $messages);
-    $this->assertStringContainsString('unpublishes this content', $messages[0]);
+    $this->assertSame([
+      'Scheduler unpublishes this content on ' . $this->longDate(self::PUBLISH_ON) . '.',
+    ], $messages);
   }
 
   /**
@@ -122,14 +137,18 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
   public function testBothDatesAreAnnouncedInOrder(): void {
     $node = $this->createArticle([
       'status' => 0,
-      'publish_on' => 1789200000,
-      'unpublish_on' => 1792000000,
+      'publish_on' => self::PUBLISH_ON,
+      'unpublish_on' => self::UNPUBLISH_ON,
     ]);
 
+    // Exact strings, and in this order. 'unpublishes this content' contains
+    // 'publishes this content', so a substring assertion here would pass
+    // even with the two field reads swapped.
     $messages = $this->announce($node);
-    $this->assertCount(2, $messages);
-    $this->assertStringContainsString('publishes this content', $messages[0]);
-    $this->assertStringContainsString('unpublishes this content', $messages[1]);
+    $this->assertSame([
+      'Scheduler publishes this content on ' . $this->longDate(self::PUBLISH_ON) . '.',
+      'Scheduler unpublishes this content on ' . $this->longDate(self::UNPUBLISH_ON) . '.',
+    ], $messages);
   }
 
   /**
@@ -141,24 +160,81 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
    * @covers ::getMessages
    */
   public function testVisitorWithoutEditAccessSeesNothing(): void {
-    $node = $this->createArticle(['unpublish_on' => 1789200000]);
+    $node = $this->createArticle(['unpublish_on' => self::PUBLISH_ON]);
     $this->setCurrentUser(User::create(['name' => 'reader']));
 
     $this->assertSame([], $this->announce($node));
   }
 
   /**
-   * An entity that carries no Scheduler fields is skipped, not fatal.
+   * A stale date on a bundle that no longer schedules is not announced.
+   *
+   * Scheduler's base fields belong to the whole node entity type, so a bundle
+   * that never opted in still carries them, and a bundle that opted out keeps
+   * whatever date was set. Cron skips both, so a message would promise
+   * something that never happens.
    *
    * @covers ::getMessages
+   * @covers ::scheduledDates
    */
-  public function testEntityWithoutSchedulerFieldsIsSilent(): void {
+  public function testDateOnUnscheduledBundleIsSilent(): void {
     $type = NodeType::create(['type' => 'plain', 'name' => 'Plain']);
     $type->save();
-    $node = Node::create(['type' => 'plain', 'title' => 'Plain', 'uid' => 1]);
+    $node = Node::create([
+      'type' => 'plain',
+      'title' => 'Plain',
+      'uid' => 1,
+      'status' => 0,
+      'publish_on' => self::PUBLISH_ON,
+    ]);
     $node->save();
 
+    $this->assertNotTrue($node->get('publish_on')->isEmpty(), 'The field exists and holds the date.');
     $this->assertSame([], $this->announce($node));
+  }
+
+  /**
+   * An entity type Scheduler does not cover has no fields to read.
+   *
+   * This is the branch a node can never reach: a user entity gets no
+   * publish_on at all, so hasField() has to carry it.
+   *
+   * @covers ::getMessages
+   * @covers ::scheduledDates
+   */
+  public function testEntityTypeWithoutSchedulerFieldsIsSilent(): void {
+    $account = User::create(['name' => 'someone']);
+    $account->save();
+
+    $this->assertFalse($account->hasField('publish_on'));
+    $this->assertSame([], $this->announcer->getMessages($account));
+  }
+
+  /**
+   * A reviewer with only Scheduler's view permission still reads the date.
+   *
+   * Scheduler grants a read-only role 'view scheduled content'. Such a
+   * reviewer has no edit rights, so edit access alone would hide the
+   * schedule from exactly the role that exists to watch it.
+   *
+   * @covers ::getMessages
+   * @covers ::mayReadSchedule
+   */
+  public function testReviewerWithViewPermissionSeesTheSchedule(): void {
+    $node = $this->createArticle(['status' => 0, 'publish_on' => self::PUBLISH_ON]);
+
+    $role = Role::create(['id' => 'reviewer', 'label' => 'Reviewer']);
+    $role->grantPermission('view scheduled content');
+    $role->grantPermission('access content');
+    $role->save();
+    $reviewer = User::create(['name' => 'reviewer', 'roles' => ['reviewer']]);
+    $reviewer->save();
+    $this->setCurrentUser($reviewer);
+
+    $this->assertFalse($node->access('update', $reviewer), 'The reviewer cannot edit.');
+    $this->assertSame([
+      'Scheduler publishes this content on ' . $this->longDate(self::PUBLISH_ON) . '.',
+    ], array_map('strval', $this->announcer->getMessages($node)));
   }
 
   /**
@@ -194,6 +270,16 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
     }
 
     return array_map('strval', $this->announcer->getMessages($node));
+  }
+
+  /**
+   * The date as the messages format it.
+   *
+   * Derived, not hardcoded: the assertion is about which timestamp reaches
+   * the message, not about how this site formats a date.
+   */
+  protected function longDate(int $timestamp): string {
+    return $this->container->get('date.formatter')->format($timestamp, 'long');
   }
 
   /**

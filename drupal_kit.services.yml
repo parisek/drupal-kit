@@ -42,7 +42,9 @@ services:
   drupal_kit.schedule_announcer:
     class: Drupal\drupal_kit\Services\ScheduleAnnouncer
     arguments:
-      - "@module_handler"
+      # Optional — NULL without the scheduler module, which is the whole
+      # opt-in: no module, no messages, no class ever resolved.
+      - "@?scheduler.manager"
       - "@date.formatter"
       - "@current_user"
   drupal_kit.taxonomy_tree_builder:
