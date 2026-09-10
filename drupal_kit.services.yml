@@ -39,6 +39,12 @@ services:
         "@drupal_kit.menu_tree_builder",
         "@drupal_kit.media_array_builder",
       ]
+  drupal_kit.schedule_announcer:
+    class: Drupal\drupal_kit\Services\ScheduleAnnouncer
+    arguments:
+      - "@module_handler"
+      - "@date.formatter"
+      - "@current_user"
   drupal_kit.taxonomy_tree_builder:
     class: Drupal\drupal_kit\Services\TaxonomyTreeBuilder
     arguments:

@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+- **A Scheduler publish or unpublish date is announced on the entity page** (#121) — `drupal_kit_page_attachments_alter()` already says *This page has not been published yet, only privileged users can see it.* When [Scheduler](https://www.drupal.org/project/scheduler) holds that page for a date, the message stopped short: it said the content was invisible, not that a date was set and cron would act on it. An editor could not tell a planned article from a forgotten draft without opening the edit form. Scheduler names the date once, in the message after the entity form is saved, so an editor who opens the page a week later saw nothing.
+
+  The hook now adds *Scheduler publishes this content on @date.* and *Scheduler unpublishes this content on @date.*, after the existing message so the two read as one thought.
+
+  Nothing changes on a site without Scheduler, and nothing changes on content that carries no date — `drupal/scheduler` is a `suggest`, never a dependency. The new `drupal_kit.schedule_announcer` service holds the logic and returns text; the caller decides where it goes and the theme decides how it looks, which is the split the existing message already had.
+
+  The viewer must pass `access('update')` on the entity. An `unpublish_on` date leaves the entity published, so an anonymous visitor reaches the page, and the schedule is editorial information. The check is edit access rather than a permission name because Scheduler names its permission per entity type, and this hook serves nodes, taxonomy terms and commerce products alike.
+
+  Found on htdvere, where a future-dated article had been publishing itself immediately.
+
 ## [2.1.2] — 2026-09-09
 
 ### Fixed

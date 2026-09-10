@@ -23,6 +23,7 @@
         "drupal/focal_point": "^2.0",
         "drupal/image_effects": "^4.0",
         "drupal/inline_entity_form": "^3.0@RC",
+        "drupal/scheduler": "^2.3",
         "ergebnis/composer-normalize": "^2.47",
         "mglaman/phpstan-drupal": "^2.0",
         "phpstan/phpstan": "^2.0",
@@ -31,7 +32,8 @@
     "suggest": {
         "drupal/address": "Enables address field rendering in EntityHelper::getAddressField.",
         "drupal/commerce": "Enables commerce_price field rendering (via the commerce_price submodule) and commerce_product entity references in EntityHelper.",
-        "drupal/office_hours": "Enables office_hours field rendering in EntityHelper."
+        "drupal/office_hours": "Enables office_hours field rendering in EntityHelper.",
+        "drupal/scheduler": "Announces a scheduled publish or unpublish date on the entity page."
     },
     "repositories": [
         {
