@@ -76,11 +76,19 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
     $type->setThirdPartySetting('scheduler', 'unpublish_enable', TRUE);
     $type->save();
 
+    // A bundle that never opted in. Node permissions are per bundle and are
+    // built from the bundles that exist, so it has to be here before the
+    // role below grants its edit permission.
+    NodeType::create(['type' => 'plain', 'name' => 'Plain'])->save();
+
     // User 1 would pass every access check for the wrong reason.
     User::create(['name' => 'root'])->save();
 
     $role = Role::create(['id' => 'editor', 'label' => 'Editor']);
     $role->grantPermission('edit any article content');
+    // The 'plain' bundle too, so the unscheduled-bundle test is decided by
+    // the bundle check and not by access it happens to lack.
+    $role->grantPermission('edit any plain content');
     $role->grantPermission('access content');
     $role->save();
 
@@ -178,8 +186,6 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
    * @covers ::scheduledDates
    */
   public function testDateOnUnscheduledBundleIsSilent(): void {
-    $type = NodeType::create(['type' => 'plain', 'name' => 'Plain']);
-    $type->save();
     $node = Node::create([
       'type' => 'plain',
       'title' => 'Plain',
@@ -190,6 +196,9 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
     $node->save();
 
     $this->assertNotTrue($node->get('publish_on')->isEmpty(), 'The field exists and holds the date.');
+    // Edit access must not be what silences this, or the test would pass
+    // with the bundle check removed.
+    $this->assertTrue($node->access('update', $this->editor), 'The editor may edit this bundle.');
     $this->assertSame([], $this->announce($node));
   }
 

@@ -13,6 +13,10 @@ All notable changes to this project are documented in this file. The format foll
 
   The viewer must pass `access('update')` on the entity. An `unpublish_on` date leaves the entity published, so an anonymous visitor reaches the page, and the schedule is editorial information. The check is edit access rather than a permission name because Scheduler names its permission per entity type, and this hook serves nodes, taxonomy terms and commerce products alike.
 
+  A date left on a bundle whose scheduling was switched off is not announced. Scheduler's base fields belong to a whole entity type rather than to the bundles that opt in, so such a value sits in the field forever and cron never acts on it.
+
+  Scheduler's own `view scheduled <type>` permission also opens the message, alongside edit access. That permission exists for a read-only reviewer role, which by definition has no edit rights.
+
   Found on htdvere, where a future-dated article had been publishing itself immediately.
 
 ## [2.1.2] — 2026-09-09
