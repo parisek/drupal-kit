@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\drupal_kit\Kernel;
 
+use Drupal\Component\Gettext\PoStreamReader;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\locale\LocaleProjectRepository;
@@ -195,7 +196,7 @@ class InterfaceTranslationsKernelTest extends KernelTestBase {
    */
   protected function poEntries(string $langcode): array {
     $path = $this->root . '/' . $this->container->get('extension.list.module')->getPath('drupal_kit');
-    $reader = new \Drupal\Component\Gettext\PoStreamReader();
+    $reader = new PoStreamReader();
     $reader->setLangcode($langcode);
     $reader->setURI($path . '/translations/' . $langcode . '.po');
     $reader->open();
