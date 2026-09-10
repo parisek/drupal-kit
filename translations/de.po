@@ -1,0 +1,106 @@
+# German translation of Drupal Kit.
+# Shipped with the module; override any string in Admin → Translate interface.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Drupal Kit\n"
+"PO-Revision-Date: 2026-09-10 06:39+0000\n"
+"Last-Translator: PORTA DESIGN\n"
+"Language-Team: PORTA DESIGN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Wrapper ID"
+msgstr "Wrapper-ID"
+
+msgid "Unique ID used for anchor links"
+msgstr "Eindeutige ID für Ankerlinks"
+
+msgid "Wrapper classes"
+msgstr "Wrapper-Klassen"
+
+msgid "Multiple classes separated by space. Use TailwindCSS <a href=\"@url\" target=\"_blank\">utility classes</a>."
+msgstr "Mehrere Klassen mit Leerzeichen trennen. Verwenden Sie die <a href=\"@url\" target=\"_blank\">Utility-Klassen</a> von TailwindCSS."
+
+msgid "The visual part can be edited via the <a href=\"@url\">layout</a> tab"
+msgstr "Der visuelle Teil wird im Reiter <a href=\"@url\">Layout</a> bearbeitet"
+
+msgid "This page has not been published yet, only privileged users can see it."
+msgstr "Diese Seite ist noch nicht veröffentlicht, nur berechtigte Benutzer sehen sie."
+
+msgid "This page has no translation for the current language, only privileged users can see it."
+msgstr "Diese Seite hat keine Übersetzung für die aktuelle Sprache, nur berechtigte Benutzer sehen sie."
+
+msgid "Scheduler publishes this content on @date."
+msgstr "Geplante Veröffentlichung: @date."
+
+msgid "Scheduler unpublishes this content on @date."
+msgstr "Geplante Depublizierung: @date."
+
+msgid "Drupal Kit: menu language filtering"
+msgstr "Drupal Kit: Sprachfilterung des Menüs"
+
+msgid "The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>."
+msgstr "Der Dienst <code>menu.language_tree_manipulator</code> fehlt, daher werden von Drupal Kit erstellte Menüs nicht nach der aktuellen Inhaltssprache gefiltert — Links aus allen Sprachen erscheinen. Der Dienst kommt mit dem Drupal-Core-Patch aus <a href=\":url\">Issue #2466553</a>."
+
+
+msgid "Typography Filter"
+msgstr "Typografie-Filter"
+
+msgid "Help format typography"
+msgstr "Hilft bei der Typografie"
+
+msgid "Links Filter"
+msgstr "Link-Filter"
+
+msgid "Remove target blank from internal links and add them to external links"
+msgstr "Entfernt target blank aus internen Links und fügt es externen hinzu"
+
+msgid "Image Filter"
+msgstr "Bild-Filter"
+
+msgid "Help format responsive images with native lazyloading"
+msgstr "Hilft bei responsiven Bildern mit nativem Lazyloading"
+
+msgid "Youtube Filter"
+msgstr "YouTube-Filter"
+
+msgid "Embed youtube"
+msgstr "Bettet ein YouTube-Video ein"
+
+msgid "Table Filter"
+msgstr "Tabellen-Filter"
+
+msgid "Help format responsive tables"
+msgstr "Hilft bei responsiven Tabellen"
+
+msgctxt "Abbreviated weekday"
+msgid "Mon"
+msgstr "Mo"
+
+msgctxt "Abbreviated weekday"
+msgid "Tue"
+msgstr "Di"
+
+msgctxt "Abbreviated weekday"
+msgid "Wed"
+msgstr "Mi"
+
+msgctxt "Abbreviated weekday"
+msgid "Thu"
+msgstr "Do"
+
+msgctxt "Abbreviated weekday"
+msgid "Fri"
+msgstr "Fr"
+
+msgctxt "Abbreviated weekday"
+msgid "Sat"
+msgstr "Sa"
+
+msgctxt "Abbreviated weekday"
+msgid "Sun"
+msgstr "So"

@@ -1,0 +1,106 @@
+# Czech translation of Drupal Kit.
+# Shipped with the module; override any string in Admin → Translate interface.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Drupal Kit\n"
+"PO-Revision-Date: 2026-09-10 06:39+0000\n"
+"Last-Translator: PORTA DESIGN\n"
+"Language-Team: PORTA DESIGN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: cs\n"
+"Plural-Forms: nplurals=3; plural=((n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2);\n"
+
+msgid "Wrapper ID"
+msgstr "ID obalu"
+
+msgid "Unique ID used for anchor links"
+msgstr "Jedinečné ID pro odkazy na kotvy"
+
+msgid "Wrapper classes"
+msgstr "Třídy obalu"
+
+msgid "Multiple classes separated by space. Use TailwindCSS <a href=\"@url\" target=\"_blank\">utility classes</a>."
+msgstr "Více tříd oddělte mezerou. Použijte <a href=\"@url\" target=\"_blank\">utility třídy</a> TailwindCSS."
+
+msgid "The visual part can be edited via the <a href=\"@url\">layout</a> tab"
+msgstr "Vizuální část se upravuje na záložce <a href=\"@url\">rozvržení</a>"
+
+msgid "This page has not been published yet, only privileged users can see it."
+msgstr "Tato stránka zatím není zveřejněná, vidí ji jen oprávnění uživatelé."
+
+msgid "This page has no translation for the current language, only privileged users can see it."
+msgstr "Tato stránka nemá překlad do aktuálního jazyka, vidí ji jen oprávnění uživatelé."
+
+msgid "Scheduler publishes this content on @date."
+msgstr "Naplánované zveřejnění: @date."
+
+msgid "Scheduler unpublishes this content on @date."
+msgstr "Naplánované skrytí: @date."
+
+msgid "Drupal Kit: menu language filtering"
+msgstr "Drupal Kit: filtrování menu podle jazyka"
+
+msgid "The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>."
+msgstr "Služba <code>menu.language_tree_manipulator</code> chybí, takže menu sestavená modulem Drupal Kit se nefiltrují podle aktuálního jazyka obsahu — objeví se odkazy ze všech jazyků. Službu přináší patch jádra Drupalu z <a href=\":url\">issue #2466553</a>."
+
+
+msgid "Typography Filter"
+msgstr "Filtr typografie"
+
+msgid "Help format typography"
+msgstr "Pomáhá se sazbou textu"
+
+msgid "Links Filter"
+msgstr "Filtr odkazů"
+
+msgid "Remove target blank from internal links and add them to external links"
+msgstr "Odebere target blank z interních odkazů a přidá ho k externím"
+
+msgid "Image Filter"
+msgstr "Filtr obrázků"
+
+msgid "Help format responsive images with native lazyloading"
+msgstr "Pomáhá se sazbou responzivních obrázků s nativním lazyloadingem"
+
+msgid "Youtube Filter"
+msgstr "Filtr YouTube"
+
+msgid "Embed youtube"
+msgstr "Vloží video z YouTube"
+
+msgid "Table Filter"
+msgstr "Filtr tabulek"
+
+msgid "Help format responsive tables"
+msgstr "Pomáhá se sazbou responzivních tabulek"
+
+msgctxt "Abbreviated weekday"
+msgid "Mon"
+msgstr "Po"
+
+msgctxt "Abbreviated weekday"
+msgid "Tue"
+msgstr "Út"
+
+msgctxt "Abbreviated weekday"
+msgid "Wed"
+msgstr "St"
+
+msgctxt "Abbreviated weekday"
+msgid "Thu"
+msgstr "Čt"
+
+msgctxt "Abbreviated weekday"
+msgid "Fri"
+msgstr "Pá"
+
+msgctxt "Abbreviated weekday"
+msgid "Sat"
+msgstr "So"
+
+msgctxt "Abbreviated weekday"
+msgid "Sun"
+msgstr "Ne"

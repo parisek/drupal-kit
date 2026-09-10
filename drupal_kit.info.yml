@@ -4,6 +4,14 @@ description: "Shared PORTA component infrastructure: services, base classes, Twi
 core_version_requirement: ^10 || ^11
 package: "PORTA"
 
+# The module ships its own interface translations under translations/.
+# Drupal's locale module reads them through this project declaration. The
+# path here is the usual install location; drupal_kit_locale_translation_
+# projects_alter() replaces it with wherever the module really sits, which
+# an info file cannot compute. Note %language carries no closing percent.
+interface translation project: drupal_kit
+interface translation server pattern: modules/contrib/drupal_kit/translations/%language.po
+
 dependencies:
   - drupal:block
   - drupal:components

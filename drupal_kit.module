@@ -73,6 +73,27 @@ function drupal_kit_page_attachments_alter(array &$page) {
 }
 
 /**
+ * Implements hook_locale_translation_projects_alter().
+ *
+ * The info file has to name a path for the module's own .po files, and a path
+ * in an info file cannot be computed. The declared one assumes the usual
+ * modules/contrib location; a consumer whose installer-paths put the module
+ * anywhere else would get a project reported as checked and no translation
+ * imported, with nothing said about why.
+ *
+ * The extension list knows where the module actually is, so this replaces
+ * the assumption with the fact.
+ */
+function drupal_kit_locale_translation_projects_alter(&$projects) {
+  if (!isset($projects['drupal_kit'])) {
+    return;
+  }
+
+  $path = \Drupal::service('extension.list.module')->getPath('drupal_kit');
+  $projects['drupal_kit']['info']['interface translation server pattern'] = $path . '/translations/%language.po';
+}
+
+/**
  * Implements hook_form_alter().
  */
 function drupal_kit_form_alter(&$form, FormStateInterface $form_state, $form_id) {

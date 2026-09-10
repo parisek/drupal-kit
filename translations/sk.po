@@ -1,0 +1,106 @@
+# Slovak translation of Drupal Kit.
+# Shipped with the module; override any string in Admin → Translate interface.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Drupal Kit\n"
+"PO-Revision-Date: 2026-09-10 06:39+0000\n"
+"Last-Translator: PORTA DESIGN\n"
+"Language-Team: PORTA DESIGN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: sk\n"
+"Plural-Forms: nplurals=3; plural=((n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2);\n"
+
+msgid "Wrapper ID"
+msgstr "ID obalu"
+
+msgid "Unique ID used for anchor links"
+msgstr "Jedinečné ID pre odkazy na kotvy"
+
+msgid "Wrapper classes"
+msgstr "Triedy obalu"
+
+msgid "Multiple classes separated by space. Use TailwindCSS <a href=\"@url\" target=\"_blank\">utility classes</a>."
+msgstr "Viac tried oddeľte medzerou. Použite <a href=\"@url\" target=\"_blank\">utility triedy</a> TailwindCSS."
+
+msgid "The visual part can be edited via the <a href=\"@url\">layout</a> tab"
+msgstr "Vizuálnu časť upravíte na záložke <a href=\"@url\">rozloženie</a>"
+
+msgid "This page has not been published yet, only privileged users can see it."
+msgstr "Táto stránka zatiaľ nie je zverejnená, vidia ju len oprávnení používatelia."
+
+msgid "This page has no translation for the current language, only privileged users can see it."
+msgstr "Táto stránka nemá preklad do aktuálneho jazyka, vidia ju len oprávnení používatelia."
+
+msgid "Scheduler publishes this content on @date."
+msgstr "Naplánované zverejnenie: @date."
+
+msgid "Scheduler unpublishes this content on @date."
+msgstr "Naplánované skrytie: @date."
+
+msgid "Drupal Kit: menu language filtering"
+msgstr "Drupal Kit: filtrovanie menu podľa jazyka"
+
+msgid "The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>."
+msgstr "Služba <code>menu.language_tree_manipulator</code> chýba, takže menu zostavené modulom Drupal Kit sa nefiltrujú podľa aktuálneho jazyka obsahu — objavia sa odkazy zo všetkých jazykov. Službu prináša patch jadra Drupalu z <a href=\":url\">issue #2466553</a>."
+
+
+msgid "Typography Filter"
+msgstr "Filter typografie"
+
+msgid "Help format typography"
+msgstr "Pomáha so sadzbou textu"
+
+msgid "Links Filter"
+msgstr "Filter odkazov"
+
+msgid "Remove target blank from internal links and add them to external links"
+msgstr "Odoberie target blank z interných odkazov a pridá ho k externým"
+
+msgid "Image Filter"
+msgstr "Filter obrázkov"
+
+msgid "Help format responsive images with native lazyloading"
+msgstr "Pomáha so sadzbou responzívnych obrázkov s natívnym lazyloadingom"
+
+msgid "Youtube Filter"
+msgstr "Filter YouTube"
+
+msgid "Embed youtube"
+msgstr "Vloží video z YouTube"
+
+msgid "Table Filter"
+msgstr "Filter tabuliek"
+
+msgid "Help format responsive tables"
+msgstr "Pomáha so sadzbou responzívnych tabuliek"
+
+msgctxt "Abbreviated weekday"
+msgid "Mon"
+msgstr "Po"
+
+msgctxt "Abbreviated weekday"
+msgid "Tue"
+msgstr "Ut"
+
+msgctxt "Abbreviated weekday"
+msgid "Wed"
+msgstr "St"
+
+msgctxt "Abbreviated weekday"
+msgid "Thu"
+msgstr "Št"
+
+msgctxt "Abbreviated weekday"
+msgid "Fri"
+msgstr "Pi"
+
+msgctxt "Abbreviated weekday"
+msgid "Sat"
+msgstr "So"
+
+msgctxt "Abbreviated weekday"
+msgid "Sun"
+msgstr "Ne"

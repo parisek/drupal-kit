@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file. The format foll
 ## [Unreleased]
 
 ### Added
+- **The module ships its own interface translations** (#123) — every string is wrapped in `t()` or `TranslatableMarkup`, so it was translatable in principle. In practice nobody translated it and every site showed English, including the message above an unpublished page on a site whose default language is Czech, and the abbreviated weekday names in `EntityHelper::getOfficeHours()`, which are user-facing content on a contact page rather than an admin screen.
+
+  `drupal_kit.info.yml` now declares the module as its own translation project, and `translations/` carries `cs.po`, `sk.po`, `de.po` and `pl.po` covering the 28 strings the module owns. Drupal's locale module picks them up on `drush locale:update`.
+
+  The server pattern ends `%language.po`, with no closing percent. `%language` is the whole placeholder — `%language%.po` resolves to `cs%.po`, a file that does not exist, and the import then reports the project as checked while silently importing nothing.
+
+  Seven strings carry `['context' => 'Abbreviated weekday']` and their entries carry the matching `msgctxt`, so they do not collide with the unqualified `Mon` that core already translates.
+
+  Three generic words the module emits — `Advanced`, `Available`, `Not available` — are deliberately **not** translated here. Locale stores a string globally by source and context rather than per project, and core emits the same three untagged, so shipping a translation for them would overwrite core's on every import and flip back on the next core update. Core already translates them.
+
+  The install path is not assumed. `drupal_kit_locale_translation_projects_alter()` rebuilds the server pattern from the extension list, so a consumer whose `installer-paths` put the module outside `modules/contrib` still gets its translations instead of a project reported as checked with nothing imported.
+
+  The scanner that guards the catalogue is held to account by its own test. It unescapes per quote style — a single-quoted PHP literal knows only `\'` and `\\`, so running the double-quoted rules over one turns a literal backslash-n into a newline and silently renames the string — and it reads a `context` key written either way. A shape it cannot read is a false green: the parity check reports a complete catalogue while the string ships untranslated.
+
+  A consumer still overrides any string in Admin → Translate interface. A shipped translation is a default, not a lock.
+
 - **A Scheduler publish or unpublish date is announced on the entity page** (#121) — `drupal_kit_page_attachments_alter()` already says *This page has not been published yet, only privileged users can see it.* When [Scheduler](https://www.drupal.org/project/scheduler) holds that page for a date, the message stopped short: it said the content was invisible, not that a date was set and cron would act on it. An editor could not tell a planned article from a forgotten draft without opening the edit form. Scheduler names the date once, in the message after the entity form is saved, so an editor who opens the page a week later saw nothing.
 
   The hook now adds *Scheduler publishes this content on @date.* and *Scheduler unpublishes this content on @date.*, after the existing message so the two read as one thought.
