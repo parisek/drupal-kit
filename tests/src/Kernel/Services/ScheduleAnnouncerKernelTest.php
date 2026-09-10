@@ -6,6 +6,8 @@ use Drupal\KernelTests\KernelTestBase;
 use Drupal\drupal_kit\Services\ScheduleAnnouncer;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
+use Drupal\taxonomy\Entity\Term;
+use Drupal\taxonomy\Entity\Vocabulary;
 use Drupal\user\Entity\Role;
 use Drupal\user\Entity\User;
 
@@ -32,6 +34,7 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
     'field',
     'text',
     'filter',
+    'taxonomy',
     'views',
     'scheduler',
   ];
@@ -67,6 +70,7 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
+    $this->installEntitySchema('taxonomy_term');
     $this->installSchema('node', ['node_access']);
     // System supplies the 'long' date format the messages are formatted with.
     $this->installConfig(['system', 'filter', 'node', 'scheduler']);
@@ -85,6 +89,14 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
     // role below grants its edit permission.
     NodeType::create(['type' => 'plain', 'name' => 'Plain'])->save();
 
+    // A bundle that schedules publishing but not unpublishing. Without it
+    // every fixture enables both processes together, and the service could
+    // ask about one process for both fields unnoticed.
+    $half = NodeType::create(['type' => 'half', 'name' => 'Half']);
+    $half->setThirdPartySetting('scheduler', 'publish_enable', TRUE);
+    $half->setThirdPartySetting('scheduler', 'unpublish_enable', FALSE);
+    $half->save();
+
     // User 1 would pass every access check for the wrong reason.
     User::create(['name' => 'root'])->save();
 
@@ -93,6 +105,7 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
     // The 'plain' bundle too, so the unscheduled-bundle test is decided by
     // the bundle check and not by access it happens to lack.
     $role->grantPermission('edit any plain content');
+    $role->grantPermission('edit any half content');
     $role->grantPermission('access content');
     $role->save();
 
@@ -248,6 +261,80 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
     $this->assertSame([
       'Scheduler publishes this content on ' . $this->longDate(self::PUBLISH_ON) . '.',
     ], array_map('strval', $this->announcer->getMessages($node)));
+  }
+
+  /**
+   * A bundle that schedules only publishing announces only that.
+   *
+   * Both fields hold a date; only one process is enabled. Cron will publish
+   * and will never unpublish, so only the publish message is true.
+   *
+   * @covers ::getMessages
+   * @covers ::scheduledDates
+   */
+  public function testOnlyTheEnabledProcessIsAnnounced(): void {
+    $node = Node::create([
+      'type' => 'half',
+      'title' => 'Half scheduled',
+      'uid' => 1,
+      'status' => 0,
+      'publish_on' => self::PUBLISH_ON,
+      'unpublish_on' => self::UNPUBLISH_ON,
+    ]);
+    $node->save();
+
+    $this->assertSame([
+      'Scheduler publishes this content on ' . $this->longDate(self::PUBLISH_ON) . '.',
+    ], $this->announce($node));
+  }
+
+  /**
+   * A taxonomy term is announced the same way a node is.
+   *
+   * Every other case uses a node, so an entity type read from anywhere but
+   * the entity itself would go unnoticed: getEnabledTypes() and
+   * permissionName() both take one.
+   *
+   * @covers ::getMessages
+   */
+  public function testTaxonomyTermIsAnnouncedToo(): void {
+    $vocabulary = Vocabulary::create(['vid' => 'tags', 'name' => 'Tags']);
+    $vocabulary->setThirdPartySetting('scheduler', 'publish_enable', TRUE);
+    $vocabulary->save();
+
+    $term = Term::create([
+      'vid' => 'tags',
+      'name' => 'Scheduled term',
+      'status' => 0,
+      'publish_on' => self::PUBLISH_ON,
+    ]);
+    $term->save();
+
+    // A reviewer holding only Scheduler's view permission for this entity
+    // type. Edit access would answer first and the permission name — which
+    // is built from the entity type — would never be asked for.
+    $role = Role::create(['id' => 'term_reviewer', 'label' => 'Term reviewer']);
+    $role->grantPermission('view scheduled taxonomy_term');
+    $role->save();
+    $reviewer = User::create(['name' => 'term-reviewer', 'roles' => ['term_reviewer']]);
+    $reviewer->save();
+    $this->setCurrentUser($reviewer);
+
+    $this->assertFalse($term->access('update', $reviewer), 'The reviewer cannot edit the term.');
+    $this->assertSame([
+      'Scheduler publishes this content on ' . $this->longDate(self::PUBLISH_ON) . '.',
+    ], array_map('strval', $this->announcer->getMessages($term)));
+  }
+
+  /**
+   * A config entity has no fields to read and is skipped, not fatal.
+   *
+   * The user entity above still has fields; this is the other guard.
+   *
+   * @covers ::getMessages
+   */
+  public function testConfigEntityIsSilent(): void {
+    $this->assertSame([], $this->announcer->getMessages(NodeType::load('article')));
   }
 
   /**
