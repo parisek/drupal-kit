@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-09-10
+
 ### Added
 - **The module ships its own interface translations** (#123) — every string is wrapped in `t()` or `TranslatableMarkup`, so it was translatable in principle. In practice nobody translated it and every site showed English, including the message above an unpublished page on a site whose default language is Czech, and the abbreviated weekday names in `EntityHelper::getOfficeHours()`, which are user-facing content on a contact page rather than an admin screen.
 
