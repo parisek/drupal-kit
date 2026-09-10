@@ -327,6 +327,47 @@ class ScheduleAnnouncerKernelTest extends KernelTestBase {
   }
 
   /**
+   * A bundle whose machine name is all digits is announced.
+   *
+   * Scheduler reports its enabled bundles through array_keys(), and PHP
+   * turns an all-digit key into an int. Without a cast on both sides the
+   * strict compare fails and the schedule is silently dropped. Machine
+   * names allow [a-z0-9_], so a vocabulary called 2024 is legal.
+   *
+   * @covers ::scheduledDates
+   */
+  public function testAllDigitBundleNameIsAnnounced(): void {
+    $vocabulary = Vocabulary::create(['vid' => '2024', 'name' => 'Year 2024']);
+    $vocabulary->setThirdPartySetting('scheduler', 'publish_enable', TRUE);
+    $vocabulary->save();
+
+    $term = Term::create([
+      'vid' => '2024',
+      'name' => 'Scheduled term',
+      'status' => 0,
+      'publish_on' => self::PUBLISH_ON,
+    ]);
+    $term->save();
+
+    // This is the whole defect in one line: the vid is the string '2024',
+    // and array_keys() on anything keyed by it gives the int 2024. The
+    // service compares strictly against $entity->bundle(), a string.
+    $this->assertSame([2024], array_keys(Vocabulary::loadMultiple(['2024'])));
+    $this->assertSame('2024', $term->bundle());
+
+    $role = Role::create(['id' => 'year_reviewer', 'label' => 'Year reviewer']);
+    $role->grantPermission('view scheduled taxonomy_term');
+    $role->save();
+    $reviewer = User::create(['name' => 'year-reviewer', 'roles' => ['year_reviewer']]);
+    $reviewer->save();
+    $this->setCurrentUser($reviewer);
+
+    $this->assertSame([
+      'Scheduler publishes this content on ' . $this->longDate(self::PUBLISH_ON) . '.',
+    ], array_map('strval', $this->announcer->getMessages($term)));
+  }
+
+  /**
    * A config entity has no fields to read and is skipped, not fatal.
    *
    * The user entity above still has fields; this is the other guard.
