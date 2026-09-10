@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file. The format foll
 ## [Unreleased]
 
 ### Added
+- **The module ships its own interface translations** (#123) — every string is wrapped in `t()` or `TranslatableMarkup`, so it was translatable in principle. In practice nobody translated it and every site showed English, including the message above an unpublished page on a site whose default language is Czech, and the abbreviated weekday names in `EntityHelper::getOfficeHours()`, which are user-facing content on a contact page rather than an admin screen.
+
+  `drupal_kit.info.yml` now declares the module as its own translation project, and `translations/` carries `cs.po`, `sk.po`, `de.po` and `pl.po` covering all 21 strings. Drupal's locale module picks them up on `drush locale:update`.
+
+  The server pattern ends `%language.po`, with no closing percent. `%language` is the whole placeholder — `%language%.po` resolves to `cs%.po`, a file that does not exist, and the import then reports the project as checked while silently importing nothing.
+
+  Seven strings carry `['context' => 'Abbreviated weekday']` and their entries carry the matching `msgctxt`, so they do not collide with the unqualified `Mon` that core already translates.
+
+  A consumer still overrides any string in Admin → Translate interface. A shipped translation is a default, not a lock.
+
 - **A Scheduler publish or unpublish date is announced on the entity page** (#121) — `drupal_kit_page_attachments_alter()` already says *This page has not been published yet, only privileged users can see it.* When [Scheduler](https://www.drupal.org/project/scheduler) holds that page for a date, the message stopped short: it said the content was invisible, not that a date was set and cron would act on it. An editor could not tell a planned article from a forgotten draft without opening the edit form. Scheduler names the date once, in the message after the entity form is saved, so an editor who opens the page a week later saw nothing.
 
   The hook now adds *Scheduler publishes this content on @date.* and *Scheduler unpublishes this content on @date.*, after the existing message so the two read as one thought.
