@@ -4,6 +4,29 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+- **`|resizer` accepts an orientation map beside its positional tuples** (#125) — a hero that is landscape on one page and portrait on the next needed a different crop per orientation, and a template could not express that. It had to classify the image itself, which no Twig template can do, or ship one crop and let the other one look wrong.
+
+  ```twig
+  {{ image|resizer({
+    landscape: [['960', '720', '1280', 'crop'], ['480', '360', '', 'crop']],
+    portrait:  [['720', '960', '1280', 'crop'], ['360', '480', '', 'crop']],
+    square:    [['800', '800', '1280', 'crop'], ['400', '400', '', 'crop']],
+  }) }}
+  ```
+
+  The shape decides which path runs: one argument, an array, carrying at least one of `landscape`, `portrait` or `square` **whose value is a list of tuples**. Everything else is positional tuples, so every existing call behaves exactly as before — the feature is opt-in per call, without a flag. The value test is what keeps a caller's own labelling safe: the old code iterated every entry, so `['landscape' => [100, 50, 900, 'crop'], …]` was a legal way to name positional tuples, and reading the key alone would explode that one tuple into four.
+
+  Dimensions are read as floats. An int cast moves an image across the band — 1000.9 x 900.1 is landscape by its own numbers and square once truncated — and it collapses two very different sides to the same `PHP_INT_MAX` when a value exceeds it.
+
+  An image is square while its sides differ by no more than 10 %, measured against the longer side and inclusive at both edges. The band is a class constant, not a setting: this module reads other modules' config and has none of its own, and a consumer that needs a different band classifies the image itself and passes tuples.
+
+  **An image with no dimensions is landscape, and that is the ordinary case.** `MediaArrayBuilder` fills width and height only when the file exists and is a valid image, so a remote file behind stage_file_proxy, a missing file, or a broken one reaches the resizer with neither key. Treating that as an edge case would leave the most common production shape undefined.
+
+  A matched bucket that is absent or empty falls through to `landscape`, so a map carries only the orientations that actually differ.
+
+  The same call shape already exists in [`parisek/timber-kit`](https://github.com/parisek/timber-kit) and in the styleguide preview, so one template now renders identically on WordPress, on Drupal and in the preview.
+
 ### Fixed
 - **CI no longer fails on two baseline ignores that depend on the core version** (#127) — every run failed at `phpstan analyse`, on both PHP 8.3 and 8.4, with `Access to an undefined property Drupal\media\MediaInterface::$thumbnail` and `…::$field_media_image` reported as unmatched ignores in `MediaArrayBuilder.php`. PHPUnit passed in the same job, so a red check read as a test failure and was not one.
 

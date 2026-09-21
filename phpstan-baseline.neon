@@ -1028,12 +1028,6 @@ parameters:
 			path: src/Services/Resizer.php
 
 		-
-			message: '#^Method Drupal\\drupal_kit\\Services\\Resizer\:\:resizer\(\) has parameter \$variants with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Services/Resizer.php
-
-		-
 			message: '#^Method Drupal\\drupal_kit\\Services\\Resizer\:\:resizer\(\) should return array\<int, array\{src\: string, type\: string, width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\> but returns array\{non\-empty\-array\<mixed\>\}\.$#'
 			identifier: return.type
 			count: 1
@@ -1390,12 +1384,6 @@ parameters:
 		-
 			message: '#^Method Drupal\\drupal_kit\\TwigExtension\:\:templateExists\(\) has parameter \$template with no type specified\.$#'
 			identifier: missingType.parameter
-			count: 1
-			path: src/TwigExtension.php
-
-		-
-			message: '#^Parameter \#2 \$variants of static method Drupal\\drupal_kit\\Services\\Resizer\:\:resizer\(\) expects array\<int, array\>, array\<int(?:\<0, max\>)?\|string, mixed\> given\.$#'
-			identifier: argument.type
 			count: 1
 			path: src/TwigExtension.php
 
