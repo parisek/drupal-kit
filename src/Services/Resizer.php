@@ -16,6 +16,22 @@ use Drupal\image\Entity\ImageStyle;
 class Resizer {
 
   /**
+   * Orientation buckets an orientation map may carry.
+   */
+  private const ORIENTATIONS = ['landscape', 'portrait', 'square'];
+
+  /**
+   * Half-width of the band around 1:1 that still counts as square.
+   *
+   * 0.1 means a 10 % departure from square in either direction is still
+   * square, inclusive on both edges. The number is a constant rather than a
+   * setting because this module has no configuration surface: it reads other
+   * modules' config, never its own. A consumer that needs a different band
+   * classifies the image itself and passes positional tuples.
+   */
+  private const ASPECT_TOLERANCE = 0.1;
+
+  /**
    * Cached output format (avif, webp, or null for no conversion).
    */
   private static ?string $outputFormat = NULL;
@@ -116,12 +132,16 @@ class Resizer {
    *   - alt: (string) Alt text.
    *   - caption: (string) Image caption.
    *   - description: (string) Image description.
-   * @param array<int, array> $variants
-   *   Array of variant configurations, each containing:
+   * @param array<int|string, mixed> $variants
+   *   Either a list of variant configurations, each containing:
    *   - 0: (int) Target width.
    *   - 1: (int) Target height.
    *   - 2: (int) Media query min-width breakpoint.
    *   - 3: (string) Image style: 'default', 'crop', 'smart_crop', 'canvas'.
+   *   Or a single orientation map keyed by landscape, portrait and square,
+   *   each holding such a list. The map is chosen by the image's own aspect
+   *   ratio; see self::selectVariants(). Both shapes reach the same code
+   *   below, so nothing else in this method knows which one the caller used.
    *
    * @return array<int, array{src: string, type: string, width: int|string, height: int|string, media?: string, alt?: string, caption?: string, description?: string}>
    *   Array of image variant data for use in picture/source elements.
@@ -144,6 +164,8 @@ class Resizer {
     if (!is_array($image) || !isset($image['src']) || empty($image['src'])) {
       return $result;
     }
+
+    $variants = self::selectVariants($variants, $image);
 
     // SVG images are not resized.
     if (($image['type'] ?? '') === 'image/svg+xml') {
@@ -363,6 +385,113 @@ class Resizer {
         'height' => $variant['height'],
       ],
     ]);
+  }
+
+  /**
+   * Pick the variant tuples for this image.
+   *
+   * Two call shapes reach here. The historical one is a list of positional
+   * tuples, which passes through untouched. The other is a single orientation
+   * map:
+   *
+   * @code
+   * {{ image|resizer({
+   *   landscape: [['960', '720', '1280', 'crop'], ['480', '360', '', 'crop']],
+   *   portrait:  [['720', '960', '1280', 'crop'], ['360', '480', '', 'crop']],
+   *   square:    [['800', '800', '1280', 'crop'], ['400', '400', '', 'crop']],
+   * }) }}
+   * @endcode
+   *
+   * The map is recognised by shape: one argument, an array, carrying at
+   * least one of landscape, portrait or square. Anything else is tuples,
+   * so a caller that never writes a map never changes behaviour.
+   *
+   * @param array<int|string, mixed> $variants
+   *   Positional tuples, or a one-element list holding an orientation map,
+   *   or the orientation map itself for a direct PHP call.
+   * @param array<string, mixed> $image
+   *   The source image, read for width and height.
+   *
+   * @return array<int|string, mixed>
+   *   The tuples to render.
+   */
+  private static function selectVariants(array $variants, array $image): array {
+    $map = self::asOrientationMap($variants);
+    if ($map === NULL) {
+      return $variants;
+    }
+
+    $orientation = self::classifyAspect($image);
+    // An absent or empty bucket falls through to landscape, so a map may
+    // carry only the orientations that actually differ.
+    $selected = $map[$orientation] ?? [];
+    if (empty($selected)) {
+      $selected = $map['landscape'] ?? [];
+    }
+
+    return array_values($selected);
+  }
+
+  /**
+   * Read an orientation map out of the argument list, or NULL if there is none.
+   *
+   * @param array<int|string, mixed> $variants
+   *   The arguments as they arrived.
+   *
+   * @return array<string, mixed>|null
+   *   The map, or NULL when this is the positional-tuple shape.
+   */
+  private static function asOrientationMap(array $variants): ?array {
+    // Through the Twig filter the map arrives wrapped by the variadic
+    // collector; a direct PHP call passes it unwrapped.
+    if (count($variants) === 1 && isset($variants[0]) && is_array($variants[0])) {
+      $candidate = $variants[0];
+    }
+    else {
+      $candidate = $variants;
+    }
+
+    foreach (self::ORIENTATIONS as $orientation) {
+      if (isset($candidate[$orientation])) {
+        return $candidate;
+      }
+    }
+
+    return NULL;
+  }
+
+  /**
+   * Classify an image as landscape, portrait or square.
+   *
+   * Dimensions come from the image array, never from the file.
+   * MediaArrayBuilder fills them only when the file exists and is a valid
+   * image, so a remote,
+   * missing or broken file arrives with no dimensions at all. That is the
+   * ordinary case for a stage_file_proxy site, not an edge case, and it lands
+   * on landscape — the orientation a map is most likely to carry.
+   *
+   * @param array<string, mixed> $image
+   *   The source image.
+   *
+   * @return string
+   *   One of landscape, portrait or square.
+   */
+  private static function classifyAspect(array $image): string {
+    $width = (int) ($image['width'] ?? 0);
+    $height = (int) ($image['height'] ?? 0);
+
+    if ($width <= 0 || $height <= 0) {
+      return 'landscape';
+    }
+
+    // Cross-multiplied so the band is computed without a division: the pair
+    // is square while the difference stays inside the tolerance, measured
+    // against the longer side so both edges of the band are inclusive.
+    if (abs($width - $height) <= self::ASPECT_TOLERANCE * max($width, $height)) {
+      return 'square';
+    }
+
+    return $width > $height ? 'landscape' : 'portrait';
   }
 
 }

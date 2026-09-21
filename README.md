@@ -29,7 +29,7 @@ drush en drupal_kit
 - `drupal_kit.media_array_builder` — builds the documented array shapes for Media and File entities (image, SVG, video, remote video, document, Lottie).
 - `drupal_kit.menu_tree_builder` — renders a menu into the documented item shape (active trail, `field_*` enrichment, subtree scoping via `params['root']`).
 - `drupal_kit.taxonomy_tree_builder` — builds nested taxonomy term trees.
-- `Drupal\drupal_kit\Services\Resizer` — static utility: image style + focal point + responsive variant generator. Call `Resizer::resizer($images, $variants)` directly.
+- `Drupal\drupal_kit\Services\Resizer` — static utility: image style + focal point + responsive variant generator. Call `Resizer::resizer($images, $variants)` directly. `$variants` is a list of positional tuples, or an orientation map (`landscape` / `portrait` / `square`) that picks its tuples from the image's own aspect ratio — see [Orientation-aware variants](#orientation-aware-variants).
 - `drupal_kit.menu_active_trail_resolver` — resolves the active menu trail accounting for entity references and aliases.
 - `drupal_kit.twig_extension` — registers Twig functions used by component templates, including the typography-aware translation helpers `_xt` / `__t` / `_nt` / `_nxt` (translate, then pipe through `|typography`).
 - `drupal_kit.typography_twig_extension` — provides the `|typography` Twig filter; delegates to [`parisek/twig-typography`](https://github.com/parisek/twig-typography) and resolves typography config from `{active_theme}/static/typography.yml`.
@@ -43,6 +43,36 @@ drush en drupal_kit
 **Filters**
 
 `FilterImage`, `FilterLinks`, `FilterTable`, `FilterTypography`, `FilterYoutube` — [text format filters](https://www.drupal.org/docs/drupal-apis/filter-api/overview) that normalize editor output into PORTA's component shape.
+
+### Orientation-aware variants
+
+`|resizer` takes either positional tuples or one orientation map. The map is
+recognised by its keys, so a template that never writes one never changes:
+
+```twig
+{# tuples — the historical shape #}
+{{ image|resizer(['960', '720', '1280', 'crop'], ['480', '360', '', 'crop']) }}
+
+{# orientation map — the image's own aspect ratio picks the bucket #}
+{{ image|resizer({
+  landscape: [['960', '720', '1280', 'crop'], ['480', '360', '', 'crop']],
+  portrait:  [['720', '960', '1280', 'crop'], ['360', '480', '', 'crop']],
+  square:    [['800', '800', '1280', 'crop'], ['400', '400', '', 'crop']],
+}) }}
+```
+
+An image counts as square while its sides differ by no more than 10 %,
+inclusive at both edges; otherwise the longer side decides. A bucket that is
+absent or empty falls through to `landscape`, so a map carries only the
+orientations that actually differ.
+
+An image with no width or height is classified as `landscape`. That is the
+ordinary case rather than an edge case: `MediaArrayBuilder` fills the
+dimensions only when the file exists and is a valid image, so a remote file, a
+missing file or a broken one arrives with neither.
+
+The same call shape works in [`parisek/timber-kit`](https://github.com/parisek/timber-kit)
+and in the styleguide preview, so one template renders on every stack.
 
 ## Required modules
 
