@@ -429,7 +429,7 @@ class Resizer {
       $selected = $map['landscape'] ?? [];
     }
 
-    return array_values($selected);
+    return is_array($selected) ? array_values($selected) : [];
   }
 
   /**
@@ -451,8 +451,17 @@ class Resizer {
       $candidate = $variants;
     }
 
+    // A bucket holds a LIST of tuples, so its first entry is itself an
+    // array. A tuple that merely happens to be keyed by an orientation
+    // name — ['landscape' => [100, 50, 900, 'default'], …], which the old
+    // code accepted because it iterated every entry — has a scalar there,
+    // and stays on the positional path.
     foreach (self::ORIENTATIONS as $orientation) {
-      if (isset($candidate[$orientation])) {
+      if (!isset($candidate[$orientation]) || !is_array($candidate[$orientation])) {
+        continue;
+      }
+      $bucket = $candidate[$orientation];
+      if ($bucket === [] || is_array(reset($bucket))) {
         return $candidate;
       }
     }
@@ -477,8 +486,13 @@ class Resizer {
    *   One of landscape, portrait or square.
    */
   private static function classifyAspect(array $image): string {
-    $width = (int) ($image['width'] ?? 0);
-    $height = (int) ($image['height'] ?? 0);
+    // Float, not int. Media metadata is not always an integer, and casting
+    // first moves an image across the band: 1000.9 x 900.1 is landscape by
+    // its own numbers and square once both are truncated. A float also
+    // survives a value larger than PHP_INT_MAX, where two very different
+    // sides would otherwise both saturate and read as square.
+    $width = (float) ($image['width'] ?? 0);
+    $height = (float) ($image['height'] ?? 0);
 
     if ($width <= 0 || $height <= 0) {
       return 'landscape';

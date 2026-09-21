@@ -35,10 +35,14 @@ class ResizerOrientationTest extends ResizerKernelTestBase {
   /**
    * Build an image array with the given dimensions.
    *
+   * Width and height are deliberately not typed as int: Drupal media
+   * metadata is not always an integer, and the classification has to read
+   * what it is actually given.
+   *
    * @return array<int, array<string, mixed>>
    *   The image, in the array-of-images shape callers use.
    */
-  private function image(int $width, int $height, string $name = 'o.png'): array {
+  private function image(int|float|string $width, int|float|string $height, string $name = 'o.png'): array {
     $this->createTestPngFile($name);
 
     return [[
@@ -217,7 +221,7 @@ class ResizerOrientationTest extends ResizerKernelTestBase {
    *
    * @covers ::asOrientationMap
    */
-  public function testSinglePositionalTupleIsNotAMap(): void {
+  public function testSinglePositionalTupleStaysOnTheTuplePath(): void {
     $image = $this->image(1200, 600, 'single.png');
 
     $result = Resizer::resizer($image, [[100, 50, 900, 'default']]);
@@ -238,6 +242,93 @@ class ResizerOrientationTest extends ResizerKernelTestBase {
     $result = Resizer::resizer($this->image(600, 1200, 'uw.png'), $this->map());
 
     $this->assertSame(['(min-width: 1200px)'], $this->breakpoints($result));
+  }
+
+  /**
+   * A fractional pair is judged on its own numbers, not on truncated ones.
+   *
+   * 1000.9 x 900.1 differ by 100.8 where the band allows 100.09, so the
+   * image is landscape. Truncating both to int first makes it 1000 x 900,
+   * which is exactly on the band and therefore square.
+   *
+   * @covers ::classifyAspect
+   */
+  public function testFractionalDimensionsAreNotTruncated(): void {
+    $result = Resizer::resizer($this->image(1000.9, 900.1, 'fr.png'), [$this->map()]);
+
+    $this->assertSame(['(min-width: 1100px)'], $this->breakpoints($result));
+  }
+
+  /**
+   * Dimensions past PHP_INT_MAX keep their ratio.
+   *
+   * Two sides in a 2:1 ratio both saturate to PHP_INT_MAX under an int
+   * cast, which reads as square.
+   *
+   * @covers ::classifyAspect
+   */
+  public function testHugeDimensionsKeepTheirRatio(): void {
+    $image = $this->image('100000000000000000000', '50000000000000000000', 'huge.png');
+
+    $result = Resizer::resizer($image, [$this->map()]);
+
+    $this->assertSame(['(min-width: 1100px)'], $this->breakpoints($result));
+  }
+
+  /**
+   * A tuple keyed by an orientation name is still a tuple.
+   *
+   * The old code iterated every entry, so a caller could label positional
+   * tuples with names of its own. Reading the key alone would send such a
+   * list down the map path and explode one tuple into four.
+   *
+   * @covers ::asOrientationMap
+   */
+  public function testTupleListKeyedByOrientationNameStaysPositional(): void {
+    $variants = [
+      'landscape' => [100, 50, 900, 'default'],
+      'thumbnail' => [50, 25, 0, 'default'],
+    ];
+
+    $result = Resizer::resizer($this->image(1200, 600, 'named.png'), $variants);
+
+    $this->assertSame(['(min-width: 900px)'], $this->breakpoints($result));
+  }
+
+  /**
+   * A bucket that is not a list of tuples yields no variants, and no error.
+   *
+   * @covers ::selectVariants
+   */
+  public function testScalarBucketProducesOnlyTheFallback(): void {
+    $map = ['landscape' => [[100, 50, 1100, 'default']], 'portrait' => 'nonsense'];
+
+    $result = Resizer::resizer($this->image(600, 1200, 'scalar.png'), [$map]);
+
+    // 'nonsense' is not empty, so it does not fall through to landscape;
+    // it selects nothing and the original is the only source left.
+    $this->assertSame([], $this->breakpoints($result));
+    $this->assertSame('/sites/default/files/scalar.png', end($result)['src']);
+  }
+
+  /**
+   * The positional path keeps its fallback and its zero-breakpoint tuple.
+   *
+   * The narrower assertion elsewhere — one media string — would still pass
+   * if the fallback were dropped or the medialess tuple lost.
+   *
+   * @covers ::resizer
+   */
+  public function testPositionalOutputKeepsFallbackAndMedialessTuple(): void {
+    $image = $this->image(1200, 600, 'shape.png');
+
+    $result = Resizer::resizer($image, [[100, 50, 900, 'default'], [50, 25, 0, 'default']]);
+
+    // Whatever the toolkit does with the derivatives, the last entry is the
+    // original and at least one source carries no media.
+    $this->assertSame('/sites/default/files/shape.png', end($result)['src']);
+    $medialess = array_filter($result, static fn(array $entry): bool => empty($entry['media']));
+    $this->assertNotEmpty($medialess);
   }
 
 }

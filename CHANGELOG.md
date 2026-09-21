@@ -15,7 +15,9 @@ All notable changes to this project are documented in this file. The format foll
   }) }}
   ```
 
-  The shape decides which path runs: one argument, an array, carrying at least one of `landscape`, `portrait` or `square`. Everything else is positional tuples, so every existing call behaves exactly as before — the feature is opt-in per call, without a flag.
+  The shape decides which path runs: one argument, an array, carrying at least one of `landscape`, `portrait` or `square` **whose value is a list of tuples**. Everything else is positional tuples, so every existing call behaves exactly as before — the feature is opt-in per call, without a flag. The value test is what keeps a caller's own labelling safe: the old code iterated every entry, so `['landscape' => [100, 50, 900, 'crop'], …]` was a legal way to name positional tuples, and reading the key alone would explode that one tuple into four.
+
+  Dimensions are read as floats. An int cast moves an image across the band — 1000.9 x 900.1 is landscape by its own numbers and square once truncated — and it collapses two very different sides to the same `PHP_INT_MAX` when a value exceeds it.
 
   An image is square while its sides differ by no more than 10 %, measured against the longer side and inclusive at both edges. The band is a class constant, not a setting: this module reads other modules' config and has none of its own, and a consumer that needs a different band classifies the image itself and passes tuples.
 
