@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-09-21
+
 ### Added
 - **`|resizer` accepts an orientation map beside its positional tuples** (#125) — a hero that is landscape on one page and portrait on the next needed a different crop per orientation, and a template could not express that. It had to classify the image itself, which no Twig template can do, or ship one crop and let the other one look wrong.
 
