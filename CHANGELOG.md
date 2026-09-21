@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Fixed
+- **CI no longer fails on two baseline ignores that depend on the core version** (#127) — every run failed at `phpstan analyse`, on both PHP 8.3 and 8.4, with `Access to an undefined property Drupal\media\MediaInterface::$thumbnail` and `…::$field_media_image` reported as unmatched ignores in `MediaArrayBuilder.php`. PHPUnit passed in the same job, so a red check read as a test failure and was not one.
+
+  The baseline was correct for one environment and wrong for the other at the same time. Against the locked `drupal/core` phpstan still reports both errors, so the entries are needed; CI scaffolds Drupal fresh, a newer core resolves both properties, and `reportUnmatchedIgnoredErrors` turns the unused ignores into failures. Nothing changed in this repository — the last green run on `main` simply predates the core release that flipped it, so every PR opened after it went red.
+
+  Both entries now carry `reportUnmatched: false`, which states what is true of them: the suppression holds only while core leaves those properties undeclared. Pinning core in CI was rejected, because testing against the newest core is one of the reasons that job exists, and switching `reportUnmatchedIgnoredErrors` off globally was rejected because it would stop policing every other entry in a 1400-line baseline to fix two.
+
+
 ## [2.2.0] — 2026-09-10
 
 ### Added
