@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.5.0] — 2026-09-22
+
 ### Added
 - **The multilingual sitemap branch finally has tests** — `FrontPageSitemapLinksAlterKernelTest` installs only `drupal_kit` and `system`, so all four of its cases ran the monolingual else-branch. The branch that reads a per-language `page.front` override had **no coverage at all**, which is exactly how it came to call a method that does not exist on the interface it was typed against: nothing ever executed the line. Every project this library serves is multilingual, so that untested branch is the one that runs in production.
 
