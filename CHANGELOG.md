@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.4.0] — 2026-09-22
+
 ### Added
 - **Hook-level behaviour can now ship opt-in** (#115) — AGENTS.md § Feature flags requires new behaviour to default off, and documented two ways to say so: a `protected bool` on a consumer-subclassed base class, and a `$params` key on a container service. A module-level hook has neither. Nobody subclasses it and nobody passes it arguments, so a hook could only be always on, which the policy forbids, or left unshipped, which pushes the same wiring into all nineteen consuming projects. The gap was found while reviewing #114 and had no answer at the time.
 
