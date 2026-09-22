@@ -8,6 +8,12 @@ parameters:
         # stale when core deprecates something.
         - drupal_kit.module
         - drupal_kit.install
+        # tests too, with a baseline (#132). phpcs has always read this tree;
+        # PHPStan had not, and two tools disagreeing on what counts as code is
+        # how the interface defect in #131 survived. The baseline is a ratchet,
+        # not a shrug: the existing 300-odd findings are mostly mock-typing
+        # friction, and what matters is that the number can no longer grow.
+        - tests
     # Measured rather than assumed, 2026-09-22: switching this on reports
     # exactly two findings, both in Resizer, and both would be wrong to
     # "fix". `getDefaultToolkit()` and focal_point's `getCropEntity()` are
@@ -19,6 +25,27 @@ parameters:
     treatPhpDocTypesAsCertain: false
 
     ignoreErrors:
+        # Two core-version-dependent suppressions, kept HERE rather than in
+        # the baseline. `--generate-baseline` rewrites that file wholesale, so
+        # the `reportUnmatched: false` they need did not survive the first
+        # regeneration and CI went red on both PHP versions (#128 fixed the
+        # same thing; #133 broke it again). A generated file cannot hold a
+        # hand-edit — this one can.
+        #
+        # Why they are conditional: against the locked drupal/core, PHPStan
+        # reports both; CI installs core fresh, a newer core declares the
+        # properties, and the unused ignores would then be errors themselves.
+        -
+            message: '#^Access to an undefined property Drupal\\media\\MediaInterface\:\:\$thumbnail\.$#'
+            identifier: property.notFound
+            path: src/Services/MediaArrayBuilder.php
+            reportUnmatched: false
+        -
+            message: '#^Access to an undefined property Drupal\\media\\MediaInterface\:\:\$field_media_image\.$#'
+            identifier: property.notFound
+            path: src/Services/MediaArrayBuilder.php
+            reportUnmatched: false
+
         # Array VALUE types on hook implementations. PHPStan wants
         # `@param array<string, mixed>`; Drupal's own standard forbids it —
         # phpcs reports "Hook implementations should not duplicate @param

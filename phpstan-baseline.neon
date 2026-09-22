@@ -1,14 +1,3 @@
-# PHPStan baseline (level 8) — grandfathered errors, regenerated at the
-# level-5 -> 8 raise. The dominant categories are missing parameter/return
-# typehints (~137) and missing iterable value types (~57) on the pre-raise
-# public surface; tightening them is routine follow-up work, entry by entry.
-#
-# The baseline shrinks over time: when you add the missing typehint or
-# narrow a Drupal magic field access with a concrete @var, delete the
-# corresponding entry. New code baselines nothing — it is held to level 8.
-#
-# Regenerate after legitimate structural moves only:
-#   composer phpstan -- --generate-baseline
 parameters:
 	ignoreErrors:
 		-
@@ -840,20 +829,6 @@ parameters:
 			path: src/Services/MediaArrayBuilder.php
 
 		-
-			message: '#^Access to an undefined property Drupal\\media\\MediaInterface\:\:\$field_media_image\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/Services/MediaArrayBuilder.php
-			reportUnmatched: false
-
-		-
-			message: '#^Access to an undefined property Drupal\\media\\MediaInterface\:\:\$thumbnail\.$#'
-			identifier: property.notFound
-			count: 2
-			path: src/Services/MediaArrayBuilder.php
-			reportUnmatched: false
-
-		-
 			message: '#^Method Drupal\\drupal_kit\\Services\\MediaArrayBuilder\:\:buildDocument\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -1392,3 +1367,2450 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/TwigExtension.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\ComponentBase\:\:__construct
+
+				The container factory wires six services into the plugin
+				constructor\: entity type manager, current route match, language
+				manager, entity repository, config factory, and the drupal_kit
+				entity helper\. We assert on the resulting instance shape \(and on
+				subsequent buildConfigurationForm working\) rather than peeking at
+				the private props directly — that keeps the test resilient to
+				future ctor reorderings\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/ComponentBaseKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\ComponentBase\:\:buildConfigurationForm
+
+				Default values come from the configuration array; verify the
+				wrapper_id and wrapper_classes defaults are wired correctly\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/ComponentBaseKernelTest.php
+
+		-
+			message: '#^Method Drupal\\drupal_kit\\ComponentBase@anonymous/tests/src/Kernel/ComponentBaseKernelTest\.php\:151\:\:build\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/ComponentBaseKernelTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\ComponentBaseStub\:\:build\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/ComponentBaseStub.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\DisplayBase\:\:__call
+
+				A method call that maps to an existing EntityHelper method should
+				delegate \(forward args \+ return result\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/DisplayBaseKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\DisplayBase\:\:__call
+
+				Unknown method names throw BadMethodCallException\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/DisplayBaseKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\DisplayBase\:\:__call
+
+				`getEmailField` and `getPhoneField` are aliases mapped to
+				`getTextField` via the static \$methodAliases table\. Verify the
+				alias resolves to the underlying EntityHelper method\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/DisplayBaseKernelTest.php
+
+		-
+			message: '#^Method Drupal\\drupal_kit\\DisplayBase@anonymous/tests/src/Kernel/DisplayBaseKernelTest\.php\:99\:\:view\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/DisplayBaseKernelTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\EntityHelperFieldsKernelTestBase\:\:attachField\(\) has parameter \$field_settings with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/EntityHelperFieldsKernelTestBase.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\EntityHelperFieldsKernelTestBase\:\:attachField\(\) has parameter \$storage_settings with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/EntityHelperFieldsKernelTestBase.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\EntityHelperFieldsKernelTestBase\:\:createTestNode\(\) has parameter \$field_values with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/EntityHelperFieldsKernelTestBase.php
+
+		-
+			message: '#^Cannot call method getName\(\) on Drupal\\Core\\Field\\FieldDefinitionInterface\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: tests/src/Kernel/EntityHelperMediaFieldsKernelTestBase.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\FrontPageSitemapLinksAlterKernelTest\:\:link\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/FrontPageSitemapLinksAlterKernelTest.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\Core\\Language\\LanguageManagerInterface\:\:getLanguageConfigOverride\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/src/Kernel/FrontPageSitemapLinksAlterMultilingualKernelTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\FrontPageSitemapLinksAlterMultilingualKernelTest\:\:link\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/FrontPageSitemapLinksAlterMultilingualKernelTest.php
+
+		-
+			message: '#^Access to an undefined property object\:\:\$files\.$#'
+			identifier: property.notFound
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '''
+				#^Call to deprecated function locale_translation_get_projects\(\)\:
+				in drupal\:11\.4\.0 and is removed from drupal\:13\.0\.0\. Use
+				  \\Drupal\:\:service\(LocaleProjectRepository\:\:class\)
+				    \-\>getAll\(\) or \\Drupal\:\:service\(LocaleProjectRepository\:\:class\)
+				    \-\>getMultiple\(\$project_names\)instead\.$#
+			'''
+			identifier: function.deprecated
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '''
+				#^Call to deprecated function locale_translation_source_build\(\)\:
+				in drupal\:11\.4\.0 and is removed from drupal\:13\.0\.0\. Use
+				  \\Drupal\:\:service\(LocaleSource\:\:class\)
+				  \-\>sourceBuild\(\$project, \$langcode, \$filename\) instead\.$#
+			'''
+			identifier: function.deprecated
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertSame\(\) with ''somewhere/else…'' and ''modules/contrib…'' will always evaluate to false\.$#'
+			identifier: method.impossibleType
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertSame\(\) with arguments array\{\}, array\{\} and ''An unknown project…'' will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\InterfaceTranslationsKernelTest\:\:extractStrings\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\InterfaceTranslationsKernelTest\:\:languageProvider\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\InterfaceTranslationsKernelTest\:\:poEntries\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\InterfaceTranslationsKernelTest\:\:sourceStrings\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:89\:\:__call\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:89\:\:__call\(\) has parameter \$arguments with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:89\:\:__call\(\) has parameter \$method with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:89\:\:__construct\(\) has parameter \$inner with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:89\:\:getPath\(\) has parameter \$name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Parameter \#1 \$code of method Drupal\\Tests\\drupal_kit\\Kernel\\InterfaceTranslationsKernelTest\:\:extractStrings\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Parameter \#1 \$source of method Drupal\\Tests\\drupal_kit\\Kernel\\InterfaceTranslationsKernelTest\:\:key\(\) expects string, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
+
+		-
+			message: '#^Cannot call method getName\(\) on Drupal\\Core\\Field\\FieldDefinitionInterface\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: tests/src/Kernel/MediaArrayBuilderKernelTestBase.php
+
+		-
+			message: '#^PHPDoc tag @return with type Drupal\\file\\FileInterface is not subtype of native type Drupal\\file\\Entity\\File\.$#'
+			identifier: return.phpDocType
+			count: 1
+			path: tests/src/Kernel/MediaArrayBuilderKernelTestBase.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\SchedulePageAttachmentsKernelTest\:\:enterRoute\(\) has parameter \$parameters with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/SchedulePageAttachmentsKernelTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/src/Kernel/Services/EntityHelperContribGatedFieldsKernelTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperDateFieldsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getFileField
+
+				When description is empty, title falls back to the file's filename\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperFileFieldKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:dispatchByFieldType
+
+				`list_integer` shares the getSelectField dispatch with
+				`list_string`\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperFormatFieldKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:dispatchByFieldType
+
+				`string_long` shares the getTextField dispatch with `string`,
+				`email`, `telephone`, `integer`, `decimal`\. Each case in the
+				switch needs an executed line to credit the dispatcher branch\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperFormatFieldKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:dispatchByFieldType
+
+				`text`, `text_long`, `text_with_summary` all route to
+				getTextareaField\. text_long is already covered by
+				testDispatchTextLong above; this pins `text` separately\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperFormatFieldKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:formatFields
+
+				Batch dispatch over a heterogeneous node\: every field_\* field
+				passes through formatField, base fields pass through getString\(\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperFormatFieldKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:mapFields
+
+				Simple string\-based mapping\: target_key \=\> source_field_name\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperFormatFieldKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:mapFields
+
+				mapFields with empty map delegates to formatFields\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperFormatFieldKernelTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperFormatFieldKernelTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/src/Kernel/Services/EntityHelperLinkFieldsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:mapArrayConfig
+
+				Array config with a `field` key \+ extra params — the
+				single\-field\-with\-params branch\. Custom params merge ON TOP of
+				buildFieldParams' auto\-cardinality default; `return_format\: array`
+				forces the result into a list shape even for cardinality\-1 fields\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMapFieldsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:mapArrayConfig
+
+				Explicit method override — `\['method' \=\> 'getTextField', 'field' \=\> …\]`
+				bypasses dispatch and calls the named getter directly\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMapFieldsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:mapArrayConfig
+
+				List\-array passthrough — when the array config is a numeric list
+				\(array_is_list\), it's returned verbatim as pre\-built data\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMapFieldsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:mapArrayConfig
+
+				Sub\-object map pattern — when the output key doesn't resolve to a
+				real field on the entity, every value in the array config is
+				treated as a field name to extract into a nested sub\-array\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMapFieldsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:mapDotNotation
+
+				Dot notation — `'tags\.name'` extracts the `name` field from each
+				referenced entity in `tags` \(an entity_reference field targeting
+				taxonomy terms\)\. The helper loads the referenced entities, reads
+				the named field from each, and returns a list under the output
+				key `items`, where each item carries the inner\-config key \(`label`\)
+				mapped to the resolved value\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMapFieldsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:mapFields
+
+				Closure config — when the value is a Closure, it's invoked with
+				the entity and its return value is placed verbatim under the key\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMapFieldsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:mapFields
+
+				Scalar \(non\-string, non\-array, non\-closure\) values pass through
+				unchanged — the catch\-all branch in mapFields\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMapFieldsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:mapStringConfig
+
+				Unresolved string config — when the named field doesn't exist on
+				the entity, mapStringConfig returns the string as a literal value\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMapFieldsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getMenuField
+
+				Happy path — node references a menu containing one visible link;
+				getMenuField unwraps the single\-reference list via
+				normalizeReturnValue and returns the menu items directly\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMenuFieldKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getMenuField
+
+				Missing field name short\-circuits via validateField and returns
+				FALSE — the documented signal for "field not present on entity"\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMenuFieldKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getMenu
+
+				Loads a menu with one root link and asserts the public shape of the
+				returned items — id and title at minimum, which is the contract
+				MenuTreeBuilder must preserve when \#6 extracts it\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMenuTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getMenu
+
+				Nested menu links flow through MenuTreeBuilder\:\:renderLinks's
+				recursive branch — parent link's `below` array carries the child
+				with the same shape\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMenuTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getMenu
+
+				The menu_item_extras enrichment path — when the consumer passes
+				a field_formatter \(EntityHelper\:\:getMenu wires its own formatField\(\)\),
+				every `field_\*` field on the menu_link_content entity is mapped
+				into the link data under the field name minus the `field_` prefix\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperMenuTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/src/Kernel/Services/EntityHelperReferenceFieldsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getSelectFieldOptions
+
+				Drupal's options\-field config schema canonicalizes
+				`allowed_values` to a sequence of `\{value, label\}` mappings on
+				save\. The fixture writes the compact `key \=\> label` form \(which
+				FieldStorageConfig accepts as input\); the read\-back via
+				configFactory returns the canonical sequence form, which
+				getSelectFieldOptions then converts back to the consumer\-facing
+				`key \=\> label` map\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperSelectFieldOptionsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getSelectFieldOptions
+
+				Missing field storage returns an empty options map without errors\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperSelectFieldOptionsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getSelectFieldOptions
+
+				`field_name` arg is normalized — `size` and `field_size` both
+				resolve to the same field storage config \(the documented behaviour
+				of `normalizeFieldName`\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperSelectFieldOptionsKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getSelectFieldOptions
+
+				Czech override of one label flows through; the un\-overridden
+				labels fall back to the original values \(the documented
+				recursive\-replace contract\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperSelectFieldOptionsLanguageOverrideKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getSelectFieldOptions
+
+				Default\-language call against the same field still returns the
+				original labels — overrides only apply to their langcode\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperSelectFieldOptionsLanguageOverrideKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getTaxonomy
+
+				disable_translation skips the per\-language translation existence check
+				and returns whatever the default language has — useful for vocabularies
+				that aren't translation\-enabled\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/EntityHelperTaxonomyTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\Services\\FeatureFlagsKernelTest\:\:storeFlag\(\) has parameter \$value with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Kernel/Services/FeatureFlagsKernelTest.php
+
+		-
+			message: '#^Cannot call method getName\(\) on Drupal\\Core\\Field\\FieldDefinitionInterface\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: tests/src/Kernel/Services/MediaArrayBuilderDocumentTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/src/Kernel/Services/MediaArrayBuilderLinkTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MediaArrayBuilder\:\:buildLottie
+
+				Lottie bundles store a JSON file\. Backed by the generic `file`
+				source plugin \(the dedicated drupal/lottie source plugin is a
+				contrib add\-on; not required here for the coverage we need\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MediaArrayBuilderLottieTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MediaArrayBuilder\:\:buildLottie
+
+				Source returning a non\-file id \(missing fixture\) yields an empty
+				array — the documented null\-safe path\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MediaArrayBuilderLottieTest.php
+
+		-
+			message: '#^Cannot call method getName\(\) on Drupal\\Core\\Field\\FieldDefinitionInterface\|null\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: tests/src/Kernel/Services/MediaArrayBuilderLottieTest.php
+
+		-
+			message: '#^Cannot call method getName\(\) on Drupal\\Core\\Field\\FieldDefinitionInterface\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: tests/src/Kernel/Services/MediaArrayBuilderRemoteVideoFallbackTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MediaArrayBuilder\:\:buildRemoteVideo
+
+				image_field_resolver callback fires when field_media_image is
+				present and non\-empty\. Verify the resolver receives the expected
+				\(\$media, 'media_image'\) args\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MediaArrayBuilderRemoteVideoTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MediaArrayBuilder\:\:buildSvg
+
+				Malformed SVG drops width/height but keeps the rest of the shape\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MediaArrayBuilderSvgTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MediaArrayBuilder\:\:buildSvg
+
+				Source returning a non\-file id \(missing fixture\) yields an empty
+				array — the documented null\-safe path\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MediaArrayBuilderSvgTest.php
+
+		-
+			message: '#^Cannot call method getName\(\) on Drupal\\Core\\Field\\FieldDefinitionInterface\|null\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: tests/src/Kernel/Services/MediaArrayBuilderSvgTest.php
+
+		-
+			message: '#^Parameter \#1 \$uri of method Drupal\\drupal_kit\\Services\\MediaArrayBuilder\:\:getSvgViewBoxDimensions\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 6
+			path: tests/src/Kernel/Services/MediaArrayBuilderSvgTest.php
+
+		-
+			message: '#^Cannot call method getName\(\) on Drupal\\Core\\Field\\FieldDefinitionInterface\|null\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: tests/src/Kernel/Services/MediaArrayBuilderVideoTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MenuTreeBuilder\:\:build
+
+				Disabled menu links \(`enabled\: 0`\) are filtered out by the access
+				\+ tree\-manipulator chain so they never reach renderLinks\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MenuTreeBuilderKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MenuTreeBuilder\:\:collectCacheMetadata
+
+				Empty menu — no links registered, build returns the empty array
+				and collectCacheMetadata yields the empty accumulator\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MenuTreeBuilderKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MenuTreeBuilder\:\:collectCacheMetadata
+
+				collectCacheMetadata drains the accumulator and resets internal
+				state — the documented "collect and reset" contract\. Two
+				consecutive collects with no build in between\: first carries the
+				build's accumulated dependencies, second is empty\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MenuTreeBuilderKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MenuTreeBuilder\:\:renderLinks
+
+				Field\-formatter callback enriches the link with `field_\*` fields
+				— same contract menu_item_extras consumers rely on\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MenuTreeBuilderKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MenuTreeBuilder\:\:renderLinks
+
+				Flat menu — pins the public shape of every returned item\: the
+				eight documented keys \(`id`, `title`, `description`, `url`,
+				`attributes`, `is_active`, `in_active_trail`, `below`\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MenuTreeBuilderKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MenuTreeBuilder\:\:renderLinks
+
+				Nested menu — `below` is populated recursively with the same shape
+				the top level has\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MenuTreeBuilderKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MenuTreeBuilder\:\:renderLinks
+
+				`params\['root'\]` scopes the returned tree to a subtree starting
+				at the given menu link plugin id — sibling top\-level links are
+				excluded\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/MenuTreeBuilderKernelTest.php
+
+		-
+			message: '#^Annotation "@coversDefaultClass\. This file pins" is invalid, "@coversDefaultClass" should be followed by a space and a value\.$#'
+			identifier: phpunit.invalidPhpDoc
+			count: 1
+			path: tests/src/Kernel/Services/MenuTreeBuilderKernelTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertInstanceOf\(\) with ''Drupal\\\\Core\\\\Cache\\\\CacheableMetadata'' and Drupal\\Core\\Cache\\CacheableMetadata will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 2
+			path: tests/src/Kernel/Services/MenuTreeBuilderKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\Resizer\:\:addCropEffect
+
+				With focal_point enabled, `image_style\: 'crop'` routes through
+				addCropEffect's focal_point branch — the `focal_point_scale_and_crop`
+				effect \(instead of the fallback `image_scale_and_crop`\)\. Exercise
+				via the public Resizer\:\:resizer entry; the variant produced still
+				has the 100×100 dimensions because focal_point_scale_and_crop has
+				the same upscale\-and\-crop contract\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/ResizerFocalPointKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\Resizer\:\:getFocalPointHash
+
+				With focal_point enabled, getFocalPointHash's `moduleExists`
+				guard returns TRUE — the method proceeds past the early\-`return ''`
+				branch into the file\-storage lookup and the focal_point manager
+				call\. Because this test never creates a crop entity, getCropEntity
+				returns NULL and the method falls through to the FINAL `return ''`\.
+				The branches covered here are therefore\:
+
+				\- moduleExists\-TRUE pass\-through \(the early\-return path is
+				  covered in the existing ResizerTest where focal_point is NOT
+				  enabled in the base modules list\)\.
+				\- file\-storage lookup \+ reset\(\)\.
+				\- getCropEntity returns NULL → final return ''\.
+
+				The non\-empty\-hash branch \(lines that build the `substr\(md5\(\.\.\.\)\)`
+				suffix from a real focal\-point position\) is NOT covered here —
+				that needs a saved crop entity with a position\. Left as a follow\-up\.
+
+				Verified observably via the `crop` image_style_id suffix\: an
+				empty hash leaves the derivative URL at `100\-100\-crop` \(no
+				`\-\{hash\}` suffix appended\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/ResizerFocalPointKernelTest.php
+
+		-
+			message: '#^Cannot access offset ''src'' on array\{src\: string, type\: string, width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\|false\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/src/Kernel/Services/ResizerFocalPointKernelTest.php
+
+		-
+			message: '#^Cannot access offset ''src'' on array\{src\: string, type\: string, width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\|false\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/src/Kernel/Services/ResizerOrientationTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\Resizer\:\:getFocalPointHash
+
+				Files that exist in public\:// AND match the /sites/default/files/
+				URL prefix go through the full image\-style derivative path\. Every
+				variant\-producing test in this class invokes getOutputFormat and
+				getFocalPointHash transitively; the explicit covers entries on all
+				such tests credit those private helpers regardless of which test
+				runs first \(PHPUnit does not guarantee a deterministic order, and
+				getOutputFormat's static\-cache early\-return means only the first
+				caller in the process hits the full toolkit\-detection body\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/ResizerTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\Resizer\:\:getFocalPointHash
+
+				`image_style\: 'canvas'` adds image_scale \+ image_effects_set_canvas
+				for exact\-size letterboxed output\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/ResizerTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\Resizer\:\:getFocalPointHash
+
+				`image_style\: 'smart_crop'` routes through addSmartCropEffect,
+				which adds the image_effects\-provided
+				`image_effects_scale_and_smart_crop` effect \(entropy algorithm\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/ResizerTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\Resizer\:\:getOutputFormat
+
+				`image_style\: 'crop'` routes through addImageEffects' match into
+				addCropEffect\. focal_point isn't in the kernel module list here,
+				so the fallback `image_scale_and_crop` effect branch is exercised\.
+				The focal_point\-enabled branch is acceptable to leave uncovered —
+				adding the module would balloon the kernel boot, and the fallback
+				is the safer default the code is designed to handle\.
+
+				Crop also exercises the two cross\-cutting helpers\: getFocalPointHash
+				is invoked once per local\-file variant pass \(line 190 in Resizer\)
+				and getOutputFormat is invoked from inside addImageEffects' format\-
+				conversion tail\. Crediting them here covers all five private helpers
+				the \#62 audit identified\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/ResizerTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\Resizer\:\:resizer
+
+				A countable input \(array of images\) collapses to its LAST element
+				before processing\. Documents the legacy passthrough where callers
+				sometimes hand in `getMediaField` output \(array of one\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/ResizerTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\Resizer\:\:resizer
+
+				SVGs are passed through unchanged — no image style is applied\.
+				Resizer expects the image as an array\-of\-images \(see consumer
+				contract\: EntityHelper's image getters return \[\[\.\.\.\]\]\)\. Wrapping
+				the single image in an outer array is the conventional shape\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/ResizerTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\Resizer\:\:resizer
+
+				URLs outside /sites/default/files/ are not processed — Resizer
+				falls through and returns the original as the sole fallback\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/ResizerTest.php
+
+		-
+			message: '#^Cannot access offset ''src'' on array\{src\: string, type\: string, width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\|false\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 4
+			path: tests/src/Kernel/Services/ResizerTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\Services\\ScheduleAnnouncerKernelTest\:\:announce\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/Services/ScheduleAnnouncerKernelTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Kernel\\Services\\ScheduleAnnouncerKernelTest\:\:createArticle\(\) has parameter \$values with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Kernel/Services/ScheduleAnnouncerKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\ComponentBase\:\:submitConfigurationForm
+
+				The submit handler should copy the nested form values for wrapper_id
+				and wrapper_classes into \$this\-\>configuration when there are no
+				form errors\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/ComponentBaseTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\ComponentBaseTest\:\:invokeProtected\(\) has parameter \$args with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/ComponentBaseTest.php
+
+		-
+			message: '#^Method Drupal\\drupal_kit\\ComponentBase@anonymous/tests/src/Unit/ComponentBaseTest\.php\:110\:\:build\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/ComponentBaseTest.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\Tests\\drupal_kit\\Unit\\TestableDisplay\:\:nonExistentMethod\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/src/Unit/DisplayBaseTest.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\drupal_kit\\Services\\EntityHelper\:\:expects\(\)\.$#'
+			identifier: method.notFound
+			count: 10
+			path: tests/src/Unit/DisplayBaseTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\TestableDisplay\:\:view\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/DisplayBaseTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Plugin\\Filter\\FilterLinks\:\:__construct
+
+				Verifies the factory wires the request_stack service into the
+				plugin constructor\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Plugin/Filter/FilterLinksTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertInstanceOf\(\) with ''Drupal\\\\drupal_kit\\\\Plugin\\\\Filter\\\\FilterLinks'' and Drupal\\drupal_kit\\Plugin\\Filter\\FilterLinks will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/src/Unit/Plugin/Filter/FilterLinksTest.php
+
+		-
+			message: '#^Property Drupal\\Tests\\drupal_kit\\Unit\\Plugin\\Filter\\FilterLinksTest\:\:\$filter \(Drupal\\drupal_kit\\Plugin\\Filter\\FilterLinks&PHPUnit\\Framework\\MockObject\\MockObject\) does not accept Drupal\\drupal_kit\\Plugin\\Filter\\FilterLinks\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: tests/src/Unit/Plugin/Filter/FilterLinksTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Plugin\\Filter\\FilterTypography\:\:__construct
+
+				The container factory pulls the typography_twig_extension service
+				and forwards the plugin args to the constructor\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Plugin/Filter/FilterTypographyTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Plugin\\Filter\\FilterTypography\:\:process
+
+				An empty langcode carries no information, so it must not pin a language —
+				it falls back to the negotiated one rather than being passed on verbatim\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Plugin/Filter/FilterTypographyTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Plugin\\Filter\\FilterTypography\:\:process
+
+				Drupal hands the filter the language of the exact text being processed,
+				which beats the negotiated content language whenever the two differ —
+				mixed\-language views, an explicitly rendered translation, mail, cron\.
+				Passing it through is the whole reason the parameter exists\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Plugin/Filter/FilterTypographyTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertInstanceOf\(\) with ''Drupal\\\\drupal_kit\\\\Plugin\\\\Filter\\\\FilterTypography'' and Drupal\\drupal_kit\\Plugin\\Filter\\FilterTypography will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/src/Unit/Plugin/Filter/FilterTypographyTest.php
+
+		-
+			message: '#^Property Drupal\\Tests\\drupal_kit\\Unit\\Plugin\\Filter\\FilterTypographyTest\:\:\$filter \(Drupal\\drupal_kit\\Plugin\\Filter\\FilterTypography&PHPUnit\\Framework\\MockObject\\MockObject\) does not accept Drupal\\drupal_kit\\Plugin\\Filter\\FilterTypography\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: tests/src/Unit/Plugin/Filter/FilterTypographyTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Routing\\RouteSubscriber\:\:alterRoutes
+
+				The taxonomy_term canonical controller override was removed in
+				\#65 — Drupal core's default route already does what the override
+				did \(renders the term in `full` view mode via `_entity_view`\)\.
+				Assert the alter is now a no\-op for that route so we don't
+				regress\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Routing/RouteSubscriberTest.php
+
+		-
+			message: '#^Cannot call method getDefault\(\) on Symfony\\Component\\Routing\\Route\|null\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: tests/src/Unit/Routing/RouteSubscriberTest.php
+
+		-
+			message: '#^Cannot call method getOption\(\) on Symfony\\Component\\Routing\\Route\|null\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: tests/src/Unit/Routing/RouteSubscriberTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:collectCacheMetadata
+
+				Tags pushed via addCacheTags drain through collectCacheMetadata,
+				and collectCacheMetadata resets the internal accumulator on read
+				\(the documented "collect and reset" contract\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperCacheAndSvgFacadeTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getSvgViewBoxDimensions
+
+				Facade dispatch — forwards the URI to MediaArrayBuilder unchanged
+				and returns whatever the builder returns\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperCacheAndSvgFacadeTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:getSvgViewBoxDimensions
+
+				NULL return passes through unchanged \(the documented null\-safe
+				shape from the underlying parser\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperCacheAndSvgFacadeTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:generateMediaImage
+
+				Default `image_style` arg is the empty string \(''\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperGenerateDispatchTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:generateMediaImage
+
+				Explicit `image_style` flows through unchanged\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperGenerateDispatchTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\EntityHelper\:\:generateMediaRemoteVideo
+
+				The remote\-video delegate passes EntityHelper's own getImageField
+				as the image_field_resolver — verify the callable is bound to the
+				exact helper instance \+ method, not just any callable\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperGenerateDispatchTest.php
+
+		-
+			message: '#^Anonymous function has an unused use \$call_count\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Class Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList extends generic class ArrayObject but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Class Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList implements generic interface Drupal\\Core\\Field\\FieldItemListInterface but does not specify its types\: T$#'
+			identifier: missingType.generics
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\EntityHelperTest\:\:createHelperWithOverrides\(\) has parameter \$overrides with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\EntityHelperTest\:\:createMockEntity\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\EntityHelperTest\:\:createMockEntity\(\) has parameter \$fields with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\EntityHelperTest\:\:createMockEntityWithAllDefinitions\(\) has parameter \$field_definitions with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\EntityHelperTest\:\:createMockEntityWithAllDefinitions\(\) has parameter \$fields with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\EntityHelperTest\:\:createMockEntityWithCardinality\(\) has parameter \$field_definitions with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\EntityHelperTest\:\:createMockEntityWithCardinality\(\) has parameter \$fields with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\EntityHelperTest\:\:createMockEntityWithDefinitions\(\) has parameter \$field_definitions with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\EntityHelperTest\:\:createMockEntityWithDefinitions\(\) has parameter \$fields with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\EntityHelperTest\:\:createPartialHelper\(\) has parameter \$methods with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\EntityHelperTest\:\:stubTaxonomyTermStorage\(\) has parameter \$terms with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:__construct\(\) has parameter \$items with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:__get\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:__get\(\) has parameter \$property_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:__isset\(\) has parameter \$property_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:__set\(\) has parameter \$property_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:__set\(\) has parameter \$value with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:__unset\(\) has parameter \$property_name with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:appendItem\(\) should return Drupal\\Core\\Field\\FieldItemInterface but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:createInstance\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:createInstance\(\) has parameter \$parent with generic interface Drupal\\Core\\TypedData\\TraversableTypedDataInterface but does not specify its types\: I, T$#'
+			identifier: missingType.generics
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:defaultAccess\(\) has parameter \$operation with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:defaultAccess\(\) should return Drupal\\Core\\Access\\AccessResultInterface but returns true\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:defaultValuesForm\(\) has parameter \$form with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:defaultValuesForm\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:defaultValuesFormSubmit\(\) has parameter \$element with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:defaultValuesFormSubmit\(\) has parameter \$form with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:defaultValuesFormSubmit\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:defaultValuesFormValidate\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:defaultValuesFormValidate\(\) has parameter \$element with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:defaultValuesFormValidate\(\) has parameter \$form with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:delete\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:deleteRevision\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:equals\(\) has parameter \$list_to_compare with generic interface Drupal\\Core\\Field\\FieldItemListInterface but does not specify its types\: T$#'
+			identifier: missingType.generics
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:generateSampleItems\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:get\(\) has parameter \$index with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:getConstraints\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:getDataDefinition\(\) should return Drupal\\Core\\TypedData\\ListDataDefinitionInterface but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:getEntity\(\) should return Drupal\\Core\\Entity\\FieldableEntityInterface but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:getFieldDefinition\(\) should return Drupal\\Core\\Field\\FieldDefinitionInterface but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:getItemDefinition\(\) should return Drupal\\Core\\TypedData\\DataDefinitionInterface but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:getParent\(\) return type with generic interface Drupal\\Core\\TypedData\\TraversableTypedDataInterface does not specify its types\: I, T$#'
+			identifier: missingType.generics
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:getProperties\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:getProperties\(\) has parameter \$include_computed with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:getRoot\(\) return type with generic interface Drupal\\Core\\TypedData\\TraversableTypedDataInterface does not specify its types\: I, T$#'
+			identifier: missingType.generics
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:getSettings\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:hasAffectingChanges\(\) has parameter \$original_items with generic interface Drupal\\Core\\Field\\FieldItemListInterface but does not specify its types\: T$#'
+			identifier: missingType.generics
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:onChange\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:postSave\(\) should return bool but return statement is missing\.$#'
+			identifier: return.missing
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:preSave\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:processDefaultValue\(\) has parameter \$default_value with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:processDefaultValue\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:processDefaultValue\(\) should return array but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:removeItem\(\) should return \$this\(Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\) but return statement is missing\.$#'
+			identifier: return.missing
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:setContext\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:setContext\(\) has parameter \$parent with generic interface Drupal\\Core\\TypedData\\TraversableTypedDataInterface but does not specify its types\: I, T$#'
+			identifier: missingType.generics
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:setLangcode\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:setValue\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:toArray\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:view\(\) has parameter \$display_options with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\StubFieldItemList\:\:view\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Parameter \#1 \$methods of method PHPUnit\\Framework\\MockObject\\MockBuilder\<Drupal\\drupal_kit\\Services\\EntityHelper\>\:\:onlyMethods\(\) expects list\<non\-empty\-string\>, array given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Parameter \#1 \$originalClassName of method PHPUnit\\Framework\\TestCase\:\:createMock\(\) expects class\-string\<mixed\>, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '#^Unable to resolve the template type T in call to method PHPUnit\\Framework\\TestCase\:\:createMock\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: tests/src/Unit/Services/EntityHelperTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\FrontPageSitemapFilter\:\:filterLink
+
+				A link carrying no path is not a duplicate of anything; it is returned
+				untouched rather than guessed at\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/FrontPageSitemapFilterTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\FrontPageSitemapFilter\:\:filterLink
+
+				A link simple_sitemap did not attribute to a language — the monolingual
+				shape — is judged by any match at all, which is what the pre\-multilingual
+				behaviour did and what a single\-language site still needs\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/FrontPageSitemapFilterTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\FrontPageSitemapFilter\:\:filterLink
+
+				A surviving link must not re\-advertise the withheld URL through its
+				hreflang block — pruning the alternate is the whole point of doing this
+				per language rather than per link\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/FrontPageSitemapFilterTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\FrontPageSitemapFilter\:\:filterLink
+
+				REGRESSION\. `page\.front` is translatable\. The first version read
+				`system\.site` once and applied that one answer to every link, so a site
+				pointing each language at its own node lost the node that matched the
+				generation\-time language and kept the other language's duplicate\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/FrontPageSitemapFilterTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MenuActiveTrailResolver\:\:buildTrailFromLink
+
+				Unrouted breadcrumb crumbs \(`\!\$url\-\>isRouted\(\)` — e\.g\. external
+				URLs surfaced by a custom breadcrumb builder\) are skipped without
+				touching the menu link manager; iteration continues to the next
+				deeper crumb\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/MenuActiveTrailResolverTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\MenuActiveTrailResolverTest\:\:makeLink\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/MenuActiveTrailResolverTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\MenuActiveTrailResolverTest\:\:makeMenuLink\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: tests/src/Unit/Services/MenuActiveTrailResolverTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\MenuActiveTrailResolverTest\:\:makeRoutedUrl\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/MenuActiveTrailResolverTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\MenuTreeBuilder\:\:collectCacheMetadata
+
+				MenuLinkTree\:\:build\(\) returns a render array with '\#cache' carrying
+				access\-check contexts \(user\.permissions\) \+ tags for route\-bound
+				links\. The builder must forward that into the collector\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/MenuTreeBuilderTest.php
+
+		-
+			message: '#^Offset ''alt'' might not exist on array\{src\: ''https\://example\.com…'', type\: ''image/jpeg'', width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: tests/src/Unit/Services/ResizerTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\TaxonomyTreeBuilder\:\:build
+
+				Drupal core's "any term in this vocabulary" cache tag format —
+				what Term save/delete invalidates via EntityBase's
+				getListCacheTagsToInvalidate\(\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/TaxonomyTreeBuilderTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\TaxonomyTreeBuilder\:\:build
+
+				Unpublished terms drop out of the returned items AND their tag is
+				not collected \(the term iteration short\-circuits before
+				addCacheableDependency runs\)\. The vocabulary list tag still fires,
+				so consumers correctly invalidate if the term is published later\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/TaxonomyTreeBuilderTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\TaxonomyTreeBuilder\:\:buildTermTree
+
+				Nested mode \(`params\['nested'\] \=\=\= TRUE`\) routes through the
+				recursive buildTermTree helper\. Each item carries a `children`
+				key holding child terms with the same shape; leaves get an empty
+				`children` array\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/TaxonomyTreeBuilderTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\TaxonomyTreeBuilder\:\:buildTermTree
+
+				buildTermTree returns an empty array when a parent_id has no
+				children registered in the children_map — exercises the
+				`\!isset\(\$children_map\[\$parent_id\]\)` early return that bounds the
+				recursion at the leaves\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/TaxonomyTreeBuilderTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\TaxonomyTreeBuilderTest\:\:stubStorage\(\) has parameter \$terms with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/TaxonomyTreeBuilderTest.php
+
+		-
+			message: '#^Property Drupal\\Tests\\drupal_kit\\Unit\\Services\\TaxonomyTreeBuilderTest\:\:\$builder \(Drupal\\drupal_kit\\Services\\TaxonomyTreeBuilder&PHPUnit\\Framework\\MockObject\\MockObject\) does not accept Drupal\\drupal_kit\\Services\\TaxonomyTreeBuilder\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: tests/src/Unit/Services/TaxonomyTreeBuilderTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				A `\.\.` segment points outside the extension, where any manifest found
+				belongs to a different build\. Previously `ltrim\(\$dir, '\./'\)` flattened
+				`\.\./x/script\.js` to a lookup under `\<extension\>/x/` while still emitting
+				the escaping path\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				A bare filename has dirname\(\) '\.', which must not leak a `\./` prefix into
+				the rewritten library path\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				A docroot\-absolute or external path is not ours to resolve\: joining it
+				onto the extension root would name a file that does not exist\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				A dot\-prefixed directory must not be mangled\. `ltrim\(\$dir, '\./'\)` is a
+				character mask, so `\.build/js` became `build/js` — a lookup against a
+				directory that does not exist, silently keeping the unhashed asset\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				A library declaring no JS at all is skipped before anything is read\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				A library without the opt\-in property is untouched, even when a usable
+				manifest sits beside its asset\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				An extension whose path cannot be resolved \(uninstalled, renamed\) must
+				leave every library alone rather than let the exception reach the asset
+				pipeline — a broken lookup should cost the hashed filename, not the page\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				Opted in, but the build never emitted a manifest — the declared asset is
+				served unchanged\. This is the shape every consumer has before it changes
+				its build config\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				REGRESSION\. The loop applied the one manifest key to every JS file in the
+				library, so each resolved the same hashed name and the rewrites overwrote
+				each other — a library declaring `vendor\.js` beside `script\.js` came out
+				with a single asset\. A bare key now covers only a library with ONE
+				resolvable asset; more than one is a real choice the map form has to make,
+				and the warning says so instead of degrading in silence\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				REGRESSION\. Two map entries resolving to one built filename land on the
+				same array key, and the second insert discards the first asset's options
+				— the round\-1 collapse, arriving through the map\. An ambiguous plan is
+				abandoned whole rather than applied in part\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				REGRESSION\. Vite names its output from the input map's KEY, not the source
+				filename, so `rollupOptions\.input\: \{app\: 'src/main\.js'\}` emits `app\.js`
+				under the manifest key `src/main\.js`\. The basename\-matching rule this
+				replaces compared `app\.js` with `main\.js`, never matched, and silently
+				rewrote nothing for every build shaped that way\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				REGRESSION\. `unset\(\)` \+ append moved a rewritten asset to the end of the
+				array, and Drupal emits a library's JS in array order\. Rewriting only
+				`vendor\.js` therefore made it run AFTER `app\.js`, inverting a dependency
+				the library declared by position\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				The map form states which asset carries which key, so a library holding
+				several entries keeps them all — the case a single key has to refuse\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				The path this class exists for\: an opted\-in library's declared asset is
+				replaced by the hashed filename, in place, keeping its options\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				The subdirectory acceptance proven end to end rather than on
+				entryFile\(\) alone\: the rewritten library keeps the `assets/` segment, so
+				the emitted asset path is the one the build actually produced\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:alterLibraries
+
+				`true` is shorthand for the default key, so the common case needs no
+				literal in every consumer's libraries\.yml\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:entryFile
+
+				A malformed manifest is not a reason to take the site's JS down\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:entryFile
+
+				Backwards compatible by construction — a build that never emitted a
+				manifest keeps whatever the library declared\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:entryFile
+
+				REGRESSION\. Every failure branch returned NULL in silence, so an opted\-in
+				library kept its declared path and could serve a 404 with nothing in the
+				log to explain it\. Each distinct failure now warns exactly once\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:entryFile
+
+				The happy path this class exists for\: the manifest names a hashed file
+				that is present, so the hashed name is returned\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:entryFile
+
+				The key is the interface\: a manifest holding other records but not this
+				key resolves nothing, rather than guessing at an `isEntry` record\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:isResolvablePath
+
+				Drupal library paths are POSIX, so a backslash is malformed — and it
+				would slip both other guards, carrying no `/`\-delimited `\.\.` segment and
+				neither a leading slash nor a scheme\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:isResolvablePath
+
+				REGRESSION\. Two dots are legal inside a directory name\. Testing the whole
+				path with `str_contains\(\$path, '\.\.'\)` rejected `\.\.build/js/script\.js`,
+				which traverses nothing — the traversal test has to look at segments\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:isUsableEntryFile
+
+				A `file` carrying a separator escapes the directory this method promises
+				to return a name inside — `is_file\(\)` alone would resolve it happily\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:isUsableEntryFile
+
+				A manifest naming a missing file is worse than no manifest\: it would
+				serve a guaranteed 404 where the declared path still worked\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:isUsableEntryFile
+
+				A subdirectory is allowed; escaping the built directory still is not\.
+				The relaxation must not have reopened traversal\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:isUsableEntryFile
+
+				REGRESSION\. Allowing a subdirectory reopened a hole the bare\-filename
+				rule had closed by accident\: `is_file\(\)` follows symlinks, so a `assets`
+				link pointing outside the build satisfies every string check and still
+				resolves elsewhere\. Containment is now asserted with realpath\(\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:isUsableEntryFile
+
+				REGRESSION\. Vite's own default `entryFileNames` is
+				`assets/\[name\]\-\[hash\]\.js`, so a stock config emits a `file` carrying a
+				subdirectory\. The first guard was `basename\(\$file\) \!\=\= \$file`, which
+				rejected every such build — silently, since nothing logged\. Only this
+				skeleton's flattened `entryFileNames` reached the happy path, so the
+				feature looked healthy here while doing nothing downstream\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:isUsableEntryFile
+
+				The key decides which RECORD is read, not what its `file` says\. A
+				stylesheet under the JS key must not be served as a script\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:isUsableEntryFile
+
+				`\#` and `\?` are legal in a POSIX filename and pass every filesystem
+				check, but a browser reads them as a fragment or query — so the file
+				validated on disk is not the file the page requests\. `%%` goes too\: a
+				server may decode `%%2e%%2e` back into traversal after this guard ran\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:plannedRewrites
+
+				A manifest naming exactly what the library already declares is a no\-op,
+				not a rewrite to the same key — the case of an unhashed build\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:plannedRewrites
+
+				A property that is neither TRUE, a non\-empty string, nor a map says
+				nothing usable\. It must be ignored rather than coerced into a key\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:plannedRewrites
+
+				Map entries that name nothing usable are skipped individually — a typo in
+				one row must not cost the rows around it\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:plannedRewrites
+
+				REGRESSION\. The collision test compared rewrite targets only\. A pair whose
+				manifest already names the declared file is a no\-op, skipped before
+				`\$rewrites` is built — so a rewrite landing on that same untouched
+				filename looked unique, and then overwrote the untouched asset's options
+				during the rebuild\. The test is now the final key set\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\ViteManifest\:\:plannedRewrites
+
+				The warning has to name the library and the property, or it sends a
+				reader nowhere\. Asserting only that `warning\(\)` fired let a garbled
+				message through\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Services\\ViteManifestTest\:\:provideUnusableManifests\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Services/ViteManifestTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Twig\\TypographyExtension\:\:applyTypography
+
+				Both languages must remain reachable from one instance — pinning one must
+				not poison the cache for the negotiated path\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Twig\\TypographyExtension\:\:applyTypography
+
+				REGRESSION\. The upstream filter's signature is `Stringable\|string\|null`,
+				and only arrays were guarded, so an int reached it and raised a TypeError
+				— a 500 on the whole page, not a filter that declined\.
+
+				Found migrating a real site\: a branch count piped through `\|typography`
+				had worked against the local `custom_components` copy, which cast, and
+				took two pages down against this package\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Twig\\TypographyExtension\:\:applyTypography
+
+				Render arrays must pass through untouched — the upstream extension
+				doesn't know about Drupal render arrays, so this is the wrapper's job\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Twig\\TypographyExtension\:\:applyTypography
+
+				The other half of the guard\: narrowing it to numbers and booleans must
+				not have cost a Stringable its typesetting\. Without this the scalar tests
+				above pass just as happily against `if \(\!is_string\(\)\) return`, which
+				would silently stop typesetting every TranslatableMarkup on the site\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Twig\\TypographyExtension\:\:upstreamForActiveTheme
+
+				An explicit language wins over the negotiated one\. A caller that knows the
+				language of the exact string — a text filter gets it as `process\(\)`'s
+				second argument — is more accurate than negotiation, and the two diverge
+				on mixed\-language views, explicitly rendered translations, mail and cron\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Twig\\TypographyExtension\:\:upstreamForActiveTheme
+
+				Per\-theme cache must key on theme machine name\: two different active
+				themes within the same request must produce two separate path lookups\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Twig\\TypographyExtension\:\:upstreamForActiveTheme
+
+				Per\-theme cache\: the YAML must only be parsed once per theme even
+				across multiple filter calls\. We verify by mocking that
+				extension\.path\.resolver is called at most once per theme\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Twig\\TypographyExtension\:\:upstreamForActiveTheme
+
+				The resolver is read per `applyTypography\(\)` call, not once at
+				construction, so one cached upstream instance serves every language in a
+				request\. That is what lets the per\-theme cache stay keyed on the theme
+				alone with no language component\. Asserted through behaviour — the same
+				instance must typeset Czech and English differently across two calls —
+				rather than by counting mock invocations\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Twig\\TypographyExtension\:\:upstreamForActiveTheme
+
+				The resolver must reach the upstream extension so its per\-language tables
+				apply\. Czech is the sharpest probe available\: its `languages\:` entry sets
+				low\-9 reversed quotes where the language\-neutral default is curled\.
+				Asserting the Czech opening quote proves the `languages\:` layer ran —
+				without a resolver `localeCandidates\(\)` returns \[\] and the entry is never
+				consulted, which is the defect this covers\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Twig\\TypographyExtension\:\:upstreamForActiveTheme
+
+				With no YAML file present, the upstream defaults still apply
+				\(PHP_Typography Settings\(true\)\), so smart quotes happen\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Twig\\TypographyExtension\:\:upstreamForActiveTheme
+
+				YAML config from the theme must reach the upstream PHP_Typography
+				Settings object\. We verify by disabling smart_quotes and asserting
+				the smart\-quote codepoints are absent \(the inverse of the
+				"missing YAML uses defaults" test, where they ARE present\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\Core\\Extension\\ExtensionPathResolver\:\:expects\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\Core\\Extension\\ExtensionPathResolver\:\:method\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\Core\\Language\\LanguageManagerInterface\:\:method\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\Core\\Theme\\ThemeManagerInterface\:\:method\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\Twig\\TypographyExtensionTest\:\:provideNonStringValues\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '#^Method PHPUnit\\Framework\\MockObject\\Builder\\InvocationMocker\:\:willReturnOnConsecutiveCalls\(\) invoked with unpacked array with possibly string key, but it''s not allowed because of @no\-named\-arguments\.$#'
+			identifier: argument.named
+			count: 1
+			path: tests/src/Unit/Twig/TypographyExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\TwigExtension\:\:formatDate
+
+				String\-formatted dates that strtotime\(\) understands are converted to
+				a Unix timestamp before being passed to the date formatter\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\TwigExtension\:\:getCountryName
+
+				The filter takes an ISO country code and returns the human\-readable
+				name as a TranslatableMarkup \(Drupal core's CountryManager seeds the
+				list with `t\(\)` calls\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\TwigExtension\:\:getOptionLabel
+
+				Resolves the human\-readable label for the selected option key via
+				the field's `allowed_values` setting\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\TwigExtension\:\:getResizer
+
+				Facade for the static Resizer\:\:resizer\(\) — verify it delegates by
+				passing an SVG image \(Resizer's documented passthrough path\) and
+				asserting the single\-item list comes back unchanged\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\TwigExtension\:\:getTranslation
+
+				The `__` / `_x` Twig functions build a TranslatableMarkup with the
+				`context` option populated — verify the wiring without rendering\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\TwigExtension\:\:getTranslationPlural
+
+				Verifies the new injected stringTranslation service is called with
+				the same shape the old \\\\Drupal\:\:translation\(\) chain produced\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\TwigExtension\:\:mergeResizer
+
+				Optional per\-viewport image\: an unfilled image field makes \|resizer
+				return \[\] — the empty group must be dropped BEFORE the last\-group
+				detection, so the remaining group becomes last and keeps its own
+				unconditional \<img\> fallback\. Regression\: the previous implementation
+				kept the empty group as "last", filtered the desktop group down to
+				media\-qualified variants and produced a \<picture\> with no fallback\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\TwigExtension\:\:mergeResizer
+
+				Resizer always sets 'media', using '' for tuples without a breakpoint\.
+				Non\-last groups must filter with \!empty\(\), not isset\(\) — otherwise the
+				desktop fallback\-shaped entry \(media\: ''\) leaks into the merged set as
+				an unconditional \<source\> placed BEFORE the mobile entries, shadowing
+				the mobile image on every viewport\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\Core\\Datetime\\DateFormatterInterface\:\:expects\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\Core\\StringTranslation\\TranslationInterface\:\:expects\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '#^Call to an undefined method Drupal\\Core\\StringTranslation\\TranslationInterface\:\:method\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '''
+				#^Call to deprecated method isType\(\) of class PHPUnit\\Framework\\Assert\:
+				https\://github\.com/sebastianbergmann/phpunit/issues/6052$#
+			'''
+			identifier: staticMethod.deprecated
+			count: 2
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '#^Method Drupal\\Tests\\drupal_kit\\Unit\\TwigExtensionTest\:\:createTwigEnv\(\) has parameter \$templates with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/TwigExtensionTest.php
+
+		-
+			message: '#^Method class@anonymous/tests/src/Unit/TwigExtensionTest\.php\:632\:\:getSetting\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/src/Unit/TwigExtensionTest.php

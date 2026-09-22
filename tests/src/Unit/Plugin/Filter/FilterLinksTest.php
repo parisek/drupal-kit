@@ -18,7 +18,7 @@ class FilterLinksTest extends TestCase {
   /**
    * The filter plugin instance under test.
    *
-   * @var \Drupal\drupal_kit\Plugin\Filter\FilterLinks
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\drupal_kit\Plugin\Filter\FilterLinks
    */
   protected FilterLinks $filter;
 
