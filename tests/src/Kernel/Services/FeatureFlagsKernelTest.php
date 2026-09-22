@@ -53,7 +53,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
    *
    * @covers ::enabled
    */
-  public function testAFlagTheProjectSetReadsTrue(): void {
+  public function testFlagTheProjectSetReadsTrue(): void {
     $this->setFeatures(['example_feature' => TRUE]);
 
     $this->assertTrue(FeatureFlags::enabled('example_feature'));
@@ -64,7 +64,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
    *
    * @covers ::enabled
    */
-  public function testAFlagSetToFalseReadsFalse(): void {
+  public function testFlagSetToFalseReadsFalse(): void {
     $this->setFeatures(['example_feature' => FALSE]);
 
     $this->assertFalse(FeatureFlags::enabled('example_feature'));
@@ -78,7 +78,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
    *
    * @covers ::enabled
    */
-  public function testAnUnknownFlagIsOff(): void {
+  public function testUnknownFlagIsOff(): void {
     $this->setFeatures(['other_feature' => TRUE]);
 
     $this->assertFalse(FeatureFlags::enabled('example_feature'));
@@ -92,7 +92,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
    *
    * @covers ::enabled
    */
-  public function testAMissingConfigObjectIsOff(): void {
+  public function testMissingConfigObjectIsOff(): void {
     $this->assertNull(\Drupal::config(FeatureFlags::CONFIG_NAME)->get('features'));
     $this->assertFalse(FeatureFlags::enabled('example_feature'));
   }
@@ -125,7 +125,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
    *
    * @covers ::enabled
    */
-  public function testTheSchemaRefusesANonMapFeaturesValue(): void {
+  public function testTheSchemaRefusesNonMapFeaturesValue(): void {
     $this->expectException(SchemaIncompleteException::class);
     $this->setFeatures('nonsense');
   }
@@ -138,7 +138,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
    *
    * @covers ::enabled
    */
-  public function testAMalformedStoredValueIsOff(): void {
+  public function testMalformedStoredValueIsOff(): void {
     \Drupal::service('config.storage')
       ->write(FeatureFlags::CONFIG_NAME, ['features' => 'nonsense']);
     \Drupal::configFactory()->reset(FeatureFlags::CONFIG_NAME);
@@ -151,7 +151,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
    *
    * @covers ::enabled
    */
-  public function testAnEmptyNameIsOff(): void {
+  public function testEmptyNameIsOff(): void {
     $this->setFeatures(['' => TRUE]);
 
     $this->assertFalse(FeatureFlags::enabled(''));
