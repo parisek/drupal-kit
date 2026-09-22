@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file. The format foll
 ## [Unreleased]
 
 ### Changed
+- **`FeatureFlags` is a service** (#139) — it was static because the supported range was `^10 || ^11`: 10.x has no `#[Hook]` registration, so every hook was procedural and a service would have had nobody to inject it into. #134 moved the floor and #135 turned all seven hooks into autowired classes, so the reason is gone. Registered as `drupal_kit.feature_flags` with the config factory injected.
+
+  **`KNOWN_FLAGS` stays a constant, and that is the decision worth recording.** Taking the list as a constructor argument would make the test simpler — no subclass needed — and would also let any project declare flag names of its own, which is the one thing the allowlist exists to stop. AGENTS.md documents three opt-in patterns, and which applies is decided by who gets to state the choice: a `protected bool` works because the consumer subclasses, a `$params` key works because the consumer calls. Both get typo-checking free from PHP, because a misspelled property or argument does not compile. A hook has neither, so the choice lives in config — where a misspelled key is silence. The allowlist is what turns that silence back into an error.
+
+  New case: the container really hands out the service. Constructing the class proves the logic and not that a hook can reach it — a misspelled service id would leave every call site fatal on a real site and every test green, because they all build their own instance.
+
+  Nothing in production called `FeatureFlags::enabled()`, because no flag ships yet (#129 landed the mechanism empty on purpose). That made this the cheapest moment the change will ever have.
+
+  `AGENTS.md` § Feature flags and `README.md` both described the static shape. Both are corrected — the AGENTS.md sentence is the one a future flag author follows.
+
+### Changed
 - **`hook_requirements()` becomes `hook_runtime_requirements()`, and `drupal_kit.install` is deleted** (#137) — the procedural form without `#[LegacyRequirementsHook]` is deprecated in drupal:11.3.0 and removed in drupal:13.0.0, and the `REQUIREMENT_OK` / `REQUIREMENT_WARNING` constants it reported with are deprecated in drupal:11.2.0 and **removed in drupal:12.0.0**. Those constants were the one thing in this module that would have broken on 12.
 
   Two tools were looking and neither could see it. `phpstan-deprecation-rules` has no rule for global constants, so a deprecated `const` is invisible at level 8. And `phpunit.xml.dist` sets `SYMFONY_DEPRECATIONS_HELPER=weak`, so the suite counts core deprecations and never fails on them — which is why the 22 in every run had gone unexamined. Found by an independent doctrine review of #135, not by CI.

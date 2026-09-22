@@ -4,30 +4,22 @@ declare(strict_types=1);
 
 namespace Drupal\drupal_kit\Services;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
+
 /**
  * Reads the opt-in flags behaviour in this module gates itself on.
  *
  * AGENTS.md § Feature flags & breaking changes requires new behaviour to ship
- * opt-in and default off, and documents two ways to express that: a
- * `protected bool` on a consumer-subclassed base class, and a `$params` key on
- * a container service. A module-level hook has neither — nobody subclasses it
- * and nobody passes it arguments — so hook behaviour could only be always on,
- * which the policy forbids, or left unshipped, which pushes the same wiring
- * into every consuming project (#115).
+ * opt-in and default off, and documents three ways to express that. Which one
+ * applies is decided by who gets to state the choice: a `protected bool` on a
+ * base class works because the consumer subclasses it, and a `$params` key
+ * works because the consumer calls it. A module-level hook is neither
+ * subclassed nor called with arguments, so the choice has nowhere to live but
+ * configuration (#115).
  *
- * This is the third way: one config object, `drupal_kit.feature_flags`, of
+ * This is that third way: one config object, `drupal_kit.feature_flags`, of
  * declared booleans, shaped after core's own `system.feature_flags`. A hook
  * asks before it acts.
- *
- * The class is static, like Resizer, and that is now a leftover rather than a
- * reason. It was static because the supported core range was `^10 || ^11`:
- * Drupal 11.1 registers `#[Hook]` classes as autowired services and could
- * inject the config factory, but 10.x cannot, so every hook here is
- * procedural and reaches the container through `\Drupal::` already. The floor
- * is `^11.4` as of 3.0, so the constraint is gone and the shape survives it.
- * Turning this into an injected service, and the hooks that read it into
- * `#[Hook]` classes, is a follow-up with its own tests — not a rider on a
- * dependency bump.
  */
 class FeatureFlags {
 
@@ -39,11 +31,17 @@ class FeatureFlags {
   /**
    * Every flag this module ships.
    *
-   * Schema validation is not runtime enforcement: it runs in tests and in
-   * Config Inspector, never on a production read. Without this list a raw
-   * config write of an undeclared key would turn on a "flag" no code in this
-   * module has ever heard of. The allowlist is what makes "unknown flags are
-   * off" true at runtime rather than only on paper.
+   * A constant, and deliberately not a constructor argument. Schema
+   * validation is not runtime enforcement — it runs in tests and in Config
+   * Inspector, never on a production read — so this list is the only thing
+   * standing between a raw config write and a "flag" no code here has heard
+   * of. The other two opt-in patterns get that guarantee free from PHP: a
+   * misspelled property or argument does not compile. A misspelled config
+   * key is silence, and this list is what turns it back into an error.
+   *
+   * Taking the list as an argument would make the test simpler and let a
+   * project inject flag names of its own, which is the one thing the
+   * allowlist exists to prevent.
    *
    * Empty until the first flag ships. A flag joins this list, the schema and
    * config/install in the same commit.
@@ -52,6 +50,10 @@ class FeatureFlags {
    * flag shipped, that is the only way to exercise the TRUE branch at all.
    */
   protected const KNOWN_FLAGS = [];
+
+  public function __construct(
+    protected ConfigFactoryInterface $configFactory,
+  ) {}
 
   /**
    * Whether a project has turned a flag on.
@@ -66,12 +68,12 @@ class FeatureFlags {
    * @return bool
    *   TRUE only when this module declares the flag and the project set it.
    */
-  public static function enabled(string $name): bool {
+  public function enabled(string $name): bool {
     if (!in_array($name, static::KNOWN_FLAGS, TRUE)) {
       return FALSE;
     }
 
-    return \Drupal::config(self::CONFIG_NAME)->get($name) === TRUE;
+    return $this->configFactory->get(self::CONFIG_NAME)->get($name) === TRUE;
   }
 
 }
