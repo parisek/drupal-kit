@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+- **The multilingual sitemap branch finally has tests** — `FrontPageSitemapLinksAlterKernelTest` installs only `drupal_kit` and `system`, so all four of its cases ran the monolingual else-branch. The branch that reads a per-language `page.front` override had **no coverage at all**, which is exactly how it came to call a method that does not exist on the interface it was typed against: nothing ever executed the line. Every project this library serves is multilingual, so that untested branch is the one that runs in production.
+
+  Four kernel cases with the `language` module installed and a Czech override: each language drops its own front page and keeps the other's (the same path survives in one language and vanishes in the other), a language with no override inherits the stored value, a link with no langcode is dropped on any match, and a surviving link loses only the alternates that point at a front page. Mutation-checked — reading `$stored` instead of the override fails three of the four, and disabling the multilingual branch fails all four.
+
 ### Changed
 - **The hooks are now statically analysed, and one of them was calling a method its type does not have** — `phpstan.neon` listed `paths: [src]`, so `drupal_kit.module` and `drupal_kit.install` had never been read by PHPStan. Those eight hooks are the code that touches core API most directly, which makes them the code most likely to go stale when core deprecates something, and nothing was looking at them.
 
