@@ -1,0 +1,41 @@
+# Feature flags for behaviour drupal_kit ships opt-in, default off.
+#
+# Shaped after core's own system.feature_flags (system.schema.yml): a
+# dedicated config object of declared booleans, not a general settings object
+# and not a sequence. A sequence accepts any key, so a project that misspells
+# a flag gets silence instead of an error — and the module author knows every
+# flag name at the moment the behaviour ships, which is the case a mapping is
+# for. Core's only boolean sequences key on names it cannot know, such as the
+# field names in an entity display's `hidden` map.
+drupal_kit.feature_flags:
+  type: config_object
+  label: 'Drupal Kit feature flags'
+  constraints:
+    # Declared keys become required, which is what turns an undeclared key
+    # into an error instead of an accident. Each flag then opts out of the
+    # requirement with `requiredKey: false`, so a site whose export predates
+    # a flag stays valid.
+    FullyValidatable: ~
+  mapping: {}
+  # The object itself does not exist yet, and cannot: Drupal skips a
+  # config/install file with no keys (FileStorage::decode() returns FALSE for
+  # empty data), so an empty object is unshippable. The first flag brings it.
+  #
+  # What a flag ships, all in one commit:
+  #
+  #   1. this schema key:
+  #
+  #        some_flag:
+  #          type: boolean
+  #          label: 'Enable <the behaviour, in a site owner's words>'
+  #          requiredKey: false
+  #
+  #   2. `some_flag: false` in config/install/drupal_kit.feature_flags.yml,
+  #      which creates the object on a fresh install;
+  #   3. a constant and a KNOWN_FLAGS entry in FeatureFlags — the schema is
+  #      not runtime enforcement, the allowlist is;
+  #   4. a post_update that sets the key FALSE where it is absent, because
+  #      config/install never reaches a site that installed the module
+  #      earlier — without it, nineteen existing sites never see the flag in
+  #      a config diff;
+  #   5. both branches covered in the kernel test.

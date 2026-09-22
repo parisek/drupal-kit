@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+- **Hook-level behaviour can now ship opt-in** (#115) — AGENTS.md § Feature flags requires new behaviour to default off, and documented two ways to say so: a `protected bool` on a consumer-subclassed base class, and a `$params` key on a container service. A module-level hook has neither. Nobody subclasses it and nobody passes it arguments, so a hook could only be always on, which the policy forbids, or left unshipped, which pushes the same wiring into all nineteen consuming projects. The gap was found while reviewing #114 and had no answer at the time.
+
+  The third way is `drupal_kit.feature_flags`, a dedicated config object of **declared** booleans — the shape core itself uses for `system.feature_flags` — read through `FeatureFlags::enabled()`. Each flag is `requiredKey: false`, so a site whose export predates it stays valid, and the object is `FullyValidatable`, so an undeclared key is an error rather than a typo nobody notices.
+
+  `FeatureFlags` also holds an allowlist of the flags this module declares. Schema validation runs in tests and in Config Inspector, never on a production read, so without it a raw config write could turn on a "flag" no code here has heard of. The allowlist is what makes *unknown flags are off* true at runtime rather than only on paper.
+
+  No flag ships yet, and the config object does not exist yet either: Drupal skips a `config/install` file with no keys, so an empty object is unshippable. The first flag brings the object, its `false` default, a `post_update` that reaches sites installed earlier, and both test branches.
+
 ## [2.3.0] — 2026-09-21
 
 ### Added
