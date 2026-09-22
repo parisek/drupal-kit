@@ -829,18 +829,6 @@ parameters:
 			path: src/Services/MediaArrayBuilder.php
 
 		-
-			message: '#^Access to an undefined property Drupal\\media\\MediaInterface\:\:\$field_media_image\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/Services/MediaArrayBuilder.php
-
-		-
-			message: '#^Access to an undefined property Drupal\\media\\MediaInterface\:\:\$thumbnail\.$#'
-			identifier: property.notFound
-			count: 2
-			path: src/Services/MediaArrayBuilder.php
-
-		-
 			message: '#^Method Drupal\\drupal_kit\\Services\\MediaArrayBuilder\:\:buildDocument\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1

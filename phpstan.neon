@@ -25,6 +25,27 @@ parameters:
     treatPhpDocTypesAsCertain: false
 
     ignoreErrors:
+        # Two core-version-dependent suppressions, kept HERE rather than in
+        # the baseline. `--generate-baseline` rewrites that file wholesale, so
+        # the `reportUnmatched: false` they need did not survive the first
+        # regeneration and CI went red on both PHP versions (#128 fixed the
+        # same thing; #133 broke it again). A generated file cannot hold a
+        # hand-edit — this one can.
+        #
+        # Why they are conditional: against the locked drupal/core, PHPStan
+        # reports both; CI installs core fresh, a newer core declares the
+        # properties, and the unused ignores would then be errors themselves.
+        -
+            message: '#^Access to an undefined property Drupal\\media\\MediaInterface\:\:\$thumbnail\.$#'
+            identifier: property.notFound
+            path: src/Services/MediaArrayBuilder.php
+            reportUnmatched: false
+        -
+            message: '#^Access to an undefined property Drupal\\media\\MediaInterface\:\:\$field_media_image\.$#'
+            identifier: property.notFound
+            path: src/Services/MediaArrayBuilder.php
+            reportUnmatched: false
+
         # Array VALUE types on hook implementations. PHPStan wants
         # `@param array<string, mixed>`; Drupal's own standard forbids it —
         # phpcs reports "Hook implementations should not duplicate @param
