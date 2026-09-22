@@ -2,12 +2,33 @@ parameters:
     level: 8
     paths:
         - src
+        # The .module file too: every hook lives there, it is the code that
+        # touches core API most directly, and it was outside `paths` — so
+        # nothing static has ever read the eight functions most likely to go
+        # stale when core deprecates something.
+        - drupal_kit.module
+        - drupal_kit.install
     # Most "if.alwaysTrue" reports in our code come from
     # PHPDoc-derived types (FieldItemInterface, etc.) — we'd have to
     # tighten typehints on every iteration variable to fix them. Off
     # for now; if a real always-true if appears in our own logic the
     # baseline will surface it.
     treatPhpDocTypesAsCertain: false
+
+    ignoreErrors:
+        # Array VALUE types on hook implementations. PHPStan wants
+        # `@param array<string, mixed>`; Drupal's own standard forbids it —
+        # phpcs reports "Hook implementations should not duplicate @param
+        # documentation", because the canonical docs live in core's *.api.php.
+        # Two tools, one line of code, opposite demands. The standard wins:
+        # it is the one a reviewer reads, and core's own hooks carry no such
+        # annotation either. Scalar and return types are NOT ignored — those
+        # phpcs accepts, and they are the half that catches a real mistake.
+        -
+            identifier: missingType.iterableValue
+            paths:
+                - drupal_kit.module
+                - drupal_kit.install
 
 includes:
     - phpstan-baseline.neon

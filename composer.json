@@ -27,6 +27,7 @@
         "ergebnis/composer-normalize": "^2.47",
         "mglaman/phpstan-drupal": "^2.0",
         "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
         "phpunit/phpunit": "^10 || ^11"
     },
     "suggest": {

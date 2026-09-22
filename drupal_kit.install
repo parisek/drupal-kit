@@ -8,7 +8,7 @@
 /**
  * Implements hook_requirements().
  */
-function drupal_kit_requirements($phase): array {
+function drupal_kit_requirements(string $phase): array {
   $requirements = [];
 
   if ($phase !== 'runtime') {
