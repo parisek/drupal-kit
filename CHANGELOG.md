@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+- **The multilingual sitemap branch finally has tests** — `FrontPageSitemapLinksAlterKernelTest` installs only `drupal_kit` and `system`, so all four of its cases ran the monolingual else-branch. The branch that reads a per-language `page.front` override had **no coverage at all**, which is exactly how it came to call a method that does not exist on the interface it was typed against: nothing ever executed the line. Every project this library serves is multilingual, so that untested branch is the one that runs in production.
+
+  Four kernel cases with the `language` module installed and a Czech override: each language drops its own front page and keeps the other's (the same path survives in one language and vanishes in the other), a language with no override inherits the stored value, a link with no langcode is dropped on any match, and a surviving link loses only the alternates that point at a front page. Mutation-checked — reading `$stored` instead of the override fails three of the four, and disabling the multilingual branch fails all four.
+
+### Changed
+- **The hooks are now statically analysed, and one of them was calling a method its type does not have** — `phpstan.neon` listed `paths: [src]`, so `drupal_kit.module` and `drupal_kit.install` had never been read by PHPStan. Those eight hooks are the code that touches core API most directly, which makes them the code most likely to go stale when core deprecates something, and nothing was looking at them.
+
+  With them in scope, the analysis found a latent defect: `drupal_kit_simple_sitemap_links_alter()` called `getLanguageConfigOverride()` on `LanguageManagerInterface`, which has no such method — it belongs to `ConfigurableLanguageManagerInterface`, provided only by the language module. The guard was `isMultilingual()`, which agrees with that condition on every real site but is not the same statement, so the call was correct by coincidence rather than by type. It now narrows with `instanceof`.
+
+  The hooks also gain scalar parameter and return types. Array *value* types are deliberately not added: PHPStan asks for `@param array<string, mixed>`, and Drupal's own standard forbids exactly that on a hook implementation ("Hook implementations should not duplicate @param documentation"), because the canonical documentation lives in core's `*.api.php`. The standard wins — core's own hooks carry no such annotation — and `missingType.iterableValue` is ignored for those two files with the reason written down.
+
+  `phpstan/phpstan-deprecation-rules` is now installed, so a deprecated core call becomes a CI failure rather than something discovered at the next major. It reports **nothing today**: the module uses no deprecated API.
+
+
 ## [2.4.0] — 2026-09-22
 
 ### Added

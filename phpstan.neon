@@ -2,12 +2,36 @@ parameters:
     level: 8
     paths:
         - src
-    # Most "if.alwaysTrue" reports in our code come from
-    # PHPDoc-derived types (FieldItemInterface, etc.) — we'd have to
-    # tighten typehints on every iteration variable to fix them. Off
-    # for now; if a real always-true if appears in our own logic the
-    # baseline will surface it.
+        # The .module file too: every hook lives there, it is the code that
+        # touches core API most directly, and it was outside `paths` — so
+        # nothing static has ever read the eight functions most likely to go
+        # stale when core deprecates something.
+        - drupal_kit.module
+        - drupal_kit.install
+    # Measured rather than assumed, 2026-09-22: switching this on reports
+    # exactly two findings, both in Resizer, and both would be wrong to
+    # "fix". `getDefaultToolkit()` and focal_point's `getCropEntity()` are
+    # documented as returning an object, so PHPStan calls the NULL guards
+    # around them always-true — but a docblock is a claim, not a guarantee,
+    # and deleting a runtime guard to satisfy one trades a real protection
+    # for a static tick. Left off deliberately; the note is no longer "for
+    # now".
     treatPhpDocTypesAsCertain: false
+
+    ignoreErrors:
+        # Array VALUE types on hook implementations. PHPStan wants
+        # `@param array<string, mixed>`; Drupal's own standard forbids it —
+        # phpcs reports "Hook implementations should not duplicate @param
+        # documentation", because the canonical docs live in core's *.api.php.
+        # Two tools, one line of code, opposite demands. The standard wins:
+        # it is the one a reviewer reads, and core's own hooks carry no such
+        # annotation either. Scalar and return types are NOT ignored — those
+        # phpcs accepts, and they are the half that catches a real mistake.
+        -
+            identifier: missingType.iterableValue
+            paths:
+                - drupal_kit.module
+                - drupal_kit.install
 
 includes:
     - phpstan-baseline.neon
