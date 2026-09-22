@@ -63,7 +63,12 @@ class FormAlter {
     if (!isset($form['settings']['provider'])) {
       return;
     }
-    if (!str_contains((string) $form['settings']['provider']['#value'], 'drupal_kit')) {
+    // No (string) cast. str_contains() and the strpos() it replaced both
+    // reject a non-string outright, so an unexpected #value fails loudly in
+    // either version. A cast would turn that fatal into a warning and a
+    // silent FALSE — the migration is supposed to preserve behaviour, and
+    // quietly not hiding the label controls is worse than stopping.
+    if (!str_contains($form['settings']['provider']['#value'], 'drupal_kit')) {
       return;
     }
 
