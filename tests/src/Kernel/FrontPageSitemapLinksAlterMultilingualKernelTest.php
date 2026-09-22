@@ -87,7 +87,7 @@ class FrontPageSitemapLinksAlterMultilingualKernelTest extends KernelTestBase {
       'cs-other' => $this->link('node/9', 'cs'),
     ];
 
-    drupal_kit_simple_sitemap_links_alter($links, new \stdClass());
+    $this->alterLinks($links);
 
     $this->assertSame(['en-other', 'cs-other'], array_keys($links));
   }
@@ -101,7 +101,7 @@ class FrontPageSitemapLinksAlterMultilingualKernelTest extends KernelTestBase {
   public function testLanguageWithoutAnOverrideUsesTheStoredValue(): void {
     $links = ['a' => $this->link('node/9', 'en'), 'b' => $this->link('about', 'en')];
 
-    drupal_kit_simple_sitemap_links_alter($links, new \stdClass());
+    $this->alterLinks($links);
 
     $this->assertSame(['b'], array_keys($links));
   }
@@ -115,7 +115,7 @@ class FrontPageSitemapLinksAlterMultilingualKernelTest extends KernelTestBase {
   public function testUnattributedLinkIsDroppedOnAnyMatch(): void {
     $links = ['a' => $this->link('node/42'), 'b' => $this->link('contact')];
 
-    drupal_kit_simple_sitemap_links_alter($links, new \stdClass());
+    $this->alterLinks($links);
 
     $this->assertSame(['b'], array_keys($links));
   }
@@ -135,10 +135,26 @@ class FrontPageSitemapLinksAlterMultilingualKernelTest extends KernelTestBase {
       ]),
     ];
 
-    drupal_kit_simple_sitemap_links_alter($links, new \stdClass());
+    $this->alterLinks($links);
 
     $this->assertSame(['a'], array_keys($links));
     $this->assertSame(['en' => 'https://example.com/node/42'], $links['a']['alternate_urls']);
+  }
+
+  /**
+   * Run the hook the way core runs it.
+   *
+   * Through the module handler rather than by calling a function: the
+   * implementation is a #[Hook] class now, so invoking it directly would
+   * test a method while production tests the registration. The registration
+   * is the half that a missing attribute or a renamed method breaks.
+   *
+   * @param array<string, mixed> $links
+   *   The sitemap links, altered in place.
+   */
+  private function alterLinks(array &$links): void {
+    $this->container->get('module_handler')
+      ->invoke('drupal_kit', 'simple_sitemap_links_alter', [&$links, new \stdClass()]);
   }
 
 }

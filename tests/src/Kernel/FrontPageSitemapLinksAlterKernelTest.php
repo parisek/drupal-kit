@@ -55,7 +55,7 @@ class FrontPageSitemapLinksAlterKernelTest extends KernelTestBase {
       'd' => $this->link('about'),
     ];
 
-    drupal_kit_simple_sitemap_links_alter($links, new \stdClass());
+    $this->alterLinks($links);
 
     $this->assertSame(['a', 'c', 'd'], array_keys($links));
   }
@@ -67,7 +67,7 @@ class FrontPageSitemapLinksAlterKernelTest extends KernelTestBase {
     \Drupal::configFactory()->getEditable('system.site')->set('page.front', '/')->save();
     $links = ['a' => $this->link('node/9'), 'b' => $this->link('about')];
 
-    drupal_kit_simple_sitemap_links_alter($links, new \stdClass());
+    $this->alterLinks($links);
 
     $this->assertSame(['a', 'b'], array_keys($links));
   }
@@ -86,7 +86,7 @@ class FrontPageSitemapLinksAlterKernelTest extends KernelTestBase {
       'c' => $this->link('node/9'),
     ];
 
-    drupal_kit_simple_sitemap_links_alter($links, new \stdClass());
+    $this->alterLinks($links);
 
     $this->assertSame(['a', 'c'], array_keys($links));
   }
@@ -103,9 +103,25 @@ class FrontPageSitemapLinksAlterKernelTest extends KernelTestBase {
       'b' => $this->link('node/9'),
     ];
 
-    drupal_kit_simple_sitemap_links_alter($links, new \stdClass());
+    $this->alterLinks($links);
 
     $this->assertSame(['a'], array_keys($links));
+  }
+
+  /**
+   * Run the hook the way core runs it.
+   *
+   * Through the module handler rather than by calling a function: the
+   * implementation is a #[Hook] class now, so invoking it directly would
+   * test a method while production tests the registration. The registration
+   * is the half that a missing attribute or a renamed method breaks.
+   *
+   * @param array<string, mixed> $links
+   *   The sitemap links, altered in place.
+   */
+  private function alterLinks(array &$links): void {
+    $this->container->get('module_handler')
+      ->invoke('drupal_kit', 'simple_sitemap_links_alter', [&$links, new \stdClass()]);
   }
 
 }

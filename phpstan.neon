@@ -2,11 +2,9 @@ parameters:
     level: 8
     paths:
         - src
-        # The .module file too: every hook lives there, it is the code that
-        # touches core API most directly, and it was outside `paths` — so
-        # nothing static has ever read the eight functions most likely to go
-        # stale when core deprecates something.
-        - drupal_kit.module
+        # drupal_kit.module is gone: every hook is a #[Hook] class under
+        # src/Hook/, which `src` already covers. drupal_kit.install stays
+        # procedural because core requires it to be.
         - drupal_kit.install
         # tests too, with a baseline (#132). phpcs has always read this tree;
         # PHPStan had not, and two tools disagreeing on what counts as code is
@@ -57,8 +55,8 @@ parameters:
         -
             identifier: missingType.iterableValue
             paths:
-                - drupal_kit.module
                 - drupal_kit.install
+                - src/Hook
 
 includes:
     - phpstan-baseline.neon

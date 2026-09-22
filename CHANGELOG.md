@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file. The format foll
 ## [Unreleased]
 
 ### Changed
+- **The hooks are OOP now: seven `#[Hook]` classes in `src/Hook/`, and `drupal_kit.module` is gone** — `.claude/rules/drupal/drupal-modules.md` has named attribute classes the default for this stack for some time, and this module was the exception because the `^10` floor had no such registration. The floor moved, so the exception goes.
+
+  `hook_module_implements_alter()` is not ported. It unset this module's entry and re-added it to push `form_alter` to the end of the list; `order: Order::Last` states the same thing on the method that needs it. Core deprecated the procedural hook in **11.2.0** and removes it in **12.0.0** unless it carries `#[LegacyModuleImplementsAlter]`, and it raises `E_USER_DEPRECATED` at every container build until then, so it had to go regardless of this migration.
+
+  The migration removed a dependency nobody could see. `hook_locale_translation_projects_alter()` read `extension.list.module`, whose class core marks `@internal`. `\Drupal::service()` returns `mixed`, so the type never had to be written down and nothing ever objected. A constructor argument has to name it, PHPStan reported it immediately, and the hook now takes `ExtensionPathResolver` — public API, and already what `ViteManifest` and `TypographyExtension` in this same module take.
+
+  New: `HookRegistrationKernelTest` asserts all seven hooks are registered and that the `.module` file is gone. A `#[Hook]` class fails by not being *found* — a renamed method or a dropped attribute leaves code that passes phpcs and PHPStan and is never called, and no other assertion in the suite would notice. Mutation-checked: breaking one attribute fails exactly one case and names the hook.
+
+  `InterfaceTranslationsKernelTest` changed for a real reason rather than a mechanical one. It swaps the extension service for a stub mid-test, which worked because the procedural hook looked the service up on every invocation. An injected dependency binds once, so the stub now goes in before the first invoke and the hook service is dropped with it. That is the trade the migration makes, written down where the next reader meets it.
+
+### Changed
 - **BREAKING: Drupal 10 is no longer supported. The floor is `^11.4`** (#130) — `core_version_requirement` and `drupal/core` both read `^10 || ^11`, and nothing runs on 10.x. All three consuming projects (`drupal-base`, `htdvere`, `proficio`) are on core 11.4.7, and `drupal-base` is the skeleton every new project starts from, so 10.x had no user and no route to one.
 
   The floor was not free. `.claude/rules/drupal/drupal-modules.md` already names `#[Hook]` attribute classes in `src/Hook/` the default for this stack, and this module was the exception to our own doctrine because 10.x has no such registration. `FeatureFlags` is the concrete case: a static utility whose docblock had to explain that the reason was the supported core range, not a design preference.
