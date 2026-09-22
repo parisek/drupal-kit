@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file. The format foll
 ## [Unreleased]
 
 ### Changed
+- **`hook_requirements()` becomes `hook_runtime_requirements()`, and `drupal_kit.install` is deleted** (#137) — the procedural form without `#[LegacyRequirementsHook]` is deprecated in drupal:11.3.0 and removed in drupal:13.0.0, and the `REQUIREMENT_OK` / `REQUIREMENT_WARNING` constants it reported with are deprecated in drupal:11.2.0 and **removed in drupal:12.0.0**. Those constants were the one thing in this module that would have broken on 12.
+
+  Two tools were looking and neither could see it. `phpstan-deprecation-rules` has no rule for global constants, so a deprecated `const` is invisible at level 8. And `phpunit.xml.dist` sets `SYMFONY_DEPRECATIONS_HELPER=weak`, so the suite counts core deprecations and never fails on them — which is why the 22 in every run had gone unexamined. Found by an independent doctrine review of #135, not by CI.
+
+  The optional service is now injected instead of looked up. `\Drupal::hasService('menu.language_tree_manipulator')` asked whether the container knows the name; a nullable constructor argument asks whether this class received it, which is what `MenuTreeBuilder` actually depends on. `Requirements` is registered by hand in `drupal_kit.services.yml` rather than autowired — `@?` is how an argument says "NULL when missing", no attribute can say that, and `Hook.php` sanctions manual registration for exactly this case.
+
+  That also makes a branch testable that never was. The old test asked `hasService()`, and a kernel container cannot answer yes for a service core does not ship, so the `RequirementSeverity::OK` path had no coverage at all. Handing the class a service is now enough. The replacement test drops the two `include_once` lines the old one needed to reach `core/includes/install.inc` for the constants — an enum needs no include.
+
+  `drupal_kit.install` held nothing else, so it is gone, and with it the last procedural hook in the module. `phpstan.neon` and `phpcs.xml.dist` drop their file entries.
+
+### Changed
 - **The hooks are OOP now: seven `#[Hook]` classes in `src/Hook/`, and `drupal_kit.module` is gone** — `.claude/rules/drupal/drupal-modules.md` has named attribute classes the default for this stack for some time, and this module was the exception because the `^10` floor had no such registration. The floor moved, so the exception goes.
 
   `hook_module_implements_alter()` is not ported. It unset this module's entry and re-added it to push `form_alter` to the end of the list; `order: Order::Last` states the same thing on the method that needs it. Core deprecated the procedural hook in **11.2.0** and removes it in **12.0.0** unless it carries `#[LegacyModuleImplementsAlter]`, and it raises `E_USER_DEPRECATED` at every container build until then, so it had to go regardless of this migration.
