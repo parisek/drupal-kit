@@ -17,14 +17,14 @@ class FilterTypographyTest extends TestCase {
   /**
    * Mocked typography extension, stubbed to pass text through unchanged.
    *
-   * @var \Drupal\drupal_kit\Twig\TypographyExtension
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\drupal_kit\Twig\TypographyExtension
    */
   protected TypographyExtension $typography;
 
   /**
    * The filter plugin instance under test.
    *
-   * @var \Drupal\drupal_kit\Plugin\Filter\FilterTypography
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\drupal_kit\Plugin\Filter\FilterTypography
    */
   protected FilterTypography $filter;
 

@@ -55,42 +55,42 @@ class EntityHelperTest extends TestCase {
   /**
    * Mocked entity type manager passed to the service under test.
    *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\Core\Entity\EntityTypeManagerInterface
    */
   protected EntityTypeManagerInterface $entityTypeManager;
 
   /**
    * Mocked current route match passed to the service under test.
    *
-   * @var \Drupal\Core\Routing\RouteMatchInterface
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\Core\Routing\RouteMatchInterface
    */
   protected RouteMatchInterface $routeMatch;
 
   /**
    * Mocked language manager passed to the service under test.
    *
-   * @var \Drupal\Core\Language\LanguageManagerInterface
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\Core\Language\LanguageManagerInterface
    */
   protected LanguageManagerInterface $languageManager;
 
   /**
    * Mocked entity repository passed to the service under test.
    *
-   * @var \Drupal\Core\Entity\EntityRepositoryInterface
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\Core\Entity\EntityRepositoryInterface
    */
   protected EntityRepositoryInterface $entityRepository;
 
   /**
    * Mocked config factory passed to the service under test.
    *
-   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\Core\Config\ConfigFactoryInterface
    */
   protected ConfigFactoryInterface $configFactory;
 
   /**
    * Mocked database connection passed to the service under test.
    *
-   * @var \Drupal\Core\Database\Connection
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\Core\Database\Connection
    */
   protected Connection $connection;
 

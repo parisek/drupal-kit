@@ -8,6 +8,12 @@ parameters:
         # stale when core deprecates something.
         - drupal_kit.module
         - drupal_kit.install
+        # tests too, with a baseline (#132). phpcs has always read this tree;
+        # PHPStan had not, and two tools disagreeing on what counts as code is
+        # how the interface defect in #131 survived. The baseline is a ratchet,
+        # not a shrug: the existing 300-odd findings are mostly mock-typing
+        # friction, and what matters is that the number can no longer grow.
+        - tests
     # Measured rather than assumed, 2026-09-22: switching this on reports
     # exactly two findings, both in Resizer, and both would be wrong to
     # "fix". `getDefaultToolkit()` and focal_point's `getCropEntity()` are

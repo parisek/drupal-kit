@@ -29,21 +29,21 @@ class TaxonomyTreeBuilderTest extends TestCase {
   /**
    * Mocked entity type manager passed to the builder under test.
    *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\Core\Entity\EntityTypeManagerInterface
    */
   protected EntityTypeManagerInterface $entityTypeManager;
 
   /**
    * Mocked language manager, stubbed to report English as current.
    *
-   * @var \Drupal\Core\Language\LanguageManagerInterface
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\Core\Language\LanguageManagerInterface
    */
   protected LanguageManagerInterface $languageManager;
 
   /**
    * The TaxonomyTreeBuilder under test.
    *
-   * @var \Drupal\drupal_kit\Services\TaxonomyTreeBuilder
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\drupal_kit\Services\TaxonomyTreeBuilder
    */
   protected TaxonomyTreeBuilder $builder;
 

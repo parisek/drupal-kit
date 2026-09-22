@@ -30,35 +30,35 @@ class MenuTreeBuilderTest extends TestCase {
   /**
    * Mocked menu link tree, stubbed to return empty tree parameters.
    *
-   * @var \Drupal\Core\Menu\MenuLinkTreeInterface
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\Core\Menu\MenuLinkTreeInterface
    */
   protected MenuLinkTreeInterface $menuLinkTree;
 
   /**
    * Mocked active trail resolver, stubbed to return no active trail.
    *
-   * @var \Drupal\drupal_kit\Services\MenuActiveTrailResolver
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\drupal_kit\Services\MenuActiveTrailResolver
    */
   protected MenuActiveTrailResolver $activeTrailResolver;
 
   /**
    * Mocked language manager, stubbed to report English as current.
    *
-   * @var \Drupal\Core\Language\LanguageManagerInterface
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\Core\Language\LanguageManagerInterface
    */
   protected LanguageManagerInterface $languageManager;
 
   /**
    * Mocked entity type manager passed to the builder under test.
    *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\Core\Entity\EntityTypeManagerInterface
    */
   protected EntityTypeManagerInterface $entityTypeManager;
 
   /**
    * Mocked request stack passed to the builder under test.
    *
-   * @var \Symfony\Component\HttpFoundation\RequestStack
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Symfony\Component\HttpFoundation\RequestStack
    */
   protected RequestStack $requestStack;
 
