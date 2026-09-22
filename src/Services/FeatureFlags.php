@@ -19,11 +19,15 @@ namespace Drupal\drupal_kit\Services;
  * declared booleans, shaped after core's own `system.feature_flags`. A hook
  * asks before it acts.
  *
- * The class is static, like Resizer. The reason is the supported core range,
- * `^10 || ^11`: Drupal 11.1 registers `#[Hook]` classes as autowired services
- * and could inject the config factory, but 10.x cannot, so every hook here is
- * procedural and reaches the container through `\Drupal::` already. When the
- * floor moves to 11.1 this becomes a thin facade over an injected service.
+ * The class is static, like Resizer, and that is now a leftover rather than a
+ * reason. It was static because the supported core range was `^10 || ^11`:
+ * Drupal 11.1 registers `#[Hook]` classes as autowired services and could
+ * inject the config factory, but 10.x cannot, so every hook here is
+ * procedural and reaches the container through `\Drupal::` already. The floor
+ * is `^11.4` as of 3.0, so the constraint is gone and the shape survives it.
+ * Turning this into an injected service, and the hooks that read it into
+ * `#[Hook]` classes, is a follow-up with its own tests — not a rider on a
+ * dependency bump.
  */
 class FeatureFlags {
 

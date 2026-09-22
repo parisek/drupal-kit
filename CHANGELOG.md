@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+- **BREAKING: Drupal 10 is no longer supported. The floor is `^11.4`** (#130) — `core_version_requirement` and `drupal/core` both read `^10 || ^11`, and nothing runs on 10.x. All three consuming projects (`drupal-base`, `htdvere`, `proficio`) are on core 11.4.7, and `drupal-base` is the skeleton every new project starts from, so 10.x had no user and no route to one.
+
+  The floor was not free. `.claude/rules/drupal/drupal-modules.md` already names `#[Hook]` attribute classes in `src/Hook/` the default for this stack, and this module was the exception to our own doctrine because 10.x has no such registration. `FeatureFlags` is the concrete case: a static utility whose docblock had to explain that the reason was the supported core range, not a design preference.
+
+  Consumers move by constraint, not by code: `^2.x` → `^3.0`, no template or call-site edits. Dropping a supported core version is breaking by definition even when nobody feels it, so this releases as **3.0.0**.
+
+  Two things the new floor makes dead, removed here because they are dead, not because they are refactors. `InterfaceTranslationsKernelTest` carried a version fork — the 11.4 locale services when present, `locale.translation.inc` when not — and the fallback half loaded a file core deprecated in 11.4. And the `FeatureFlags` docblock stated a constraint that no longer exists.
+
+  Migrating the eight procedural hooks to `#[Hook]` classes and turning `FeatureFlags` into an injected service are **not** in this change. Both become possible here; neither should ride a dependency bump. They land as their own PRs, with their own tests, before 3.0.0 ships.
+
+  `drupal/core-dev` is pinned to `^11.4` too, so CI resolves against the floor this package actually promises rather than the oldest 11.x composer will accept.
+
 ## [2.5.0] — 2026-09-22
 
 ### Added

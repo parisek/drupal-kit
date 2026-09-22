@@ -1489,35 +1489,6 @@ parameters:
 			path: tests/src/Kernel/FrontPageSitemapLinksAlterMultilingualKernelTest.php
 
 		-
-			message: '#^Access to an undefined property object\:\:\$files\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
-
-		-
-			message: '''
-				#^Call to deprecated function locale_translation_get_projects\(\)\:
-				in drupal\:11\.4\.0 and is removed from drupal\:13\.0\.0\. Use
-				  \\Drupal\:\:service\(LocaleProjectRepository\:\:class\)
-				    \-\>getAll\(\) or \\Drupal\:\:service\(LocaleProjectRepository\:\:class\)
-				    \-\>getMultiple\(\$project_names\)instead\.$#
-			'''
-			identifier: function.deprecated
-			count: 1
-			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
-
-		-
-			message: '''
-				#^Call to deprecated function locale_translation_source_build\(\)\:
-				in drupal\:11\.4\.0 and is removed from drupal\:13\.0\.0\. Use
-				  \\Drupal\:\:service\(LocaleSource\:\:class\)
-				  \-\>sourceBuild\(\$project, \$langcode, \$filename\) instead\.$#
-			'''
-			identifier: function.deprecated
-			count: 1
-			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertSame\(\) with ''somewhere/else…'' and ''modules/contrib…'' will always evaluate to false\.$#'
 			identifier: method.impossibleType
 			count: 1
@@ -1554,31 +1525,31 @@ parameters:
 			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
 
 		-
-			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:89\:\:__call\(\) has no return type specified\.$#'
+			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:80\:\:__call\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
 			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
 
 		-
-			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:89\:\:__call\(\) has parameter \$arguments with no type specified\.$#'
+			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:80\:\:__call\(\) has parameter \$arguments with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
 			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
 
 		-
-			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:89\:\:__call\(\) has parameter \$method with no type specified\.$#'
+			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:80\:\:__call\(\) has parameter \$method with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
 			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
 
 		-
-			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:89\:\:__construct\(\) has parameter \$inner with no type specified\.$#'
+			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:80\:\:__construct\(\) has parameter \$inner with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
 			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
 
 		-
-			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:89\:\:getPath\(\) has parameter \$name with no type specified\.$#'
+			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:80\:\:getPath\(\) has parameter \$name with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
 			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php

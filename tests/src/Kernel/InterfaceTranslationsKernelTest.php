@@ -55,20 +55,11 @@ class InterfaceTranslationsKernelTest extends KernelTestBase {
     ConfigurableLanguage::createFromLangcode('cs')->save();
 
     // locale.translation.inc is deprecated in 11.4 and replaced by these
-    // services — which only exist from 11.4. composer.json promises
-    // ^10 || ^11, so on anything older the services are the ones missing
-    // and the deprecated functions are what spans the whole range.
-    if ($this->container->has(LocaleProjectRepository::class)) {
-      $projects = $this->container->get(LocaleProjectRepository::class)->getAll();
-      $this->assertArrayHasKey('drupal_kit', $projects, 'The module is its own translation project.');
-      $source = $this->container->get(LocaleSource::class)->sourceBuild($projects['drupal_kit'], 'cs');
-    }
-    else {
-      $this->container->get('module_handler')->loadInclude('locale', 'inc', 'locale.translation');
-      $projects = locale_translation_get_projects();
-      $this->assertArrayHasKey('drupal_kit', $projects, 'The module is its own translation project.');
-      $source = locale_translation_source_build($projects['drupal_kit'], 'cs');
-    }
+    // services. The floor is ^11.4, so the services are always there and the
+    // deprecated fallback this test used to carry is unreachable.
+    $projects = $this->container->get(LocaleProjectRepository::class)->getAll();
+    $this->assertArrayHasKey('drupal_kit', $projects, 'The module is its own translation project.');
+    $source = $this->container->get(LocaleSource::class)->sourceBuild($projects['drupal_kit'], 'cs');
     $this->assertArrayHasKey('local', $source->files, 'A local file is offered.');
     $this->assertFileExists($this->root . '/' . $source->files['local']->uri);
   }
