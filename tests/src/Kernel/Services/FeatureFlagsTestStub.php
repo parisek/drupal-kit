@@ -12,9 +12,10 @@ use Drupal\drupal_kit\Services\FeatureFlags;
  * a name in the list can read TRUE, a name outside it never can.
  *
  * Still a subclass after FeatureFlags became a service, because the
- * allowlist is still a constant. Passing the list to the constructor would
- * make this file unnecessary and would also let any project declare its own
- * flag names, which is the one thing the list exists to stop.
+ * allowlist is still a constant — module-owned data rather than wiring.
+ * Passing the list to the constructor would make this file unnecessary; it
+ * would not make the list any harder to override, since a ServiceProvider
+ * can swap the class either way.
  */
 class FeatureFlagsTestStub extends FeatureFlags {
 

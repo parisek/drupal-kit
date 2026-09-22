@@ -31,17 +31,25 @@ class FeatureFlags {
   /**
    * Every flag this module ships.
    *
-   * A constant, and deliberately not a constructor argument. Schema
-   * validation is not runtime enforcement — it runs in tests and in Config
-   * Inspector, never on a production read — so this list is the only thing
-   * standing between a raw config write and a "flag" no code here has heard
-   * of. The other two opt-in patterns get that guarantee free from PHP: a
-   * misspelled property or argument does not compile. A misspelled config
-   * key is silence, and this list is what turns it back into an error.
+   * Why the list exists: schema validation is not runtime enforcement. It
+   * runs in tests and in Config Inspector, never on a production read, so
+   * this list is the only thing standing between a raw storage write and a
+   * "flag" no code here has heard of.
    *
-   * Taking the list as an argument would make the test simpler and let a
-   * project inject flag names of its own, which is the one thing the
-   * allowlist exists to prevent.
+   * Why it is a constant and not a constructor argument: it is module-owned
+   * data, not wiring. The container has no business carrying the list of
+   * flags this module happens to declare, and nothing outside this module
+   * has anything to say about it.
+   *
+   * Two arguments that do NOT hold, recorded because an earlier version of
+   * this docblock made both. A constructor argument would not let a project
+   * declare its own flags — the service is registered here, so changing the
+   * argument needs a ServiceProvider, and a ServiceProvider can swap the
+   * class and override this constant just as easily. And the other two
+   * opt-in patterns do not get typo protection free from PHP: the `$params`
+   * pattern reads keys with isset() (EntityHelper::normalizeReturnValue()),
+   * and a subclass that misspells a `protected bool` simply declares a new
+   * property. All three patterns are equally silent about a typo.
    *
    * Empty until the first flag ships. A flag joins this list, the schema and
    * config/install in the same commit.
