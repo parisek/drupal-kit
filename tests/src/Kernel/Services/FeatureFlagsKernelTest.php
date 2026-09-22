@@ -23,6 +23,21 @@ class FeatureFlagsKernelTest extends KernelTestBase {
   protected static $modules = ['drupal_kit', 'system'];
 
   /**
+   * The reader under test, built on the shipped allowlist.
+   *
+   * Constructed rather than fetched from the container in most cases: the
+   * stub subclass is what carries a declared flag, and the container only
+   * knows the shipped class.
+   *
+   * @param class-string<FeatureFlags> $class
+   *   The reader to build — the shipped class, or the stub that declares a
+   *   flag.
+   */
+  private function flags(string $class = FeatureFlags::class): FeatureFlags {
+    return new $class(\Drupal::service('config.factory'));
+  }
+
+  /**
    * Write a flag straight into config storage.
    *
    * Through the storage rather than the config factory on purpose. The
@@ -45,7 +60,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
   public function testNoFlagShipsEnabled(): void {
     $this->storeFlag(FeatureFlagsTestStub::EXAMPLE_FEATURE, TRUE);
 
-    $this->assertFalse(FeatureFlags::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
+    $this->assertFalse($this->flags()->enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
   }
 
   /**
@@ -56,7 +71,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
   public function testDeclaredFlagTheProjectSetReadsTrue(): void {
     $this->storeFlag(FeatureFlagsTestStub::EXAMPLE_FEATURE, TRUE);
 
-    $this->assertTrue(FeatureFlagsTestStub::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
+    $this->assertTrue($this->flags(FeatureFlagsTestStub::class)->enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
   }
 
   /**
@@ -67,7 +82,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
   public function testDeclaredFlagSetToFalseReadsFalse(): void {
     $this->storeFlag(FeatureFlagsTestStub::EXAMPLE_FEATURE, FALSE);
 
-    $this->assertFalse(FeatureFlagsTestStub::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
+    $this->assertFalse($this->flags(FeatureFlagsTestStub::class)->enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
   }
 
   /**
@@ -86,7 +101,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
       \Drupal::config(FeatureFlags::CONFIG_NAME)->get('not_a_flag'),
       'the value really is in config',
     );
-    $this->assertFalse(FeatureFlagsTestStub::enabled('not_a_flag'));
+    $this->assertFalse($this->flags(FeatureFlagsTestStub::class)->enabled('not_a_flag'));
   }
 
   /**
@@ -100,7 +115,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
   public function testDeclaredFlagAbsentFromConfigIsOff(): void {
     $this->storeFlag('something_else', TRUE);
 
-    $this->assertFalse(FeatureFlagsTestStub::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
+    $this->assertFalse($this->flags(FeatureFlagsTestStub::class)->enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
   }
 
   /**
@@ -110,7 +125,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
    */
   public function testMissingConfigObjectIsOff(): void {
     $this->assertTrue(\Drupal::config(FeatureFlags::CONFIG_NAME)->isNew());
-    $this->assertFalse(FeatureFlagsTestStub::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
+    $this->assertFalse($this->flags(FeatureFlagsTestStub::class)->enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
   }
 
   /**
@@ -125,7 +140,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
     foreach ([1, '1', 'true', 'yes', [], 0, '', NULL] as $value) {
       $this->storeFlag(FeatureFlagsTestStub::EXAMPLE_FEATURE, $value);
       $this->assertFalse(
-        FeatureFlagsTestStub::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE),
+        $this->flags(FeatureFlagsTestStub::class)->enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE),
         var_export($value, TRUE) . ' must not enable a flag',
       );
     }
@@ -137,7 +152,7 @@ class FeatureFlagsKernelTest extends KernelTestBase {
    * @covers ::enabled
    */
   public function testEmptyNameIsOff(): void {
-    $this->assertFalse(FeatureFlagsTestStub::enabled(''));
+    $this->assertFalse($this->flags(FeatureFlagsTestStub::class)->enabled(''));
   }
 
   /**
@@ -161,6 +176,23 @@ class FeatureFlagsKernelTest extends KernelTestBase {
     );
 
     $this->assertSame([], array_filter($shipped), 'no shipped default turns a flag on');
+  }
+
+  /**
+   * The container really hands out the reader.
+   *
+   * Constructing the class proves the logic; it does not prove a hook can
+   * get hold of it. A missing or misspelled service id leaves every call
+   * site fatal on a real site and every test here green, because they all
+   * build their own instance.
+   *
+   * @covers ::enabled
+   */
+  public function testTheServiceIsRegistered(): void {
+    $flags = \Drupal::service('drupal_kit.feature_flags');
+
+    $this->assertInstanceOf(FeatureFlags::class, $flags);
+    $this->assertFalse($flags->enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
   }
 
 }

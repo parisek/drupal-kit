@@ -10,6 +10,12 @@ use Drupal\drupal_kit\Services\FeatureFlags;
  * KNOWN_FLAGS is empty in the shipped class, so `enabled()` can only ever
  * return FALSE there. Subclassing is how the allowlist itself gets tested:
  * a name in the list can read TRUE, a name outside it never can.
+ *
+ * Still a subclass after FeatureFlags became a service, because the
+ * allowlist is still a constant — module-owned data rather than wiring.
+ * Passing the list to the constructor would make this file unnecessary; it
+ * would not make the list any harder to override, since a ServiceProvider
+ * can swap the class either way.
  */
 class FeatureFlagsTestStub extends FeatureFlags {
 
