@@ -13,7 +13,7 @@ Surface: `EntityHelper` facade (entity loading + field formatting), `MediaArrayB
 ```yaml
 PACKAGE_NAME: "parisek/drupal-kit"
 PHP_REQUIRES: ">=8.3"
-DRUPAL_REQUIRES: "^10 || ^11"
+DRUPAL_REQUIRES: "^11.4"
 TESTS_DIR: "tests"
 ```
 
