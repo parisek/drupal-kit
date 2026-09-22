@@ -2,10 +2,6 @@ parameters:
     level: 8
     paths:
         - src
-        # drupal_kit.module is gone: every hook is a #[Hook] class under
-        # src/Hook/, which `src` already covers. drupal_kit.install stays
-        # procedural because core requires it to be.
-        - drupal_kit.install
         # tests too, with a baseline (#132). phpcs has always read this tree;
         # PHPStan had not, and two tools disagreeing on what counts as code is
         # how the interface defect in #131 survived. The baseline is a ratchet,
@@ -55,7 +51,6 @@ parameters:
         -
             identifier: missingType.iterableValue
             paths:
-                - drupal_kit.install
                 - src/Hook
 
 includes:
