@@ -1525,36 +1525,6 @@ parameters:
 			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
 
 		-
-			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:80\:\:__call\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
-
-		-
-			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:80\:\:__call\(\) has parameter \$arguments with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
-
-		-
-			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:80\:\:__call\(\) has parameter \$method with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
-
-		-
-			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:80\:\:__construct\(\) has parameter \$inner with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
-
-		-
-			message: '#^Method class@anonymous/tests/src/Kernel/InterfaceTranslationsKernelTest\.php\:80\:\:getPath\(\) has parameter \$name with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: tests/src/Kernel/InterfaceTranslationsKernelTest.php
-
-		-
 			message: '#^Parameter \#1 \$code of method Drupal\\Tests\\drupal_kit\\Kernel\\InterfaceTranslationsKernelTest\:\:extractStrings\(\) expects string, string\|false given\.$#'
 			identifier: argument.type
 			count: 1

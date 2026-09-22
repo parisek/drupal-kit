@@ -3,7 +3,9 @@
 namespace Drupal\Tests\drupal_kit\Kernel;
 
 use Drupal\Component\Gettext\PoStreamReader;
+use Drupal\Core\Extension\ExtensionPathResolver;
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\drupal_kit\Hook\LocaleTranslations;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\locale\LocaleProjectRepository;
 use Drupal\locale\LocaleSource;
@@ -71,34 +73,48 @@ class InterfaceTranslationsKernelTest extends KernelTestBase {
    * reads proves nothing: on a normal checkout the module really is at
    * modules/contrib, so hardcoding that literal passes too. The stub below
    * moves the module somewhere else, which only the real lookup follows.
+   *
+   * The stub goes in BEFORE the first invoke, and the hook service is
+   * dropped with it. The procedural version called
+   * \Drupal::service('extension.list.module') on each invocation, so a
+   * container swap at any point reached it. LocaleTranslations takes the
+   * extension list as a constructor argument, so the swap only reaches a
+   * copy built after it — invoking first would pin the real list and the
+   * stub would change nothing. That is the migration's actual trade, not a
+   * testing inconvenience: the dependency is declared once instead of
+   * looked up every time.
    */
   public function testTheServerPatternFollowsTheRealModulePath(): void {
-    $projects = [];
-    $this->container->get('module_handler')->invoke('drupal_kit', 'locale_translation_projects_alter', [&$projects]);
-    $this->assertSame([], $projects, 'An unknown project is left alone.');
-
-    $this->container->set('extension.list.module', new class($this->container->get('extension.list.module')) {
+    // The stub subclasses the resolver rather than wrapping it through
+    // __call(). It used to wrap: \Drupal::service() returns mixed, so a
+    // duck-typed object was enough. A constructor argument is typed, and the
+    // container rejects anything that is not really an ExtensionPathResolver.
+    //
+    // The parent constructor is deliberately not called. getPath() is the
+    // only method this test reaches and it is overridden, delegating every
+    // other extension to the real resolver, so no inherited state is read.
+    $this->container->set('extension.path.resolver', new class($this->container->get('extension.path.resolver')) extends ExtensionPathResolver {
 
       /**
-       * Wraps the real extension list.
+       * Wraps the real resolver.
        */
-      public function __construct(protected $inner) {}
+      public function __construct(protected ExtensionPathResolver $inner) {}
 
       /**
        * Reports a different path for this module, the real one for others.
        */
-      public function getPath($name): string {
-        return $name === 'drupal_kit' ? 'somewhere/else/drupal_kit' : $this->inner->getPath($name);
-      }
-
-      /**
-       * Everything else goes to the real list unchanged.
-       */
-      public function __call($method, $arguments) {
-        return $this->inner->$method(...$arguments);
+      public function getPath($type, $name): string {
+        return $name === 'drupal_kit'
+          ? 'somewhere/else/drupal_kit'
+          : $this->inner->getPath($type, $name);
       }
 
     });
+    $this->container->set(LocaleTranslations::class, NULL);
+
+    $projects = [];
+    $this->container->get('module_handler')->invoke('drupal_kit', 'locale_translation_projects_alter', [&$projects]);
+    $this->assertSame([], $projects, 'An unknown project is left alone.');
 
     $projects = ['drupal_kit' => ['info' => ['interface translation server pattern' => 'modules/contrib/drupal_kit/translations/%language.po']]];
     $this->container->get('module_handler')->invoke('drupal_kit', 'locale_translation_projects_alter', [&$projects]);
