@@ -43,8 +43,8 @@ msgstr "Naplánované skrytí: @date."
 msgid "Drupal Kit: menu language filtering"
 msgstr "Drupal Kit: filtrování menu podle jazyka"
 
-msgid "The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>."
-msgstr "Služba <code>menu.language_tree_manipulator</code> chybí, takže menu sestavená modulem Drupal Kit se nefiltrují podle aktuálního jazyka obsahu — objeví se odkazy ze všech jazyků. Službu přináší patch jádra Drupalu z <a href=\":url\">issue #2466553</a>."
+msgid "Neither <code>menu.language_menu_link_tree_manipulator</code> nor <code>menu.language_tree_manipulator</code> exists, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. One of the two ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>, depending on which revision is applied."
+msgstr "Neexistuje ani <code>menu.language_menu_link_tree_manipulator</code>, ani <code>menu.language_tree_manipulator</code>, takže menu sestavená modulem Drupal Kit se nefiltrují podle aktuálního jazyka obsahu — objeví se odkazy ze všech jazyků. Jednu z těch dvou služeb přináší patch jádra Drupalu z <a href=\":url\">issue #2466553</a>, podle toho, která revize je nasazená."
 
 
 msgid "Typography Filter"

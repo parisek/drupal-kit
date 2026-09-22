@@ -43,8 +43,8 @@ msgstr "Geplante Depublizierung: @date."
 msgid "Drupal Kit: menu language filtering"
 msgstr "Drupal Kit: Sprachfilterung des Menüs"
 
-msgid "The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>."
-msgstr "Der Dienst <code>menu.language_tree_manipulator</code> fehlt, daher werden von Drupal Kit erstellte Menüs nicht nach der aktuellen Inhaltssprache gefiltert — Links aus allen Sprachen erscheinen. Der Dienst kommt mit dem Drupal-Core-Patch aus <a href=\":url\">Issue #2466553</a>."
+msgid "Neither <code>menu.language_menu_link_tree_manipulator</code> nor <code>menu.language_tree_manipulator</code> exists, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. One of the two ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>, depending on which revision is applied."
+msgstr "Weder <code>menu.language_menu_link_tree_manipulator</code> noch <code>menu.language_tree_manipulator</code> existiert, daher werden von Drupal Kit erstellte Menüs nicht nach der aktuellen Inhaltssprache gefiltert — Links aus allen Sprachen erscheinen. Einer der beiden Dienste kommt mit dem Drupal-Core-Patch aus <a href=\":url\">Issue #2466553</a>, je nachdem, welche Revision angewendet wurde."
 
 
 msgid "Typography Filter"

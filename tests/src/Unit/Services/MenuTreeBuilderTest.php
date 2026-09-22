@@ -3,6 +3,7 @@
 namespace Drupal\Tests\drupal_kit\Unit\Services;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\Context\CacheContextsManager;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -174,14 +175,123 @@ class MenuTreeBuilderTest extends TestCase {
   /**
    * Builds a MenuTreeBuilder wired to this test's mocked dependencies.
    */
-  protected function newBuilder(): MenuTreeBuilder {
+  protected function newBuilder(
+    ?object $patched_manipulator = NULL,
+    ?object $contextual_manipulator = NULL,
+  ): MenuTreeBuilder {
     return new MenuTreeBuilder(
       $this->menuLinkTree,
       $this->activeTrailResolver,
       $this->languageManager,
       $this->entityTypeManager,
       $this->requestStack,
+      $patched_manipulator,
+      $contextual_manipulator,
     );
+  }
+
+  /**
+   * Runs build() and returns the arguments transform() received.
+   *
+   * @return array<int, mixed>
+   *   The positional arguments: [0 => tree, 1 => manipulators].
+   */
+  protected function captureTransformArgs(MenuTreeBuilder $builder): array {
+    $captured = [];
+    $this->menuLinkTree->method('load')->willReturn([]);
+    $this->menuLinkTree->method('transform')
+      ->willReturnCallback(function (...$args) use (&$captured) {
+        $captured = array_values($args);
+        return [];
+      });
+    $this->menuLinkTree->method('build')->willReturn([]);
+    $builder->build('main');
+
+    return $captured;
+  }
+
+  /**
+   * The language filter is skipped when neither service exists.
+   *
+   * @covers ::build
+   */
+  public function testNoLanguageManipulatorWithoutEitherService(): void {
+    [, $manipulators] = $this->captureTransformArgs($this->newBuilder());
+
+    $callables = array_column($manipulators, 'callable');
+    $this->assertSame([
+      'menu.default_tree_manipulators:checkAccess',
+      'menu.default_tree_manipulators:generateIndexAndSort',
+    ], $callables);
+  }
+
+  /**
+   * Patch revision #255 renamed the service and made it contextual.
+   *
+   * It is applied through process() with a NULL context, because its own
+   * applies() restricts it to SystemMenuBlock.
+   *
+   * @covers ::build
+   */
+  public function testContextualLanguageManipulatorIsAppliedAsProcess(): void {
+    // The patch's LanguageMenuLinkTreeManipulator is not autoloadable —
+    // it is not in stock core — and the builder only ever asks whether
+    // the injected object is cacheable. A CacheableDependencyInterface
+    // double is the contract under test.
+    $manipulator = $this->createMock(CacheableDependencyInterface::class);
+    $manipulator->method('getCacheContexts')->willReturn(['languages:language_content']);
+    $manipulator->method('getCacheTags')->willReturn([]);
+    $manipulator->method('getCacheMaxAge')->willReturn(Cache::PERMANENT);
+
+    $builder = $this->newBuilder(NULL, $manipulator);
+    [, $manipulators] = $this->captureTransformArgs($builder);
+
+    $this->assertContains([
+      'callable' => 'menu.language_menu_link_tree_manipulator:process',
+      'args' => [NULL],
+    ], $manipulators);
+
+    // Calling process() as a plain callable bypasses the contextual loop
+    // that would otherwise bubble this context, so the builder attaches it.
+    $this->assertContains(
+      'languages:language_content',
+      $builder->collectCacheMetadata()->getCacheContexts(),
+    );
+  }
+
+  /**
+   * An older patch revision still works where it is the only service.
+   *
+   * @covers ::build
+   */
+  public function testPatchedLanguageManipulatorStillApplies(): void {
+    $manipulator = new \stdClass();
+    [, $manipulators] = $this->captureTransformArgs($this->newBuilder($manipulator));
+
+    $this->assertContains(
+      ['callable' => 'menu.language_tree_manipulator:filterLanguage'],
+      $manipulators,
+    );
+  }
+
+  /**
+   * With both present, the contextual one wins — it is the newer revision.
+   *
+   * @covers ::build
+   */
+  public function testContextualServiceIsPreferredOverTheOlderOne(): void {
+    $core = $this->createMock(CacheableDependencyInterface::class);
+    $core->method('getCacheContexts')->willReturn([]);
+    $core->method('getCacheTags')->willReturn([]);
+    $core->method('getCacheMaxAge')->willReturn(Cache::PERMANENT);
+
+    [, $manipulators] = $this->captureTransformArgs(
+      $this->newBuilder(new \stdClass(), $core),
+    );
+
+    $callables = array_column($manipulators, 'callable');
+    $this->assertContains('menu.language_menu_link_tree_manipulator:process', $callables);
+    $this->assertNotContains('menu.language_tree_manipulator:filterLanguage', $callables);
   }
 
 }

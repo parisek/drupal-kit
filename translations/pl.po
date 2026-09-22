@@ -43,8 +43,8 @@ msgstr "Zaplanowane cofnięcie publikacji: @date."
 msgid "Drupal Kit: menu language filtering"
 msgstr "Drupal Kit: filtrowanie menu według języka"
 
-msgid "The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>."
-msgstr "Brakuje usługi <code>menu.language_tree_manipulator</code>, więc menu budowane przez Drupal Kit nie są filtrowane według bieżącego języka treści — pojawią się odnośniki ze wszystkich języków. Usługę dostarcza łatka rdzenia Drupala z <a href=\":url\">zgłoszenia #2466553</a>."
+msgid "Neither <code>menu.language_menu_link_tree_manipulator</code> nor <code>menu.language_tree_manipulator</code> exists, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. One of the two ships with the Drupal core patch from <a href=\":url\">issue #2466553</a>, depending on which revision is applied."
+msgstr "Nie istnieje ani <code>menu.language_menu_link_tree_manipulator</code>, ani <code>menu.language_tree_manipulator</code>, więc menu budowane przez Drupal Kit nie są filtrowane według bieżącego języka treści — pojawią się odnośniki ze wszystkich języków. Jedną z tych dwóch usług dostarcza łatka rdzenia Drupala z <a href=\":url\">zgłoszenia #2466553</a>, zależnie od tego, która rewizja została nałożona."
 
 
 msgid "Typography Filter"
