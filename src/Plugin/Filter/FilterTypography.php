@@ -6,21 +6,23 @@ namespace Drupal\drupal_kit\Plugin\Filter;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\drupal_kit\Twig\TypographyExtension;
+use Drupal\filter\Attribute\Filter;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
+use Drupal\filter\Plugin\FilterInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Provides a filter to format typography.
- *
- * @Filter(
- *   id = "filter_typography",
- *   title = @Translation("Typography Filter"),
- *   description = @Translation("Help format typography"),
- *   type = Drupal\filter\Plugin\FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
- * )
  */
+#[Filter(
+  id: "filter_typography",
+  title: new TranslatableMarkup("Typography Filter"),
+  description: new TranslatableMarkup("Help format typography"),
+  type: FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
+)]
 class FilterTypography extends FilterBase implements ContainerFactoryPluginInterface {
 
   public function __construct(

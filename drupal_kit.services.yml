@@ -1,3 +1,12 @@
+parameters:
+  # No procedural hooks left: drupal_kit.module went with the #[Hook]
+  # migration and drupal_kit.install with hook_runtime_requirements, so
+  # there is nothing for the collector's file scan to find. It was unsafe
+  # to set this while .install existed — the flag skips the scan entirely
+  # (HookCollectorPass), so hook_requirements would have stopped
+  # registering without a word. 74 core modules set it.
+  drupal_kit.skip_procedural_hook_scan: true
+
 services:
   # Registered by hand, unlike the other #[Hook] classes, which autowire.
   # Both menu language manipulator services ship with a core patch and are

@@ -3,19 +3,21 @@
 namespace Drupal\drupal_kit\Plugin\Filter;
 
 use Drupal\Component\Utility\Html;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\filter\Attribute\Filter;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
+use Drupal\filter\Plugin\FilterInterface;
 
 /**
  * Provides a filter to format responsive tables.
- *
- * @Filter(
- *   id = "filter_table",
- *   title = @Translation("Table Filter"),
- *   description = @Translation("Help format responsive tables"),
- *   type = Drupal\filter\Plugin\FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
- * )
  */
+#[Filter(
+  id: "filter_table",
+  title: new TranslatableMarkup("Table Filter"),
+  description: new TranslatableMarkup("Help format responsive tables"),
+  type: FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
+)]
 class FilterTable extends FilterBase {
 
   /**
