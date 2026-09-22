@@ -2,15 +2,14 @@
 
 namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
-use Drupal\Core\Config\Schema\SchemaIncompleteException;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\drupal_kit\Services\FeatureFlags;
 
 /**
  * Kernel tests for the feature-flag reader (#115).
  *
- * The cases that matter are the ones returning FALSE. A flag that reads TRUE
- * by accident is a behaviour change on upgrade, which is the single thing
+ * The cases that matter are the ones returning FALSE. A flag reading TRUE by
+ * accident is a behaviour change on upgrade, which is the one thing
  * AGENTS.md § Feature flags forbids.
  *
  * @coversDefaultClass \Drupal\drupal_kit\Services\FeatureFlags
@@ -24,126 +23,112 @@ class FeatureFlagsKernelTest extends KernelTestBase {
   protected static $modules = ['drupal_kit', 'system'];
 
   /**
-   * Write a features map into the settings object.
+   * Write a flag straight into config storage.
    *
-   * @param mixed $features
-   *   Whatever the project's config holds — not always a map.
+   * Through the storage rather than the config factory on purpose. The
+   * schema is FullyValidatable, so a kernel test's strict schema checking
+   * rejects an undeclared key written through the API — that is the typo
+   * guard doing its job. Storage is also how such a value really arrives on
+   * a site: a hand-edited file, or an older export.
    */
-  private function setFeatures($features): void {
-    \Drupal::configFactory()
-      ->getEditable(FeatureFlags::CONFIG_NAME)
-      ->set('features', $features)
-      ->save();
+  private function storeFlag(string $name, $value): void {
+    \Drupal::service('config.storage')
+      ->write(FeatureFlags::CONFIG_NAME, [$name => $value]);
+    \Drupal::configFactory()->reset(FeatureFlags::CONFIG_NAME);
   }
 
   /**
-   * The shipped default turns nothing on.
+   * The module ships no flags, so nothing it declares can be on.
    *
    * @covers ::enabled
    */
-  public function testInstalledDefaultsAreOff(): void {
-    $this->installConfig(['drupal_kit']);
+  public function testNoFlagShipsEnabled(): void {
+    $this->storeFlag(FeatureFlagsTestStub::EXAMPLE_FEATURE, TRUE);
 
-    $this->assertSame([], \Drupal::config(FeatureFlags::CONFIG_NAME)->get('features'));
-    $this->assertFalse(FeatureFlags::enabled('anything'));
+    $this->assertFalse(FeatureFlags::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
   }
 
   /**
-   * A project that set the flag gets the behaviour.
+   * A declared flag the project set reads TRUE.
    *
    * @covers ::enabled
    */
-  public function testFlagTheProjectSetReadsTrue(): void {
-    $this->setFeatures(['example_feature' => TRUE]);
+  public function testDeclaredFlagTheProjectSetReadsTrue(): void {
+    $this->storeFlag(FeatureFlagsTestStub::EXAMPLE_FEATURE, TRUE);
 
-    $this->assertTrue(FeatureFlags::enabled('example_feature'));
+    $this->assertTrue(FeatureFlagsTestStub::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
   }
 
   /**
-   * A flag the project set to FALSE stays off.
+   * A declared flag set to FALSE stays off.
    *
    * @covers ::enabled
    */
-  public function testFlagSetToFalseReadsFalse(): void {
-    $this->setFeatures(['example_feature' => FALSE]);
+  public function testDeclaredFlagSetToFalseReadsFalse(): void {
+    $this->storeFlag(FeatureFlagsTestStub::EXAMPLE_FEATURE, FALSE);
 
-    $this->assertFalse(FeatureFlags::enabled('example_feature'));
+    $this->assertFalse(FeatureFlagsTestStub::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
   }
 
   /**
-   * A flag nobody has heard of is off.
+   * A flag nobody declared is off even when config turns it on.
    *
-   * This is the upgrade case: the site's config predates the flag, so the
-   * key is simply absent and the behaviour must be what it was before.
+   * The allowlist, not the schema, enforces this at runtime: schema
+   * validation runs in tests and in Config Inspector, never on a production
+   * read.
    *
    * @covers ::enabled
    */
-  public function testUnknownFlagIsOff(): void {
-    $this->setFeatures(['other_feature' => TRUE]);
+  public function testUndeclaredFlagIsOffEvenWhenSetInConfig(): void {
+    $this->storeFlag('not_a_flag', TRUE);
 
-    $this->assertFalse(FeatureFlags::enabled('example_feature'));
+    $this->assertTrue(
+      \Drupal::config(FeatureFlags::CONFIG_NAME)->get('not_a_flag'),
+      'the value really is in config',
+    );
+    $this->assertFalse(FeatureFlagsTestStub::enabled('not_a_flag'));
+  }
+
+  /**
+   * A declared flag absent from config is off.
+   *
+   * The upgrade case: the site's export predates the flag, so the key is
+   * simply missing and behaviour must be what it was before.
+   *
+   * @covers ::enabled
+   */
+  public function testDeclaredFlagAbsentFromConfigIsOff(): void {
+    $this->storeFlag('something_else', TRUE);
+
+    $this->assertFalse(FeatureFlagsTestStub::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
   }
 
   /**
    * A missing config object is off, not an error.
    *
-   * A site installed before this object existed has no `drupal_kit.settings`
-   * until something writes one. Reading it must be silent.
-   *
    * @covers ::enabled
    */
   public function testMissingConfigObjectIsOff(): void {
-    $this->assertNull(\Drupal::config(FeatureFlags::CONFIG_NAME)->get('features'));
-    $this->assertFalse(FeatureFlags::enabled('example_feature'));
+    $this->assertTrue(\Drupal::config(FeatureFlags::CONFIG_NAME)->isNew());
+    $this->assertFalse(FeatureFlagsTestStub::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE));
   }
 
   /**
-   * The schema casts what a project writes, and casting is the contract.
+   * A non-boolean value does not turn a flag on.
    *
-   * `features` is typed `boolean`, so the config system normalises `1` to
-   * TRUE and `0` to FALSE on save. That is the behaviour to rely on — not
-   * this reader's own strictness, which only ever sees an already-cast value
-   * when the write went through the config API.
+   * Written through storage, so no schema cast has normalised it — which is
+   * exactly when the reader's own strictness is the only thing left.
    *
    * @covers ::enabled
    */
-  public function testTheSchemaCastsOnSave(): void {
-    $this->setFeatures(['example_feature' => 1]);
-    $this->assertTrue(FeatureFlags::enabled('example_feature'));
-
-    $this->setFeatures(['example_feature' => 0]);
-    $this->assertFalse(FeatureFlags::enabled('example_feature'));
-  }
-
-  /**
-   * The schema refuses a features value that is not a map.
-   *
-   * The reader still guards against one — a value written straight into
-   * storage never passed this check — but the schema is where the shape is
-   * enforced, and a test claiming otherwise would describe the wrong
-   * mechanism.
-   *
-   * @covers ::enabled
-   */
-  public function testTheSchemaRefusesNonMapFeaturesValue(): void {
-    $this->expectException(SchemaIncompleteException::class);
-    $this->setFeatures('nonsense');
-  }
-
-  /**
-   * A malformed value that reached storage anyway is off, not a crash.
-   *
-   * Written through the raw config storage, which is how config arrives on a
-   * site hand-edited or restored from an older export.
-   *
-   * @covers ::enabled
-   */
-  public function testMalformedStoredValueIsOff(): void {
-    \Drupal::service('config.storage')
-      ->write(FeatureFlags::CONFIG_NAME, ['features' => 'nonsense']);
-    \Drupal::configFactory()->reset(FeatureFlags::CONFIG_NAME);
-
-    $this->assertFalse(FeatureFlags::enabled('example_feature'));
+  public function testNonBooleanValuesDoNotEnable(): void {
+    foreach ([1, '1', 'true', 'yes', [], 0, '', NULL] as $value) {
+      $this->storeFlag(FeatureFlagsTestStub::EXAMPLE_FEATURE, $value);
+      $this->assertFalse(
+        FeatureFlagsTestStub::enabled(FeatureFlagsTestStub::EXAMPLE_FEATURE),
+        var_export($value, TRUE) . ' must not enable a flag',
+      );
+    }
   }
 
   /**
@@ -152,9 +137,30 @@ class FeatureFlagsKernelTest extends KernelTestBase {
    * @covers ::enabled
    */
   public function testEmptyNameIsOff(): void {
-    $this->setFeatures(['' => TRUE]);
+    $this->assertFalse(FeatureFlagsTestStub::enabled(''));
+  }
 
-    $this->assertFalse(FeatureFlags::enabled(''));
+  /**
+   * The module ships no config object yet, and that is deliberate.
+   *
+   * Drupal skips a config/install file with no keys — FileStorage::decode()
+   * returns FALSE for empty data — so an empty object cannot ship at all.
+   * The first flag brings the object with it. This test is the tripwire: the
+   * moment an install file appears, it must declare flags and they must all
+   * be FALSE.
+   *
+   * @covers ::enabled
+   */
+  public function testTheModuleShipsNoFlagsOn(): void {
+    $this->installConfig(['drupal_kit']);
+
+    $shipped = array_filter(
+      \Drupal::config(FeatureFlags::CONFIG_NAME)->getRawData(),
+      static fn(string $key): bool => !str_starts_with($key, '_core'),
+      ARRAY_FILTER_USE_KEY,
+    );
+
+    $this->assertSame([], array_filter($shipped), 'no shipped default turns a flag on');
   }
 
 }
