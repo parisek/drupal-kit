@@ -1,14 +1,15 @@
 services:
   # Registered by hand, unlike the other #[Hook] classes, which autowire.
-  # `menu.language_tree_manipulator` ships with a core patch and is absent on
-  # most sites; `@?` is how an argument says "NULL when missing", and no
-  # attribute can say that. Hook.php sanctions manual registration for
-  # exactly this case.
+  # Both menu language manipulator services ship with a core patch and are
+  # absent on most sites; `@?` is how an argument says "NULL when missing",
+  # and no attribute can say that. Hook.php sanctions manual registration
+  # for exactly this case.
   Drupal\drupal_kit\Hook\Requirements:
     class: Drupal\drupal_kit\Hook\Requirements
     arguments:
       - "@language_manager"
       - "@?menu.language_tree_manipulator"
+      - "@?menu.language_menu_link_tree_manipulator"
   drupal_kit.route_subscriber:
     class: Drupal\drupal_kit\Routing\RouteSubscriber
     tags:
@@ -70,9 +71,12 @@ services:
       - "@language_manager"
       - "@entity_type.manager"
       - "@request_stack"
-      # Optional — Drupal core patch (drupal.org#2466553) provides it.
-      # NULL when patch is absent; filter is skipped silently.
+      # Both optional, both from the hand-applied core patch
+      # drupal.org#2466553. Older revisions name it this:
       - "@?menu.language_tree_manipulator"
+      # Revision #255 (rerolled for 11.4) renames it to this and makes it
+      # a contextual manipulator. Preferred when both are present.
+      - "@?menu.language_menu_link_tree_manipulator"
   drupal_kit.media_array_builder:
     class: Drupal\drupal_kit\Services\MediaArrayBuilder
     arguments:

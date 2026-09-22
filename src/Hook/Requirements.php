@@ -41,8 +41,8 @@ class Requirements {
    *
    * This class is registered by hand in drupal_kit.services.yml rather than
    * autowired, which is the one case Hook.php sanctions manual registration
-   * for: `menu.language_tree_manipulator` ships with a core patch and is
-   * absent on most sites, and `@?` is how a YAML argument says "NULL when
+   * for: both manipulator services ship with a core patch and are absent
+   * on most sites, and `@?` is how a YAML argument says "NULL when
    * missing". An attribute cannot say that, and autowiring a service that
    * usually does not exist fails the container build.
    *
@@ -54,6 +54,7 @@ class Requirements {
   public function __construct(
     protected LanguageManagerInterface $languageManager,
     protected ?object $languageTreeManipulator = NULL,
+    protected ?object $contextualLanguageTreeManipulator = NULL,
   ) {}
 
   /**
@@ -72,7 +73,8 @@ class Requirements {
       return [];
     }
 
-    $available = $this->languageTreeManipulator !== NULL;
+    $available = $this->languageTreeManipulator !== NULL
+      || $this->contextualLanguageTreeManipulator !== NULL;
     $requirement = [
       'title' => $this->t('Drupal Kit: menu language filtering'),
       'value' => $available ? $this->t('Available') : $this->t('Not available'),
@@ -81,7 +83,7 @@ class Requirements {
 
     if (!$available) {
       $requirement['description'] = $this->t(
-        'The <code>menu.language_tree_manipulator</code> service is missing, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. The service ships with the Drupal core patch from <a href=":url">issue #2466553</a>.',
+        'Neither <code>menu.language_menu_link_tree_manipulator</code> nor <code>menu.language_tree_manipulator</code> exists, so menus built by Drupal Kit are not filtered by the current content language — links from every language will appear. One of the two ships with the Drupal core patch from <a href=":url">issue #2466553</a>, depending on which revision is applied.',
         [':url' => 'https://www.drupal.org/project/drupal/issues/2466553'],
       );
     }

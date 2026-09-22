@@ -2,6 +2,7 @@
 
 namespace Drupal\drupal_kit\Services;
 
+use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
@@ -35,15 +36,23 @@ class MenuTreeBuilder {
     protected LanguageManagerInterface $languageManager,
     protected EntityTypeManagerInterface $entityTypeManager,
     protected RequestStack $requestStack,
-    // Optional: the `menu.language_tree_manipulator` service ships via
-    // a Drupal core patch
-    // (https://www.drupal.org/project/drupal/issues/2466553).
-    // When the consumer has applied the patch, Drupal's container
-    // injects the service here and getMenu() filters menu links by the
-    // current content language. When not applied, NULL is injected and
-    // we skip that manipulator step — menu items for all languages
-    // appear.
+    // Both are optional, and both come from the same core patch
+    // (https://www.drupal.org/project/drupal/issues/2466553), which is
+    // NOT in Drupal core — the service exists only where a consumer
+    // applied it. Neither present means no filtering, and menu items for
+    // all languages appear; Hook\Requirements reports that.
+    //
+    // Older revisions of the patch ship `menu.language_tree_manipulator`
+    // with a filterLanguage() method.
     protected ?object $languageTreeManipulator = NULL,
+    // Revision #255, rerolled against 11.4, renamed it to
+    // `menu.language_menu_link_tree_manipulator` and reshaped it into a
+    // MenuLinkTreeContextualManipulatorInterface. That one is applied
+    // through process(), and its own applies() restricts it to
+    // SystemMenuBlock, so this builder calls process() directly and
+    // passes NULL as the context — process() only hands the context to
+    // its own recursion.
+    protected ?object $contextualLanguageTreeManipulator = NULL,
   ) {
     $this->cacheMetadata = new CacheableMetadata();
   }
@@ -108,13 +117,35 @@ class MenuTreeBuilder {
       ['callable' => 'menu.default_tree_manipulators:checkAccess'],
       ['callable' => 'menu.default_tree_manipulators:generateIndexAndSort'],
     ];
-    if ($this->languageTreeManipulator !== NULL) {
-      // Filter by the current content language. Available only when
-      // the consumer has applied
-      // https://www.drupal.org/project/drupal/issues/2466553.
+    // Filter by the current content language. Prefer the contextual
+    // manipulator from patch revision #255; fall back to the older
+    // revision's service. Neither present means no filtering.
+    $language_manipulator = NULL;
+    if ($this->contextualLanguageTreeManipulator !== NULL) {
+      $manipulators[] = [
+        'callable' => 'menu.language_menu_link_tree_manipulator:process',
+        'args' => [NULL],
+      ];
+      $language_manipulator = $this->contextualLanguageTreeManipulator;
+    }
+    elseif ($this->languageTreeManipulator !== NULL) {
       $manipulators[] = ['callable' => 'menu.language_tree_manipulator:filterLanguage'];
+      $language_manipulator = $this->languageTreeManipulator;
     }
 
+    // Calling process() as a plain callable bypasses transform()'s
+    // contextual-manipulator loop, which is what would otherwise attach
+    // the manipulator's own cacheability (languages:language_content).
+    // Attach it here, or a menu filtered per content language is cached
+    // without varying by it.
+    if ($language_manipulator instanceof CacheableDependencyInterface) {
+      $this->cacheMetadata->addCacheableDependency($language_manipulator);
+    }
+
+    // Two arguments on purpose. transform() deprecates a NULL $context
+    // in 11.2 and drops it in 12.0, but MenuLinkTreeInterface still has
+    // the parameter commented out, so passing it violates the interface
+    // this property is typed against. Core has to declare it first.
     $tree = $menu_tree->transform($tree, $manipulators);
     $menu = $menu_tree->build($tree);
 
