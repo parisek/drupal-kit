@@ -14,6 +14,22 @@ All notable changes to this project are documented in this file. The format foll
   **Upgrade note.** A site that uses private files and does not add `drupal/r4032login` will show an anonymous visitor "Access denied" where it previously showed the login form. `drupal-base` and `htdvere` both use private files and both need the module; `proficio` already has it. `system.site:page.403` is empty on `drupal-base`, so there is no fallback there today.
 
   The hook also gets its first test. The old shape could only have been checked as a side effect on a global response, which is part of why none existed. Three kernel cases, mutation-checked, and the interesting one is that an authenticated user must produce an **empty** result array rather than `[NULL]`: `ModuleHandler::invokeAll()` guards each result with `isset()`, so NULL leaves no trace in the list core scans. Returning `0` instead would *grant* access — it survives `isset()`, `0 == -1` is false so core does not deny, and `count($headers)` then makes `FileDownloadController` serve the private file with a nonsense header.
+- **The remaining core deprecations are cleared, and CI can finally fail on one** (#142).
+
+  Five filter plugins move from `@Filter` annotations to `#[Filter]` attributes. Core emits a deprecation for every annotation-discovered plugin (`AttributeDiscoveryWithAnnotations.php:98`, removed in drupal:13.0.0). Plugin IDs are unchanged, so no consumer sees anything.
+
+  `drupal_kit.skip_procedural_hook_scan: true`. `HookCollectorPass` then skips this module's procedural file scan entirely. It was unsafe while `drupal_kit.install` existed — `hook_requirements` would have stopped registering without a word — and #138 removed the last procedural file.
+
+  New `FilterDiscoveryKernelTest`, because all five existing filter tests are **unit** tests that construct the class and call `process()`. They prove the transformation and say nothing about whether Drupal can find the plugin, so this conversion could have broken discovery with every one of them green — the same gap the `#[Hook]` migration had. And the failure would be silent: a text format stores filter IDs in config, so an ID that stops resolving does not error, the filter simply stops running and body text renders unprocessed.
+
+### Fixed
+- **`SYMFONY_DEPRECATIONS_HELPER` never did anything** — `symfony/phpunit-bridge` is not a dependency of this package and is not in `vendor/`, so nothing read the variable. Twenty lines of comment weighed `weak` against `disabled` against `max[total]=0`: a careful decision between settings of a mechanism that was not installed.
+
+  That is why #137 — `REQUIREMENT_OK` removed in drupal:12.0.0 — was found by a code review rather than by CI. The guard was never there; it only looked like it was.
+
+  Replaced with PHPUnit's own: `failOnDeprecation` on the root element, and `ignoreIndirectDeprecations` on `<source>`, whose include list is `src/`. So a deprecation this module causes fails the build and a deprecation in core or a vendor package does not. Measured before switching it on: 22 PHP deprecations in a full run, 20 of them PHP 8.4 implicit-nullable notices inside `mundschenk-at/php-typography` and 2 null-array-offset notices inside core. **None from `src/`**, so the ratchet costs nothing today.
+
+  Its limit is written into the config rather than left to be discovered: it does **not** catch a deprecation this module raises with `@trigger_error()`, which is how Drupal raises them. PHPUnit ignores suppressed deprecations, and the switch that changes that would un-suppress core's too. Verified by mutation — an unsuppressed `trigger_error()` in `src/` exits 1, the same call with `@` exits 0.
 
 ### Changed
 - **`FeatureFlags` is a service** (#139) — it was static because the supported range was `^10 || ^11`: 10.x has no `#[Hook]` registration, so every hook was procedural and a service would have had nobody to inject it into. #134 moved the floor and #135 turned all seven hooks into autowired classes, so the reason is gone. Registered as `drupal_kit.feature_flags` with the config factory injected.
@@ -198,7 +214,6 @@ All notable changes to this project are documented in this file. The format foll
 
   Backwards compatible by construction: no `vite_entry`, or no manifest, and the declared path is served unchanged. Four guards on the manifest value — resolvable inside the built directory, free of URL-significant characters, `.js` suffix, present on disk — each answering a reproduction rather than a hypothesis and each pinned by a mutation-verified test. Every rejection also logs: an opt-in that cannot do its job says so, instead of silently serving a declared path that may 404.
 
-||||||| 682a6f1
 
 ### Changed
 - **`|typography` now typesets per language** — `TypographyExtension` hands the upstream `Parisek\Twig\TypographyExtension` a locale resolver, so the `languages:` tables shipped by `parisek/twig-typography` ^1.3 (quote style, dash convention, single-character word spacing, …) actually apply. Without a resolver the upstream `localeCandidates()` returns `[]` and that whole layer is inert: only the language-neutral house defaults ever ran, so Czech content was typeset with English curled quotes (`“ahoj”`, not `„ahoj“`) and lost the non-breaking space after single-letter prepositions that Czech typography requires. Ported from `StarterBase::typography_locale_resolver()` in parisek/timber-kit, the WordPress-side sibling.

@@ -8,6 +8,7 @@
          failOnRisky="true"
          failOnWarning="true"
          cacheResult="false"
+         failOnDeprecation="true"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd">
   <php>
     <ini name="error_reporting" value="32767"/>
@@ -16,20 +17,37 @@
     <env name="SIMPLETEST_BASE_URL" value="http://localhost"/>
     <env name="BROWSERTEST_OUTPUT_DIRECTORY" value="/tmp"/>
     <!--
-      SYMFONY_DEPRECATIONS_HELPER=weak: deprecations are collected and
-      summarized at the end of the run, but DO NOT fail the suite by
-      themselves. Combined with failOnRisky=true (above), there is a
-      theoretical path where the Symfony PHPUnit bridge marks a test
-      "risky" when un-self deprecations accumulate, which would then
-      fail the suite. We're keeping `weak` because:
-        - "disabled" hides our own deprecations (useful signal)
-        - "max[total]=0" is too strict for a library that depends on
-          drupal/core (which emits its own internal deprecations)
-      If a future contrib dep starts spamming deprecations and trips
-      failOnRisky, switch to "disabled" with a TODO link to the
-      offending dep.
+      SYMFONY_DEPRECATIONS_HELPER is gone, and with it twenty lines of
+      comment weighing `weak` against `disabled` against `max[total]=0`.
+      All of it was inert: symfony/phpunit-bridge is not a dependency of
+      this package and is not in vendor/, so nothing ever read the
+      variable. The deprecations this suite reports are PHPUnit 11's own.
+
+      That is why #137 - REQUIREMENT_OK removed in drupal:12.0.0 - was
+      found by a code review rather than by CI. The guard was never there;
+      it only looked like it was.
+
+      Deprecations now fail the build, but only the ones this module
+      causes: the failOn flag on the root element, and
+      ignoreIndirectDeprecations on <source>, whose include list is src/.
+
+      Measured 2026-09-22 on a full run: 22 PHP deprecations, 20 of them
+      PHP 8.4 implicit-nullable notices inside
+      mundschenk-at/php-typography, 2 null-array-offset notices inside
+      core. NONE from src/. So this costs nothing today, and failing on
+      third-party deprecations instead would turn CI red on a day nobody
+      touched this repo.
+
+      Know what this does NOT catch: a deprecation this module raises
+      itself with @trigger_error(), which is how Drupal raises them.
+      PHPUnit ignores suppressed deprecations by default, and the switch
+      that changes it - ignoreSuppressionOfDeprecations on <source> -
+      would un-suppress core's as well. So the guard covers PHP
+      deprecations caused by our code (an implicitly nullable parameter,
+      a null array offset), not our own deprecation notices. Verified by
+      mutation: an unsuppressed trigger_error() in src/ exits 1, the same
+      call with @ exits 0.
     -->
-    <env name="SYMFONY_DEPRECATIONS_HELPER" value="weak"/>
   </php>
   <testsuites>
     <testsuite name="unit">
@@ -39,7 +57,7 @@
       <directory>tests/src/Kernel</directory>
     </testsuite>
   </testsuites>
-  <source>
+  <source ignoreIndirectDeprecations="true">
     <include>
       <directory>src</directory>
     </include>
