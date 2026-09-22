@@ -32,9 +32,18 @@ class FormAlter {
    * reordering, so the reason for the ordering lived in a different function
    * from the code that needed it. The attribute states it here, once.
    *
-   * The two are not merely equivalent in effect — the legacy hook cannot
-   * reach an attribute-based implementation at all, so migrating this method
-   * and deleting that function are one change, not two.
+   * The legacy hook has to go on its own account: core deprecated it in
+   * 11.2.0 and removes it in 12.0.0 unless it carries
+   * #[LegacyModuleImplementsAlter], and it trigger_error()s at every
+   * container build until then (HookCollectorPass::collectModuleHook()).
+   *
+   * It is NOT true that the legacy hook cannot reach an attribute-based
+   * implementation — an earlier version of this docblock said so, and core
+   * says otherwise. HookCollectorPass::calculateImplementations() builds one
+   * module map from procedural and OOP implementations together, then runs
+   * every hook_module_implements_alter over it. The ordering would have kept
+   * working. Deleting it here is a choice, made because the deprecation is
+   * unconditional and the replacement belongs beside the method it orders.
    */
   #[Hook('form_alter', order: Order::Last)]
   public function formAlter(array &$form, FormStateInterface $form_state, string $form_id): void {
