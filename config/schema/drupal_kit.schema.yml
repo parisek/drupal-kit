@@ -1,0 +1,14 @@
+drupal_kit.settings:
+  type: config_object
+  label: 'Drupal Kit settings'
+  mapping:
+    features:
+      # A sequence rather than a fixed mapping: a new flag then needs no
+      # schema edit, so adding one cannot fail config validation on a site
+      # that has not exported the new key yet. The flag NAME is the contract,
+      # and it is documented where the behaviour it gates lives.
+      type: sequence
+      label: 'Feature flags'
+      sequence:
+        type: boolean
+        label: 'Enabled'

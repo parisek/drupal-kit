@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+- **Hook-level behaviour can now ship opt-in** (#115) — AGENTS.md § Feature flags requires new behaviour to default off, and documented two ways to say so: a `protected bool` on a consumer-subclassed base class, and a `$params` key on a container service. A module-level hook has neither. Nobody subclasses it and nobody passes it arguments, so a hook could only be always on, which the policy forbids, or left unshipped, which pushes the same wiring into all nineteen consuming projects. The gap was found while reviewing #114 and had no answer at the time.
+
+  The third way is one config object, `drupal_kit.settings`, holding a `features` map of booleans, and `FeatureFlags::enabled('<flag>')` to read it. Absent, unknown and malformed all read FALSE — a site whose config predates a flag behaves exactly as it did before the upgrade, which is the whole point rather than a defensive habit.
+
+  `features` is a **sequence**, not a fixed mapping, so adding a flag needs no schema edit and cannot fail config validation on a site that has not exported the new key. The flag name is the contract, documented beside the behaviour it gates.
+
+  The module ships no flags yet. This is the mechanism the next hook-shaped feature uses, and PORTA's own defaults belong downstream in `drupal-base`, per *Opinionated defaults live downstream*.
+
+
 ## [2.3.0] — 2026-09-21
 
 ### Added
