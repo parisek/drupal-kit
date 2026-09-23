@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [3.1.0] — 2026-09-23
+
+### Added
+
+- `drupal_kit.config_applier` service (`Drupal\drupal_kit\Services\ConfigApplier`) and `drush kit:config-apply` command — creates, and optionally updates, an explicit list of config objects through the entity/config API, in dependency order. Never touches config outside the given list and never deletes anything. Create-only by default; `--update` opts a name into changing, with an optional `--expect-hash` guard against overwriting a production UI edit. `--dry-run` prints the plan without changing anything. Supports the `hook_post_update_NAME()` pattern documented in the README, so new config (e.g. a paragraph type and its fields) ships through `drush updb` on deploy — the supported alternative to `drush config:import` on stacks that never run a full config import.
+
 ## [3.0.0] — 2026-09-23
 
 **Upgrading from 2.x.** Constraint only for most consumers: `composer require parisek/drupal-kit:^3.0`. One breaking change is visible on a site, and it needs one command.
