@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_kit_teaser
+    - node.type.kit_page
+  module:
+    - text
+id: node.kit_page.field_kit_teaser
+field_name: field_kit_teaser
+entity_type: node
+bundle: kit_page
+label: Teaser
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: text

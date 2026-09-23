@@ -98,6 +98,13 @@ services:
       - "@logger.factory"
       - "@cache.default"
       - "@file_url_generator"
+  drupal_kit.config_applier:
+    class: Drupal\drupal_kit\Services\ConfigApplier
+    arguments:
+      - "@config.factory"
+      - "@config.manager"
+      - "@config.storage"
+      - "@entity_type.manager"
   # drupal_kit.resizer was removed in v1.4.0. Resizer is
   # a static utility — call \Drupal\drupal_kit\Services\Resizer::resizer()
   # directly. TwigExtension::getResizer does this.

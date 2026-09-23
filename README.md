@@ -35,6 +35,7 @@ drush en drupal_kit
 - `drupal_kit.twig_extension` — registers Twig functions used by component templates, including the typography-aware translation helpers `_xt` / `__t` / `_nt` / `_nxt` (translate, then pipe through `|typography`).
 - `drupal_kit.typography_twig_extension` — provides the `|typography` Twig filter; delegates to [`parisek/twig-typography`](https://github.com/parisek/twig-typography) and resolves typography config from `{active_theme}/static/typography.yml`.
 - `drupal_kit.route_subscriber` — alters routes for entity access edge cases.
+- `drupal_kit.config_applier` (`Drupal\drupal_kit\Services\ConfigApplier`) — creates (and, opt-in, updates) an explicit list of config objects through the entity/config API, in dependency order. See [Applying config on deploy](#applying-config-on-deploy).
 
 **Base classes**
 
@@ -74,6 +75,98 @@ missing file or a broken one arrives with neither.
 
 The same call shape works in [`parisek/timber-kit`](https://github.com/parisek/timber-kit)
 and in the styleguide preview, so one template renders on every stack.
+
+## Applying config on deploy
+
+Sites on this stack never run `drush config:import` on deploy — a full import
+diffs the *whole* active config store against the repository and would
+overwrite production UI edits (menu links, block placement, view filters —
+anything an editor changed after launch). `ConfigApplier` and
+`drush kit:config-apply` are the supported alternative: they create (and,
+opt-in, update) an **explicit, named list** of config objects through the
+same entity API core's own config sync uses — `ConfigEntityStorage::createFromStorageRecord()`
+/ `updateFromStorageRecord()` — never a raw `\Drupal::configFactory()->save()`.
+That matters for config like `field.storage.*`: going through the entity API
+is what creates the database column and refreshes the entity field map, not
+just the config object.
+
+Guarantees:
+
+- **Never "everything".** You always name the config objects, directly or
+  via a list file (`--names-file`, one name per line, `#` comments allowed).
+- **Never deletes.** A config present in the active store but absent from
+  your list is left untouched, full stop — it is never even considered.
+- **Create-only by default.** An existing config is reported `SKIP-EXISTS`
+  unless its name is also in `--update`.
+- **Update guard.** Pass `--expect-hash name=<sha256>` (from `ConfigApplier::activeHash()`)
+  to refuse an update whose *active* value has drifted from the hash you
+  captured — protects a production UI edit you didn't know about.
+- **Dependency order.** Names are topologically sorted from each config's own
+  `dependencies.config` list (`field.storage.*` before `field.field.*`,
+  a bundle before its fields, …) — you don't have to list them in order.
+  A dependency that is neither in your list nor already active is reported
+  `ERROR` and nothing is applied.
+- **Idempotent.** Safe to run on every deploy; the second run reports
+  `SKIP-EXISTS` for everything it already created.
+
+### CLI
+
+```bash
+# Preview only — prints CREATE / SKIP-EXISTS / UPDATE / REFUSE / ERROR, changes nothing.
+drush kit:config-apply --names=paragraphs.paragraphs_type.hero,field.storage.paragraph.field_hero_image,field.field.paragraph.hero.field_hero_image --dry-run
+
+# Apply for real.
+drush kit:config-apply --names-file=../config-deploy/hero.txt
+
+# Allow one already-existing config to change, guarded by a hash captured earlier.
+drush kit:config-apply --names=language.content_settings.paragraph.hero \
+  --update=language.content_settings.paragraph.hero \
+  --expect-hash=language.content_settings.paragraph.hero=3f9c…
+```
+
+`--config-dir` defaults to `config/sync`.
+
+### `hook_post_update_NAME()` pattern
+
+The command above is a manual front end for the same PHP API — call it from
+a `hook_post_update_NAME()` in a project module so a new paragraph type (or
+any other config) ships through `drush updb` on deploy, the same way schema
+changes do:
+
+```php
+/**
+ * Creates the "hero" paragraph type and its fields.
+ */
+function my_project_post_update_hero_paragraph_type(): void {
+  /** @var \Drupal\drupal_kit\Services\ConfigApplier $applier */
+  $applier = \Drupal::service('drupal_kit.config_applier');
+
+  $names = [
+    'paragraphs.paragraphs_type.hero',
+    'field.storage.paragraph.field_hero_image',
+    'field.field.paragraph.hero.field_hero_image',
+    'core.entity_view_display.paragraph.hero.default',
+    'core.entity_form_display.paragraph.hero.default',
+  ];
+
+  $plan = $applier->apply(
+    \Drupal::service('extension.list.module')->getPath('my_project') . '/config/deploy',
+    $names,
+  );
+
+  foreach ($plan as $entry) {
+    if ($entry['action'] === 'ERROR') {
+      throw new \RuntimeException("kit:config-apply: {$entry['name']}: {$entry['reason']}");
+    }
+  }
+}
+```
+
+Re-running `drush updb` on a site that already has the paragraph type is a
+no-op — every name comes back `SKIP-EXISTS`. Ship the config as a
+`config/deploy`-style directory shipped with the module (not `config/sync`,
+which is the site's own export), so the fixture travels with the code that
+needs it.
 
 ## Required modules
 
