@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\drupal_kit\Services;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\ImageToolkit\ImageToolkitManager;
 use Drupal\file\FileInterface;
 use Drupal\image\Entity\ImageStyle;
 
@@ -32,14 +36,34 @@ class Resizer {
   private const ASPECT_TOLERANCE = 0.1;
 
   /**
+   * Constructs a Resizer.
+   *
+   * These are the services this class used to fetch statically on every
+   * call, seven times per invocation.
+   *
+   * The focal_point manager is optional: the module need not be installed, and
+   * `@?` is how a YAML argument says "NULL when missing". The type is
+   * therefore `?object` rather than the manager's class, which does not
+   * exist without the module and cannot be named in a signature that must
+   * load either way.
+   */
+  public function __construct(
+    protected ImageToolkitManager $imageToolkitManager,
+    protected ModuleHandlerInterface $moduleHandler,
+    protected EntityTypeManagerInterface $entityTypeManager,
+    protected ConfigFactoryInterface $configFactory,
+    protected ?object $focalPointManager = NULL,
+  ) {}
+
+  /**
    * Cached output format (avif, webp, or null for no conversion).
    */
-  private static ?string $outputFormat = NULL;
+  private ?string $outputFormat = NULL;
 
   /**
    * Whether the output format has been determined.
    */
-  private static bool $formatChecked = FALSE;
+  private bool $formatChecked = FALSE;
 
   /**
    * Get the preferred output format based on toolkit support.
@@ -50,28 +74,26 @@ class Resizer {
    * @return array{extension: string, mime: string}|null
    *   Format info array with 'extension' and 'mime' keys, or NULL.
    */
-  private static function getOutputFormat(): ?array {
-    if (!self::$formatChecked) {
-      self::$formatChecked = TRUE;
-      self::$outputFormat = NULL;
+  private function getOutputFormat(): ?array {
+    if (!$this->formatChecked) {
+      $this->formatChecked = TRUE;
+      $this->outputFormat = NULL;
 
-      /** @var \Drupal\Core\ImageToolkit\ImageToolkitManager $toolkit_manager */
-      $toolkit_manager = \Drupal::service('image.toolkit.manager');
-      $toolkit = $toolkit_manager->getDefaultToolkit();
+      $toolkit = $this->imageToolkitManager->getDefaultToolkit();
 
       if ($toolkit) {
         $supported = $toolkit->getSupportedExtensions();
 
         if (\in_array('avif', $supported, TRUE)) {
-          self::$outputFormat = 'avif';
+          $this->outputFormat = 'avif';
         }
         elseif (\in_array('webp', $supported, TRUE)) {
-          self::$outputFormat = 'webp';
+          $this->outputFormat = 'webp';
         }
       }
     }
 
-    return match (self::$outputFormat) {
+    return match ($this->outputFormat) {
       'avif' => ['extension' => 'avif', 'mime' => 'image/avif'],
       'webp' => ['extension' => 'webp', 'mime' => 'image/webp'],
       default => NULL,
@@ -87,12 +109,17 @@ class Resizer {
    * @return string
    *   An 8-character hash based on focal point position, or empty string.
    */
-  private static function getFocalPointHash(string $image_uri): string {
-    if (!\Drupal::moduleHandler()->moduleExists('focal_point')) {
+  private function getFocalPointHash(string $image_uri): string {
+    // The injected manager, not moduleExists(). They agree on every real
+    // site, but they are different questions: one asks whether the
+    // container knows the module, the other whether this object received
+    // the service it is about to call. #137 made the same correction in
+    // Requirements for the same reason.
+    if ($this->focalPointManager === NULL) {
       return '';
     }
 
-    $files = \Drupal::entityTypeManager()
+    $files = $this->entityTypeManager
       ->getStorage('file')
       ->loadByProperties(['uri' => $image_uri]);
     $file = reset($files);
@@ -101,8 +128,8 @@ class Resizer {
       return '';
     }
 
-    $crop_type = \Drupal::config('focal_point.settings')->get('crop_type');
-    $crop = \Drupal::service('focal_point.manager')->getCropEntity($file, $crop_type);
+    $crop_type = $this->configFactory->get('focal_point.settings')->get('crop_type');
+    $crop = $this->focalPointManager->getCropEntity($file, $crop_type);
 
     if ($crop && !$crop->isNew()) {
       $position = $crop->position();
@@ -110,6 +137,32 @@ class Resizer {
     }
 
     return '';
+  }
+
+  /**
+   * The static entry point this class has published since #44.
+   *
+   * Kept, and deliberately. RELEASING.md § Static utilities names it public
+   * API and the README documents it for direct calls, so removing it would
+   * be breaking. Measured before this change: nothing calls it that way -
+   * not in this package beyond TwigExtension, and not in any of the three
+   * consuming projects, which all reach it through the `|resizer` Twig
+   * filter. So the facade costs one delegation and buys the promise.
+   *
+   * New code should take the drupal_kit.resizer service instead. This is
+   * the one place left that reaches the container statically, and it does
+   * so exactly once per call rather than seven times.
+   *
+   * @param array|mixed $images
+   *   See resize().
+   * @param array<int|string, mixed> $variants
+   *   See resize().
+   *
+   * @return array<int, array{src: string, type: string, width: int|string, height: int|string, media?: string, alt?: string, caption?: string, description?: string}>
+   *   See resize().
+   */
+  public static function resizer(mixed $images, array $variants): array {
+    return \Drupal::service('drupal_kit.resizer')->resize($images, $variants);
   }
 
   /**
@@ -146,8 +199,7 @@ class Resizer {
    * @return array<int, array{src: string, type: string, width: int|string, height: int|string, media?: string, alt?: string, caption?: string, description?: string}>
    *   Array of image variant data for use in picture/source elements.
    */
-  // phpcs:ignore Generic.NamingConventions.ConstructorName.OldStyle
-  public static function resizer(mixed $images, array $variants): array {
+  public function resize(mixed $images, array $variants): array {
     $result = [];
 
     // Defensive coercion: accept either a single image (associative
@@ -204,12 +256,12 @@ class Resizer {
 
       // Check if stage_file_proxy is enabled for local development.
       // @see https://www.drupal.org/project/stage_file_proxy/issues/2928564
-      $stage_file_proxy_origin = \Drupal::config('stage_file_proxy.settings')->get('origin');
+      $stage_file_proxy_origin = $this->configFactory->get('stage_file_proxy.settings')->get('origin');
       $stage_file_proxy_enabled = !empty($stage_file_proxy_origin);
 
       if (file_exists($image_uri) || $stage_file_proxy_enabled) {
         // Get focal point hash once per image for cache busting.
-        $focal_point_hash = self::getFocalPointHash($image_uri);
+        $focal_point_hash = $this->getFocalPointHash($image_uri);
 
         foreach ($variants as $variant) {
           $image_style_id = $variant['width'] . '-' . $variant['height'] . '-' . $variant['image_style'];
@@ -221,7 +273,7 @@ class Resizer {
 
           $image_style = ImageStyle::create(['name' => $image_style_id]);
 
-          self::addImageEffects($image_style, $variant);
+          $this->addImageEffects($image_style, $variant);
 
           // Calculate dimensions after applying effects.
           $dimensions = [
@@ -237,7 +289,7 @@ class Resizer {
           $resize_src = $image_style->buildUrl($image_uri);
 
           if ($success || $stage_file_proxy_enabled) {
-            $format = self::getOutputFormat();
+            $format = $this->getOutputFormat();
             $result[] = [
               'src' => $resize_src,
               'type' => $format['mime'] ?? $default_image['type'],
@@ -264,9 +316,9 @@ class Resizer {
    * @param array{width: int, height: int, media: int, image_style: string} $variant
    *   The variant configuration.
    */
-  private static function addImageEffects(ImageStyle $image_style, array $variant): void {
+  private function addImageEffects(ImageStyle $image_style, array $variant): void {
     match ($variant['image_style']) {
-      'crop' => self::addCropEffect($image_style, $variant),
+      'crop' => $this->addCropEffect($image_style, $variant),
       'smart_crop' => self::addSmartCropEffect($image_style, $variant),
       'canvas' => self::addCanvasEffect($image_style, $variant),
       default => self::addScaleEffect($image_style, $variant),
@@ -280,7 +332,7 @@ class Resizer {
     ]);
 
     // Convert to modern format (AVIF preferred, WebP fallback).
-    $format = self::getOutputFormat();
+    $format = $this->getOutputFormat();
     if ($format !== NULL) {
       $image_style->addImageEffect([
         'id' => 'image_convert',
@@ -293,8 +345,8 @@ class Resizer {
   /**
    * Add crop effect using focal_point if available.
    */
-  private static function addCropEffect(ImageStyle $image_style, array $variant): void {
-    if (\Drupal::moduleHandler()->moduleExists('focal_point')) {
+  private function addCropEffect(ImageStyle $image_style, array $variant): void {
+    if ($this->moduleHandler->moduleExists('focal_point')) {
       $image_style->addImageEffect([
         'id' => 'focal_point_scale_and_crop',
         'weight' => 1,

@@ -2,15 +2,28 @@
 
 namespace Drupal\Tests\drupal_kit\Unit\Services;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\ImageToolkit\ImageToolkitManager;
 use Drupal\drupal_kit\Services\Resizer;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Tests for the Resizer service.
  *
- * Note: Resizer uses static methods and \Drupal:: calls internally.
- * These tests cover input validation and SVG passthrough paths that
- * don't require a full Drupal bootstrap.
+ * These cover input validation and the SVG passthrough, which need no
+ * Drupal bootstrap.
+ *
+ * They build the service rather than calling the static
+ * Resizer::resizer() facade, and that is a deliberate consequence of
+ * #150. The facade fetches the service from the container before the
+ * early returns run, so the static entry point now needs a container
+ * even for an empty image, where it used to answer on its own.
+ *
+ * Production always has a container, so nothing real changes. A unit
+ * test is precisely the caller that does not, and building the object
+ * is what a unit test should have been doing anyway.
  *
  * @coversDefaultClass \Drupal\drupal_kit\Services\Resizer
  * @group drupal_kit
@@ -18,32 +31,49 @@ use PHPUnit\Framework\TestCase;
 class ResizerTest extends TestCase {
 
   /**
-   * @covers ::resizer
+   * A Resizer with every dependency mocked.
+   *
+   * None of the cases in this file reaches a dependency: they return on
+   * the input guards or on the SVG passthrough. The mocks exist to let the
+   * constructor run, and a case that started touching one would fail
+   * loudly rather than quietly reach a real service.
+   */
+  private function resizer(): Resizer {
+    return new Resizer(
+      $this->createMock(ImageToolkitManager::class),
+      $this->createMock(ModuleHandlerInterface::class),
+      $this->createMock(EntityTypeManagerInterface::class),
+      $this->createMock(ConfigFactoryInterface::class),
+    );
+  }
+
+  /**
+   * @covers ::resize
    */
   public function testResizerEmptyImage(): void {
-    $result = Resizer::resizer([], []);
+    $result = $this->resizer()->resize([], []);
     $this->assertSame([], $result);
   }
 
   /**
-   * @covers ::resizer
+   * @covers ::resize
    */
   public function testResizerNoSrc(): void {
     // Countable array without src: end() gives last value, then src check.
-    $result = Resizer::resizer([['alt' => 'test']], []);
+    $result = $this->resizer()->resize([['alt' => 'test']], []);
     $this->assertSame([], $result);
   }
 
   /**
-   * @covers ::resizer
+   * @covers ::resize
    */
   public function testResizerEmptySrc(): void {
-    $result = Resizer::resizer([['src' => '']], []);
+    $result = $this->resizer()->resize([['src' => '']], []);
     $this->assertSame([], $result);
   }
 
   /**
-   * @covers ::resizer
+   * @covers ::resize
    */
   public function testResizerSvgPassthrough(): void {
     // Resizer expects array-of-arrays (as returned by getMediaField).
@@ -55,28 +85,28 @@ class ResizerTest extends TestCase {
         'height' => 24,
       ],
     ];
-    $result = Resizer::resizer($image, [[100, 100, 0, 'default']]);
+    $result = $this->resizer()->resize($image, [[100, 100, 0, 'default']]);
     $this->assertCount(1, $result);
     $this->assertSame('image/svg+xml', $result[0]['type']);
     $this->assertSame('/sites/default/files/icon.svg', $result[0]['src']);
   }
 
   /**
-   * @covers ::resizer
+   * @covers ::resize
    */
   public function testResizerCountableUsesLast(): void {
     $images = [
       ['src' => '/first.jpg', 'type' => 'image/jpeg'],
       ['src' => '/last.svg', 'type' => 'image/svg+xml', 'width' => 10, 'height' => 10],
     ];
-    $result = Resizer::resizer($images, []);
+    $result = $this->resizer()->resize($images, []);
     // Last image is SVG, should passthrough.
     $this->assertCount(1, $result);
     $this->assertSame('/last.svg', $result[0]['src']);
   }
 
   /**
-   * @covers ::resizer
+   * @covers ::resize
    */
   public function testResizerOriginalFallback(): void {
     // Non-SVG image with src outside /sites/default/files/ path.
@@ -90,7 +120,7 @@ class ResizerTest extends TestCase {
         'alt' => 'Test',
       ],
     ];
-    $result = Resizer::resizer($image, [[400, 300, 0, 'default']]);
+    $result = $this->resizer()->resize($image, [[400, 300, 0, 'default']]);
     $this->assertCount(1, $result);
     $this->assertSame('https://example.com/photo.jpg', $result[0]['src']);
     $this->assertSame('image/jpeg', $result[0]['type']);
