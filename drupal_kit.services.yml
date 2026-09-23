@@ -23,12 +23,23 @@ services:
     class: Drupal\drupal_kit\Services\FeatureFlags
     arguments:
       - "@config.factory"
+  drupal_kit.resizer:
+    class: Drupal\drupal_kit\Services\Resizer
+    arguments:
+      - "@image.toolkit.manager"
+      - "@module_handler"
+      - "@entity_type.manager"
+      - "@config.factory"
+      # Optional — NULL without the focal_point module, which is the whole
+      # point: getFocalPointHash() guards on having received this, not on
+      # moduleExists().
+      - "@?focal_point.manager"
   drupal_kit.route_subscriber:
     class: Drupal\drupal_kit\Routing\RouteSubscriber
     tags:
       - { name: event_subscriber }
   drupal_kit.twig_extension:
-    arguments: ["@date.formatter", "@language_manager", "@string_translation"]
+    arguments: ["@date.formatter", "@language_manager", "@string_translation", "@drupal_kit.resizer"]
     class: Drupal\drupal_kit\TwigExtension
     tags:
       - { name: twig.extension }
@@ -105,9 +116,6 @@ services:
       - "@config.manager"
       - "@config.storage"
       - "@entity_type.manager"
-  # drupal_kit.resizer was removed in v1.4.0. Resizer is
-  # a static utility — call \Drupal\drupal_kit\Services\Resizer::resizer()
-  # directly. TwigExtension::getResizer does this.
   drupal_kit.menu_active_trail_resolver:
     class: Drupal\drupal_kit\Services\MenuActiveTrailResolver
     arguments:

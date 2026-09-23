@@ -1003,7 +1003,7 @@ parameters:
 			path: src/Services/Resizer.php
 
 		-
-			message: '#^Method Drupal\\drupal_kit\\Services\\Resizer\:\:resizer\(\) should return array\<int, array\{src\: string, type\: string, width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\> but returns array\{non\-empty\-array\<mixed\>\}\.$#'
+			message: '#^Method Drupal\\drupal_kit\\Services\\Resizer\:\:resize\(\) should return array\<int, array\{src\: string, type\: string, width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\> but returns array\{non\-empty\-array\<mixed\>\}\.$#'
 			identifier: return.type
 			count: 1
 			path: src/Services/Resizer.php
@@ -3684,9 +3684,15 @@ parameters:
 			message: '''
 				#^@covers value \\Drupal\\drupal_kit\\TwigExtension\:\:getResizer
 
-				Facade for the static Resizer\:\:resizer\(\) — verify it delegates by
-				passing an SVG image \(Resizer's documented passthrough path\) and
-				asserting the single\-item list comes back unchanged\. references an invalid method\.$#
+				Delegation, asserted as delegation\. The previous version of this test
+				passed an SVG and checked that the single\-item list came back
+				unchanged — which exercised Resizer's passthrough branch and told us
+				nothing about TwigExtension, because a method that ignored its
+				arguments and returned the input would have passed too\.
+
+				With Resizer injectable \(\#150\) the mock can assert the real contract\:
+				the variadic variants arrive as one array, and the service's return
+				value is passed through untouched\. references an invalid method\.$#
 			'''
 			identifier: phpunit.coversMethod
 			count: 1
@@ -3777,7 +3783,7 @@ parameters:
 			path: tests/src/Unit/TwigExtensionTest.php
 
 		-
-			message: '#^Method class@anonymous/tests/src/Unit/TwigExtensionTest\.php\:632\:\:getSetting\(\) return type has no value type specified in iterable type array\.$#'
+			message: '#^Method class@anonymous/tests/src/Unit/TwigExtensionTest\.php\:642\:\:getSetting\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: tests/src/Unit/TwigExtensionTest.php

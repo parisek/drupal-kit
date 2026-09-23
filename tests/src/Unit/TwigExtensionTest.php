@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\drupal_kit\Unit;
 
+use Drupal\drupal_kit\Services\Resizer;
 use Drupal\drupal_kit\TwigExtension;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
@@ -43,6 +44,13 @@ class TwigExtensionTest extends TestCase {
   protected TranslationInterface $stringTranslation;
 
   /**
+   * The resizer service, mocked so delegation can be asserted.
+   *
+   * @var \PHPUnit\Framework\MockObject\MockObject&\Drupal\drupal_kit\Services\Resizer
+   */
+  protected $resizer;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -56,10 +64,12 @@ class TwigExtensionTest extends TestCase {
     $language->method('getId')->willReturn('cs');
     $this->languageManager->method('getCurrentLanguage')->willReturn($language);
 
+    $this->resizer = $this->createMock(Resizer::class);
     $this->twigExtension = new TwigExtension(
       $this->dateFormatter,
       $this->languageManager,
       $this->stringTranslation,
+      $this->resizer,
     );
 
     // `t()` (used by getTranslation + CountryManager::getStandardList)
@@ -679,23 +689,33 @@ class TwigExtensionTest extends TestCase {
   /**
    * @covers ::getResizer
    *
-   * Facade for the static Resizer::resizer() — verify it delegates by
-   * passing an SVG image (Resizer's documented passthrough path) and
-   * asserting the single-item list comes back unchanged.
+   * Delegation, asserted as delegation. The previous version of this test
+   * passed an SVG and checked that the single-item list came back
+   * unchanged — which exercised Resizer's passthrough branch and told us
+   * nothing about TwigExtension, because a method that ignored its
+   * arguments and returned the input would have passed too.
+   *
+   * With Resizer injectable (#150) the mock can assert the real contract:
+   * the variadic variants arrive as one array, and the service's return
+   * value is passed through untouched.
    */
-  public function testGetResizerDelegatesToResizerStatic(): void {
+  public function testGetResizerDelegatesToTheService(): void {
     $image = [
       'src' => '/sites/default/files/icon.svg',
       'type' => 'image/svg+xml',
       'width' => 24,
       'height' => 24,
     ];
+    $expected = [['src' => '/from/the/service.avif', 'type' => 'image/avif']];
 
-    $result = TwigExtension::getResizer($image);
+    $this->resizer->expects($this->once())
+      ->method('resize')
+      ->with($image, [[100, 100, 768], [50, 50, '']])
+      ->willReturn($expected);
 
-    $this->assertCount(1, $result);
-    $this->assertSame('/sites/default/files/icon.svg', $result[0]['src']);
-    $this->assertSame('image/svg+xml', $result[0]['type']);
+    $result = $this->twigExtension->getResizer($image, [100, 100, 768], [50, 50, '']);
+
+    $this->assertSame($expected, $result);
   }
 
 }

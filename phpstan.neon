@@ -40,6 +40,18 @@ parameters:
             path: src/Services/MediaArrayBuilder.php
             reportUnmatched: false
 
+        # getCropEntity() on the optional focal_point manager. The
+        # argument is typed `?object` because FocalPointManager does not
+        # exist without the module, and a signature naming it would fail
+        # to load on a site that has not installed focal_point — which is
+        # most of them. The call is guarded by a NULL check on the
+        # injected service, which is the strongest guarantee available
+        # when the class itself cannot be named.
+        -
+            message: '#^Call to an undefined method object\:\:getCropEntity\(\)\.$#'
+            identifier: method.notFound
+            path: src/Services/Resizer.php
+
         # Array VALUE types on hook implementations. PHPStan wants
         # `@param array<string, mixed>`; Drupal's own standard forbids it —
         # phpcs reports "Hook implementations should not duplicate @param
