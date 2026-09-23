@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file. The format foll
 ## [Unreleased]
 
 ### Changed
+- **BREAKING: `hook_file_download()` returns `-1` instead of sending a redirect** (#141) — the hook used to build a `RedirectResponse` to `/user/login` and send it from inside the hook, then return `void`. The contract is `array|int|null` (`file.api.php:34`), and core's own `FileDownloadHook` returns `-1` to deny.
+
+  It looked like it worked because the browser followed a redirect it had already received. The sequence was wrong: `FileDownloadController::download()` collects what the hooks return, finds nothing, and throws `AccessDeniedHttpException` — **after the response has gone out**. Drupal then tried to render a 403 onto a finished request.
+
+  **The login redirect is not this library's decision**, and the measurement said so plainly. What a site's 403 does belongs to the site, `drupal/r4032login` already does it properly with `destination` preserved, and `proficio` was already running that module while this hook redirected from underneath it. So this is a deletion from the library rather than an exception subscriber written, tested and maintained here.
+
+  **Upgrade note.** A site that uses private files and does not add `drupal/r4032login` will show an anonymous visitor "Access denied" where it previously showed the login form. `drupal-base` and `htdvere` both use private files and both need the module; `proficio` already has it. `system.site:page.403` is empty on `drupal-base`, so there is no fallback there today.
+
+  The hook also gets its first test. The old shape could only have been checked as a side effect on a global response, which is part of why none existed. Three kernel cases, mutation-checked, and the interesting one is that an authenticated user must produce an **empty** result array rather than `[NULL]`: `ModuleHandler::invokeAll()` guards each result with `isset()`, so NULL leaves no trace in the list core scans. Returning `0` instead would *grant* access — it survives `isset()`, `0 == -1` is false so core does not deny, and `count($headers)` then makes `FileDownloadController` serve the private file with a nonsense header.
+
+### Changed
 - **`FeatureFlags` is a service** (#139) — it was static because the supported range was `^10 || ^11`: 10.x has no `#[Hook]` registration, so every hook was procedural and a service would have had nobody to inject it into. #134 moved the floor and #135 turned all seven hooks into autowired classes, so the reason is gone. Registered as `drupal_kit.feature_flags` with the config factory injected.
 
   **`KNOWN_FLAGS` stays a constant.** The reason is that it is module-owned data rather than wiring: the container has no business carrying the list of flags this module declares. The list itself earns its keep because schema validation is not runtime enforcement — it runs in tests and in Config Inspector, never on a production read — so it is the only thing between a raw storage write and a "flag" no code here has heard of.
