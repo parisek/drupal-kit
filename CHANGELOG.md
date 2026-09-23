@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [3.0.0] — 2026-09-23
+
+**Upgrading from 2.x.** Constraint only for most consumers: `composer require parisek/drupal-kit:^3.0`. One breaking change is visible on a site, and it needs one command.
+
+`hook_file_download()` now returns `-1` for an anonymous visitor instead of redirecting to `/user/login` itself. Core answers that with a 403, so a site that serves private files needs a 403 handler:
+
+```
+composer require drupal/r4032login && drush en -y r4032login
+```
+
+Measured across the consuming projects at release time: `drupal-base` and `htdvere` use private files and need the module; `proficio` already had it enabled. The replacement is better than what it removes — `r4032login` preserves `destination`, so a visitor returns to the page they asked for after logging in, which the old redirect did not do.
+
+Everything else is invisible to a consumer: the Drupal 10 floor, the `#[Hook]` migration, `hook_runtime_requirements`, the `FeatureFlags` service and the `#[Filter]` attributes all keep their existing behaviour and public names.
+
 ### Changed
 - **BREAKING: `hook_file_download()` returns `-1` instead of sending a redirect** (#141) — the hook used to build a `RedirectResponse` to `/user/login` and send it from inside the hook, then return `void`. The contract is `array|int|null` (`file.api.php:34`), and core's own `FileDownloadHook` returns `-1` to deny.
 
