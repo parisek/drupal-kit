@@ -205,6 +205,56 @@ final class ConfigApplierKernelTest extends KernelTestBase {
   }
 
   /**
+   * A config name absent from the source directory is reported as an error.
+   */
+  public function testNameNotFoundInSourceIsReportedAsError(): void {
+    $plan = $this->configApplier->plan($this->fixtureDir, ['node.type.does_not_exist']);
+
+    $this->assertSame(ConfigApplier::ACTION_ERROR, $plan[0]['action']);
+    $this->assertStringContainsString('not found in', $plan[0]['reason']);
+  }
+
+  /**
+   * An empty name list plans and applies to nothing.
+   */
+  public function testEmptyNamesListReturnsEmptyPlan(): void {
+    $this->assertSame([], $this->configApplier->plan($this->fixtureDir, []));
+    $this->assertSame([], $this->configApplier->apply($this->fixtureDir, []));
+  }
+
+  /**
+   * ActiveHash() is NULL until the config exists.
+   */
+  public function testActiveHashIsNullWhenConfigDoesNotExist(): void {
+    $this->assertNull($this->configApplier->activeHash('node.type.kit_page'));
+
+    $this->configApplier->apply($this->fixtureDir, ['node.type.kit_page']);
+
+    $this->assertNotNull($this->configApplier->activeHash('node.type.kit_page'));
+  }
+
+  /**
+   * A non-entity config object saves through the plain config factory.
+   */
+  public function testSimpleNonEntityConfigIsCreatedAndUpdated(): void {
+    // system.site is simple (non-entity) config with a real core schema —
+    // avoids inventing a fixture schema just to exercise this branch.
+    $simpleDir = sys_get_temp_dir() . '/' . $this->getRandomGenerator()->name();
+    mkdir($simpleDir);
+    $target = new FileStorage($simpleDir);
+    $target->write('system.site', ['name' => 'Kit Site']);
+
+    $plan = $this->configApplier->apply($simpleDir, ['system.site']);
+    $this->assertSame(ConfigApplier::ACTION_CREATE, $plan[0]['action']);
+    $this->assertSame('Kit Site', $this->container->get('config.factory')->get('system.site')->get('name'));
+
+    $target->write('system.site', ['name' => 'Renamed Kit Site']);
+    $plan = $this->configApplier->apply($simpleDir, ['system.site'], updateAllowed: ['system.site']);
+    $this->assertSame(ConfigApplier::ACTION_UPDATE, $plan[0]['action']);
+    $this->assertSame('Renamed Kit Site', $this->container->get('config.factory')->get('system.site')->get('name'));
+  }
+
+  /**
    * Dry run changes nothing.
    */
   public function testDryRunChangesNothing(): void {
