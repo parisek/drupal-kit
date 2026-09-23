@@ -2117,13 +2117,39 @@ parameters:
 				\- file\-storage lookup \+ reset\(\)\.
 				\- getCropEntity returns NULL → final return ''\.
 
-				The non\-empty\-hash branch \(lines that build the `substr\(md5\(\.\.\.\)\)`
-				suffix from a real focal\-point position\) is NOT covered here —
-				that needs a saved crop entity with a position\. Left as a follow\-up\.
+				The non\-empty\-hash branch — the `substr\(md5\(\.\.\.\)\)` suffix built from
+				a real focal\-point position — is covered by
+				testFocalPointPositionReachesTheImageStyleId\(\) below, which saves
+				the crop entity this case deliberately does not\.
 
 				Verified observably via the `crop` image_style_id suffix\: an
 				empty hash leaves the derivative URL at `100\-100\-crop` \(no
 				`\-\{hash\}` suffix appended\)\. references an invalid method\.$#
+			'''
+			identifier: phpunit.coversMethod
+			count: 1
+			path: tests/src/Kernel/Services/ResizerFocalPointKernelTest.php
+
+		-
+			message: '''
+				#^@covers value \\Drupal\\drupal_kit\\Services\\Resizer\:\:resizer
+
+				This is the branch the sibling case above cannot reach\: with no crop
+				entity, getFocalPointHash\(\) falls through to its final `return ''`
+				and the style id stays `100\-100\-crop`\. Saving a crop with a position
+				makes it `100\-100\-crop\-\{hash\}`\.
+
+				Why that matters beyond coverage\: the hash IS the cache\-busting
+				mechanism\. Drupal keys a derivative by the style name, so without the
+				suffix an editor who repositions the focal point gets the old crop
+				served forever, and the only remedy is flushing image styles\. A
+				regression here is silent and looks like a caching problem\.
+
+				The expected value is computed the same way the implementation does,
+				which would normally prove nothing — so the test also asserts the
+				suffix is ABSENT for a file with no crop, and that two different
+				positions produce two different ids\. A hardcoded or constant hash
+				fails both\. references an invalid method\.$#
 			'''
 			identifier: phpunit.coversMethod
 			count: 1

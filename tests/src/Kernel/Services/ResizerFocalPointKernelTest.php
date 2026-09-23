@@ -3,6 +3,7 @@
 namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
 use Drupal\Tests\drupal_kit\Kernel\ResizerKernelTestBase;
+use Drupal\crop\Entity\Crop;
 use Drupal\drupal_kit\Services\Resizer;
 
 /**
@@ -113,9 +114,10 @@ class ResizerFocalPointKernelTest extends ResizerKernelTestBase {
    * - file-storage lookup + reset().
    * - getCropEntity returns NULL → final return ''.
    *
-   * The non-empty-hash branch (lines that build the `substr(md5(...))`
-   * suffix from a real focal-point position) is NOT covered here —
-   * that needs a saved crop entity with a position. Left as a follow-up.
+   * The non-empty-hash branch — the `substr(md5(...))` suffix built from
+   * a real focal-point position — is covered by
+   * testFocalPointPositionReachesTheImageStyleId() below, which saves
+   * the crop entity this case deliberately does not.
    *
    * Verified observably via the `crop` image_style_id suffix: an
    * empty hash leaves the derivative URL at `100-100-crop` (no
@@ -150,6 +152,107 @@ class ResizerFocalPointKernelTest extends ResizerKernelTestBase {
       $variant_src,
       'No focal point set → derivative URL must not carry a hash suffix.',
     );
+  }
+
+  /**
+   * A saved focal point changes the image style id.
+   *
+   * So the derivative is rebuilt when an editor moves the point.
+   *
+   * @covers ::resizer
+   *
+   * This is the branch the sibling case above cannot reach: with no crop
+   * entity, getFocalPointHash() falls through to its final `return ''`
+   * and the style id stays `100-100-crop`. Saving a crop with a position
+   * makes it `100-100-crop-{hash}`.
+   *
+   * Why that matters beyond coverage: the hash IS the cache-busting
+   * mechanism. Drupal keys a derivative by the style name, so without the
+   * suffix an editor who repositions the focal point gets the old crop
+   * served forever, and the only remedy is flushing image styles. A
+   * regression here is silent and looks like a caching problem.
+   *
+   * The expected value is computed the same way the implementation does,
+   * which would normally prove nothing — so the test also asserts the
+   * suffix is ABSENT for a file with no crop, and that two different
+   * positions produce two different ids. A hardcoded or constant hash
+   * fails both.
+   */
+  public function testFocalPointPositionReachesTheImageStyleId(): void {
+    $file = $this->createTestPngFile('fp-hash.png');
+    $crop_type = $this->config('focal_point.settings')->get('crop_type');
+
+    Crop::create([
+      'type' => $crop_type,
+      'entity_id' => $file->id(),
+      'entity_type' => 'file',
+      'uri' => $file->getFileUri(),
+      'x' => 30,
+      'y' => 70,
+    ])->save();
+
+    $hash = $this->styleIdSuffix('fp-hash.png');
+
+    $this->assertNotSame('', $hash, 'A saved crop must add a hash suffix.');
+    $this->assertSame(substr(md5('30-70'), 0, 8), $hash);
+  }
+
+  /**
+   * Moving the point changes the hash; the same point keeps it.
+   *
+   * @covers ::resizer
+   */
+  public function testTheHashFollowsThePosition(): void {
+    $a = $this->createTestPngFile('fp-a.png');
+    $b = $this->createTestPngFile('fp-b.png');
+    $c = $this->createTestPngFile('fp-c.png');
+    $crop_type = $this->config('focal_point.settings')->get('crop_type');
+
+    foreach ([[$a, 10, 20], [$b, 90, 80], [$c, 10, 20]] as [$file, $x, $y]) {
+      Crop::create([
+        'type' => $crop_type,
+        'entity_id' => $file->id(),
+        'entity_type' => 'file',
+        'uri' => $file->getFileUri(),
+        'x' => $x,
+        'y' => $y,
+      ])->save();
+    }
+
+    $first = $this->styleIdSuffix('fp-a.png');
+    $moved = $this->styleIdSuffix('fp-b.png');
+    $same = $this->styleIdSuffix('fp-c.png');
+
+    $this->assertNotSame($first, $moved, 'A different position must produce a different id.');
+    $this->assertSame($first, $same, 'The same position must produce the same id.');
+  }
+
+  /**
+   * The hash suffix a crop variant's derivative URL carries, if any.
+   *
+   * Read off the generated URL rather than from the private helper: the
+   * suffix only matters because it reaches the style id, and reflection
+   * into getFocalPointHash() would assert the helper against itself.
+   *
+   * @param string $name
+   *   The test image filename.
+   *
+   * @return string
+   *   The 8-character suffix, or '' when the style id carries none.
+   */
+  private function styleIdSuffix(string $name): string {
+    $image = [
+      [
+        'src' => '/sites/default/files/' . $name,
+        'type' => 'image/png',
+        'width' => 1,
+        'height' => 1,
+      ],
+    ];
+
+    $result = Resizer::resizer($image, [[100, 100, 768, 'crop']]);
+
+    return preg_match('#/100-100-crop-([0-9a-f]{8})/#', $result[0]['src'], $m) === 1 ? $m[1] : '';
   }
 
 }

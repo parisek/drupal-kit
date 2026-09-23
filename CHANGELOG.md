@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+- **`DisplayBase::create()` and the focal-point hash have tests** (#148) — both were gaps the tracker did not record, and both were self-concealing.
+
+  `DisplayBase` sat at 13% line coverage while `__call` had fourteen cases. The uncovered half was the constructor and `create()`, and `DisplayBaseKernelTest` hid it: it builds its subject with `new class(...)`, listing the same thirteen arguments in the same order `create()` does, so the test carried its own copy of the ordering it was meant to protect. Reordering `create()` left it green.
+
+  The ordering matters because `$entity_helper` is **untyped** — the type lives only in the docblock. Swapping two typed services is a `TypeError`; swapping that one is silent, and the class asks the wrong service for the rest of its life. `DisplayBase` is a base class consumers extend, so the failure would surface in their project, not here. Mutation-checked: `current_route_match` ↔ `language_manager` is caught by PHP itself, `drupal_kit.entity_helper` → `drupal_kit.media_array_builder` **only** by the new test.
+
+  `ResizerFocalPointKernelTest` carried a docblock saying the non-empty-hash branch was "left as a follow-up". It is followed up. The hash is the cache-busting mechanism: Drupal keys a derivative by image style name, so without the suffix an editor who moves the focal point is served the old crop until someone flushes image styles — a silent regression that reads as a caching problem. The tests assert behaviour rather than recomputing `md5()` against the implementation: no crop means no suffix, two positions give two ids, the same position gives the same id, all read off the generated URL rather than by reflecting into the private helper.
+
 ## [3.1.0] — 2026-09-23
 
 ### Added
