@@ -52,15 +52,12 @@ class ResizerFocalPointKernelTest extends ResizerKernelTestBase {
     // calls to succeed. Install the module's default config.
     $this->installConfig(['focal_point']);
 
-    // Reset Resizer's static format-detection cache so this test's
-    // toolkit-detection runs fresh rather than reusing whatever the
-    // earlier variant-test process recorded. Without this, the
-    // getOutputFormat body inside this test class never runs.
-    $reflection = new \ReflectionClass(Resizer::class);
-    $checked = $reflection->getProperty('formatChecked');
-    $checked->setValue(NULL, FALSE);
-    $format = $reflection->getProperty('outputFormat');
-    $format->setValue(NULL, NULL);
+    // No cache reset here any more. The format-detection cache used to be
+    // static, so one test's answer leaked into the next and this setUp had
+    // to clear it by reflection — a test reaching into private static state
+    // to keep the next test honest. Since #150 the cache is instance state
+    // on the drupal_kit.resizer service, and a kernel test gets a fresh
+    // container, so it starts clean by construction.
   }
 
   /**

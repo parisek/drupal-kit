@@ -55,11 +55,18 @@ class TwigExtension extends AbstractExtension {
    *   The language manager.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The translation service.
+   * @param \Drupal\drupal_kit\Services\Resizer|null $resizer
+   *   The resizer service. Trailing and optional, which RELEASING.md
+   *   classifies as MINOR; the container always supplies it.
    */
   public function __construct(
     DateFormatterInterface $date_formatter,
     LanguageManagerInterface $language_manager,
     TranslationInterface $string_translation,
+    // Trailing and optional, which RELEASING.md § Public API surface
+    // classifies as MINOR. The container always supplies it; the default
+    // keeps a consumer that constructs this class by hand working.
+    protected ?Resizer $resizer = NULL,
   ) {
     $this->dateFormatter = $date_formatter;
     $this->languageManager = $language_manager;
@@ -403,12 +410,27 @@ class TwigExtension extends AbstractExtension {
   /**
    * Generate resizer formats.
    *
-   * Direct static call — Resizer is a static utility (no instance state,
-   * no constructor deps). The `drupal_kit.resizer` service entry
-   * was removed in v1.4.0.
+   * Goes through the drupal_kit.resizer service. Resizer stopped being a
+   * pure static utility the moment it grew a format-detection cache (#150),
+   * and a static cache is why a kernel test had to reset private state by
+   * reflection between cases.
+   *
+   * No longer static: it was declared static and registered as
+   * `[$this, 'getResizer']`, so PHP was already calling it on an instance.
+   * The declaration simply disagreed with the call site.
+   *
+   * The NULL branch is for a consumer that built this class by hand
+   * before the constructor gained its fourth argument. The container
+   * always supplies the service, so that branch is unreachable through
+   * normal wiring.
    */
-  public static function getResizer($image, ...$variants) {
-    return Resizer::resizer($image, $variants);
+  public function getResizer($image, ...$variants) {
+    // Through the static facade when absent, not \Drupal::service(): the
+    // facade is the single sanctioned static reach in this package, and
+    // routing the fallback through it keeps that true.
+    return $this->resizer === NULL
+      ? Resizer::resizer($image, $variants)
+      : $this->resizer->resize($image, $variants);
   }
 
   /**

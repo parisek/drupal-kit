@@ -4,6 +4,23 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+- **`Resizer` is a service** (#150) — registered as `drupal_kit.resizer`, with the seven `\Drupal::` reaches replaced by injected dependencies. `Resizer::resizer()` stays as a thin static facade, so this is a MINOR and no consumer changes.
+
+  #44 removed the service registration with the reason that "the class has no instance state". That stopped being true when the class grew a format-detection cache: `ResizerFocalPointKernelTest::setUp()` reset `$outputFormat` and `$formatChecked` **by reflection**, with a comment saying that without it "the getOutputFormat body inside this test class never runs". A test reaching into private static state to keep the next test honest was the evidence, sitting in the repository the whole time. Those nine lines are gone — a kernel test gets a fresh container, so the cache starts clean by construction.
+
+  Measured before touching anything: nothing calls the static entry point. One caller inside the kit (`TwigExtension`), **zero** PHP callers across `drupal-base`, `htdvere` and `proficio` — all three reach it through the `|resizer` Twig filter. So the facade costs one delegation and keeps a promise `RELEASING.md` makes.
+
+  `focal_point.manager` is injected with `@?` and the hash helper now guards on **having received the service** rather than on `moduleExists()`. The same correction #137 made in `Requirements`, for the same reason: one asks whether the container knows the module, the other whether this object holds the thing it is about to call.
+
+  `TwigExtension` takes the service as a **trailing optional** constructor argument, which `RELEASING.md` § Public API surface classifies as MINOR. `getResizer()` also stops being declared `static` — it was registered as `[$this, 'getResizer']`, so PHP was already calling it on an instance and the declaration simply disagreed with the call site.
+
+  Two behaviour changes on the facade, worth stating plainly. It fetches the service before the input guards run, so `Resizer::resizer([], [])` now needs a container where it used to answer without one. And it needs **this module installed**: the old body reached only core services, so the class worked in any container where it autoloaded — a kernel test listing just `system`, `file` and `image`, for instance. An uninstalled `drupal_kit` now raises `ServiceNotFoundException`. Neither matters in production, where both hold by definition; the second was found by review, not by me.
+
+  The unit tests build the service instead of calling the facade, which is what a unit test should have been doing anyway.
+
+  `TwigExtensionTest` now asserts delegation. The old case passed an SVG and checked the single-item list came back unchanged, which exercised `Resizer`'s passthrough and said nothing about `TwigExtension`: a method that ignored its arguments and returned the input would have passed too.
+
 ### Added
 - **`DisplayBase::create()` and the focal-point hash have tests** (#148) — both were gaps the tracker did not record, and both were self-concealing.
 
