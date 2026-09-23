@@ -15,7 +15,9 @@ All notable changes to this project are documented in this file. The format foll
 
   `TwigExtension` takes the service as a **trailing optional** constructor argument, which `RELEASING.md` § Public API surface classifies as MINOR. `getResizer()` also stops being declared `static` — it was registered as `[$this, 'getResizer']`, so PHP was already calling it on an instance and the declaration simply disagreed with the call site.
 
-  One behaviour change worth stating plainly: the facade fetches the service before the input guards run, so `Resizer::resizer([], [])` now needs a container where it used to answer without one. Production always has a container. A unit test is exactly the caller that does not, which is why the unit tests build the service instead — what a unit test should have been doing anyway.
+  Two behaviour changes on the facade, worth stating plainly. It fetches the service before the input guards run, so `Resizer::resizer([], [])` now needs a container where it used to answer without one. And it needs **this module installed**: the old body reached only core services, so the class worked in any container where it autoloaded — a kernel test listing just `system`, `file` and `image`, for instance. An uninstalled `drupal_kit` now raises `ServiceNotFoundException`. Neither matters in production, where both hold by definition; the second was found by review, not by me.
+
+  The unit tests build the service instead of calling the facade, which is what a unit test should have been doing anyway.
 
   `TwigExtensionTest` now asserts delegation. The old case passed an SVG and checked the single-item list came back unchanged, which exercised `Resizer`'s passthrough and said nothing about `TwigExtension`: a method that ignored its arguments and returned the input would have passed too.
 

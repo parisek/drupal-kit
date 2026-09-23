@@ -234,9 +234,10 @@ class ResizerTest extends ResizerKernelTestBase {
    * variant-producing test in this class invokes getOutputFormat and
    * getFocalPointHash transitively; the explicit covers entries on all
    * such tests credit those private helpers regardless of which test
-   * runs first (PHPUnit does not guarantee a deterministic order, and
-   * getOutputFormat's static-cache early-return means only the first
-   * caller in the process hits the full toolkit-detection body).
+   * runs first. The ordering caveat that used to live here is gone with
+   * the static cache: getOutputFormat() now caches on the service
+   * instance, and a kernel test gets a fresh container, so every test
+   * runs the full toolkit-detection body.
    */
   public function testLocalFileProducesVariantsViaImageStyle(): void {
     $this->createTestPngFile('local.png');
