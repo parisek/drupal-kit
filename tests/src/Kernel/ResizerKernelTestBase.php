@@ -8,10 +8,10 @@ use Drupal\file\Entity\File;
 /**
  * Shared base for Resizer kernel tests.
  *
- * Resizer::resizer is a static method, so tests don't fetch it from
- * the container — but the implementation calls \Drupal::config(),
- * \Drupal::moduleHandler(), and reads files from public://, so a real
- * kernel container is required.
+ * Resizer is the drupal_kit.resizer service since #150. These tests
+ * still reach it through the static Resizer::resizer() facade, which is
+ * the entry point consumers are documented to use, and that facade needs
+ * a real container. The implementation also reads files from public://.
  *
  * @group drupal_kit
  */

@@ -153,6 +153,15 @@ class Resizer {
    * the one place left that reaches the container statically, and it does
    * so exactly once per call rather than seven times.
    *
+   * Two preconditions this gained, both found by review rather than by
+   * me. It needs a container at all, before the input guards run — so
+   * `Resizer::resizer([], [])`, which used to answer on its own, no
+   * longer does. And it needs THIS MODULE installed: the old body reached
+   * only core services, so the class worked in any container where it
+   * autoloaded, including a kernel test listing just system, file and
+   * image. Now an uninstalled drupal_kit means ServiceNotFoundException.
+   * Neither matters in production, where both hold by definition.
+   *
    * @param array|mixed $images
    *   See resize().
    * @param array<int|string, mixed> $variants

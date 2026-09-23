@@ -419,9 +419,10 @@ class TwigExtension extends AbstractExtension {
    * `[$this, 'getResizer']`, so PHP was already calling it on an instance.
    * The declaration simply disagreed with the call site.
    *
-   * The `??` is for a consumer that built this class by hand before the
-   * constructor gained its fourth argument. The container always supplies
-   * the service.
+   * The NULL branch is for a consumer that built this class by hand
+   * before the constructor gained its fourth argument. The container
+   * always supplies the service, so that branch is unreachable through
+   * normal wiring.
    */
   public function getResizer($image, ...$variants) {
     // Through the static facade when absent, not \Drupal::service(): the
