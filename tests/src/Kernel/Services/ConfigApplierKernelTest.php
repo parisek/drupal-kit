@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
+use Drupal\node\Entity\Node;
 use Drupal\Core\Config\FileStorage;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\drupal_kit\Services\ConfigApplier;
@@ -29,8 +30,14 @@ final class ConfigApplierKernelTest extends KernelTestBase {
    */
   protected static $modules = ['drupal_kit', 'system', 'user', 'field', 'text', 'node'];
 
+  /**
+   * The ConfigApplier service under test.
+   */
   protected ConfigApplier $configApplier;
 
+  /**
+   * Absolute path to tests/fixtures/config.
+   */
   protected string $fixtureDir;
 
   /**
@@ -48,7 +55,10 @@ final class ConfigApplierKernelTest extends KernelTestBase {
   }
 
   /**
+   * The three fixture config names used by most test methods.
+   *
    * @return string[]
+   *   The config names.
    */
   private function names(): array {
     return [
@@ -58,6 +68,9 @@ final class ConfigApplierKernelTest extends KernelTestBase {
     ];
   }
 
+  /**
+   * Create in dependency order.
+   */
   public function testCreateInDependencyOrder(): void {
     $plan = $this->configApplier->apply($this->fixtureDir, $this->names());
 
@@ -75,7 +88,7 @@ final class ConfigApplierKernelTest extends KernelTestBase {
 
     // The field storage table exists and is usable — the point of going
     // through the entity API instead of raw config save().
-    $node = \Drupal\node\Entity\Node::create([
+    $node = Node::create([
       'type' => 'kit_page',
       'title' => 'Hi',
       'field_kit_teaser' => 'Teaser text',
@@ -84,6 +97,9 @@ final class ConfigApplierKernelTest extends KernelTestBase {
     $this->assertSame('Teaser text', $node->get('field_kit_teaser')->value);
   }
 
+  /**
+   * Idempotent re run skips existing.
+   */
   public function testIdempotentReRunSkipsExisting(): void {
     $this->configApplier->apply($this->fixtureDir, $this->names());
     $plan = $this->configApplier->apply($this->fixtureDir, $this->names());
@@ -93,6 +109,9 @@ final class ConfigApplierKernelTest extends KernelTestBase {
     }
   }
 
+  /**
+   * Create only mode skips without update list.
+   */
   public function testCreateOnlyModeSkipsWithoutUpdateList(): void {
     $this->configApplier->apply($this->fixtureDir, ['node.type.kit_page']);
 
@@ -111,6 +130,9 @@ final class ConfigApplierKernelTest extends KernelTestBase {
     $this->assertSame('Changed locally', $reloaded->label());
   }
 
+  /**
+   * Update guard refuses on hash mismatch.
+   */
   public function testUpdateGuardRefusesOnHashMismatch(): void {
     $this->configApplier->apply($this->fixtureDir, ['node.type.kit_page']);
 
@@ -133,6 +155,9 @@ final class ConfigApplierKernelTest extends KernelTestBase {
     $this->assertSame('Changed by a production editor', $reloaded->label());
   }
 
+  /**
+   * Update applies when hash matches active value.
+   */
   public function testUpdateAppliesWhenHashMatchesActiveValue(): void {
     $this->configApplier->apply($this->fixtureDir, ['node.type.kit_page']);
 
@@ -168,6 +193,9 @@ final class ConfigApplierKernelTest extends KernelTestBase {
     $this->assertSame('Renamed Upstream', $reloaded->label());
   }
 
+  /**
+   * Missing dependency is reported as error.
+   */
   public function testMissingDependencyIsReportedAsError(): void {
     $plan = $this->configApplier->plan($this->fixtureDir, ['field.field.node.kit_page.field_kit_teaser']);
 
@@ -176,6 +204,9 @@ final class ConfigApplierKernelTest extends KernelTestBase {
     $this->assertNull(FieldConfig::loadByName('node', 'kit_page', 'field_kit_teaser'));
   }
 
+  /**
+   * Dry run changes nothing.
+   */
   public function testDryRunChangesNothing(): void {
     $plan = $this->configApplier->apply($this->fixtureDir, $this->names(), dryRun: TRUE);
 

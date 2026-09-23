@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\drupal_kit\Services;
 
+use Drupal\Core\Config\Entity\ConfigEntityInterface;
+use Drupal\Core\Config\Entity\ConfigEntityStorageInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\ConfigManagerInterface;
 use Drupal\Core\Config\Entity\ConfigDependencyManager;
@@ -139,7 +141,11 @@ class ConfigApplier {
           continue;
         }
         if (!in_array($name, $updateAllowed, TRUE)) {
-          $plan[] = ['name' => $name, 'action' => self::ACTION_SKIP_EXISTS, 'reason' => 'already exists, not in --update list'];
+          $plan[] = [
+            'name' => $name,
+            'action' => self::ACTION_SKIP_EXISTS,
+            'reason' => 'already exists, not in --update list',
+          ];
           continue;
         }
         if (isset($expectedHashes[$name])) {
@@ -167,17 +173,27 @@ class ConfigApplier {
    * UPDATE, if listed) on the next run rather than failing. Safe to call
    * from a hook_post_update_NAME() on every deploy.
    *
+   * @param string $configDir
+   *   Directory of exported config to read from.
+   * @param string[] $names
+   *   Explicit config object names to consider.
+   * @param string[] $updateAllowed
+   *   Names allowed to move from CREATE-only reasoning into UPDATE.
+   * @param array<string, string> $expectedHashes
+   *   Optional name => sha256 hash of the active value, guarding updates.
+   * @param bool $dryRun
+   *   TRUE to return the plan without applying it.
+   *
    * @return array<int, array{name: string, action: string, reason: string}>
    *   The plan that was executed (or would have been, for a dry run).
    */
-  /**
-   * @param string[] $names
-   * @param string[] $updateAllowed
-   * @param array<string, string> $expectedHashes
-   *
-   * @return array<int, array{name: string, action: string, reason: string}>
-   */
-  public function apply(string $configDir, array $names, array $updateAllowed = [], array $expectedHashes = [], bool $dryRun = FALSE): array {
+  public function apply(
+    string $configDir,
+    array $names,
+    array $updateAllowed = [],
+    array $expectedHashes = [],
+    bool $dryRun = FALSE,
+  ): array {
     $plan = $this->plan($configDir, $names, $updateAllowed, $expectedHashes);
     if ($dryRun) {
       return $plan;
@@ -211,7 +227,7 @@ class ConfigApplier {
     }
 
     $storage = $this->entityTypeManager->getStorage($entityType);
-    if (!$storage instanceof \Drupal\Core\Config\Entity\ConfigEntityStorageInterface) {
+    if (!$storage instanceof ConfigEntityStorageInterface) {
       throw new \RuntimeException("Entity type $entityType is not config entity storage.");
     }
 
@@ -222,7 +238,7 @@ class ConfigApplier {
     }
 
     $entity = $this->configManager->loadConfigEntityByName($name);
-    if (!$entity instanceof \Drupal\Core\Config\Entity\ConfigEntityInterface) {
+    if (!$entity instanceof ConfigEntityInterface) {
       throw new \RuntimeException("Config entity $name disappeared between planning and apply.");
     }
     $entity = $storage->updateFromStorageRecord($entity, $record);
@@ -236,6 +252,7 @@ class ConfigApplier {
    * $expectedHashes map compute it identically to the internal guard.
    *
    * @param array<string, mixed> $data
+   *   The decoded config value to hash.
    */
   public function hash(array $data): string {
     return hash('sha256', serialize($data));

@@ -35,6 +35,7 @@ final class ConfigApplierCommands extends DrushCommands {
    * for.
    *
    * @param array<string, mixed> $options
+   *   Drush command options, keyed by option name.
    */
   #[CLI\Command(name: 'kit:config-apply', aliases: ['kca'])]
   #[CLI\Option(name: 'config-dir', description: 'Directory to read config from. Defaults to config/sync.')]
@@ -80,14 +81,20 @@ final class ConfigApplierCommands extends DrushCommands {
   }
 
   /**
+   * Splits a comma-separated option value into trimmed, non-empty items.
+   *
    * @return string[]
+   *   The trimmed, non-empty items.
    */
   private function splitList(string $value): array {
     return array_values(array_filter(array_map('trim', explode(',', $value))));
   }
 
   /**
+   * Reads config names from a list file, one per line, `#` comments allowed.
+   *
    * @return string[]
+   *   The config names found in the file.
    */
   private function readNamesFile(string $path): array {
     if (!is_readable($path)) {
@@ -106,9 +113,13 @@ final class ConfigApplierCommands extends DrushCommands {
   }
 
   /**
+   * Parses repeatable/comma-separated name=hash pairs into a name-keyed map.
+   *
    * @param string|array<int, string> $option
+   *   The raw --expect-hash option value(s).
    *
    * @return array<string, string>
+   *   Config name => expected hash.
    */
   private function parseHashOptions(string|array $option): array {
     $pairs = is_array($option) ? $option : $this->splitList($option);
