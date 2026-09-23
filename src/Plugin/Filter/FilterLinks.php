@@ -4,21 +4,23 @@ namespace Drupal\drupal_kit\Plugin\Filter;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\filter\Attribute\Filter;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
+use Drupal\filter\Plugin\FilterInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Provides a filter to manage link targets.
- *
- * @Filter(
- *   id = "filter_links",
- *   title = @Translation("Links Filter"),
- *   description = @Translation("Remove target blank from internal links and add them to external links"),
- *   type = Drupal\filter\Plugin\FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
- * )
  */
+#[Filter(
+  id: "filter_links",
+  title: new TranslatableMarkup("Links Filter"),
+  description: new TranslatableMarkup("Remove target blank from internal links and add them to external links"),
+  type: FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
+)]
 class FilterLinks extends FilterBase implements ContainerFactoryPluginInterface {
 
   public function __construct(

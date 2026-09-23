@@ -3,19 +3,21 @@
 namespace Drupal\drupal_kit\Plugin\Filter;
 
 use Drupal\Component\Utility\Html;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\filter\Attribute\Filter;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
+use Drupal\filter\Plugin\FilterInterface;
 
 /**
  * Provides a filter to format responsive images with lazy loading.
- *
- * @Filter(
- *   id = "filter_image",
- *   title = @Translation("Image Filter"),
- *   description = @Translation("Help format responsive images with native lazyloading"),
- *   type = Drupal\filter\Plugin\FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
- * )
  */
+#[Filter(
+  id: "filter_image",
+  title: new TranslatableMarkup("Image Filter"),
+  description: new TranslatableMarkup("Help format responsive images with native lazyloading"),
+  type: FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
+)]
 class FilterImage extends FilterBase {
 
   /**

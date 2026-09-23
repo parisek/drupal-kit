@@ -2,20 +2,22 @@
 
 namespace Drupal\drupal_kit\Plugin\Filter;
 
+use Drupal\Component\Utility\Html;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\filter\Attribute\Filter;
 use Drupal\filter\FilterProcessResult;
 use Drupal\filter\Plugin\FilterBase;
-use Drupal\Component\Utility\Html;
+use Drupal\filter\Plugin\FilterInterface;
 
 /**
  * Provides a filter to embed YouTube videos.
- *
- * @Filter(
- *   id = "filter_youtube",
- *   title = @Translation("Youtube Filter"),
- *   description = @Translation("Embed youtube"),
- *   type = Drupal\filter\Plugin\FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
- * )
  */
+#[Filter(
+  id: "filter_youtube",
+  title: new TranslatableMarkup("Youtube Filter"),
+  description: new TranslatableMarkup("Embed youtube"),
+  type: FilterInterface::TYPE_TRANSFORM_IRREVERSIBLE,
+)]
 class FilterYoutube extends FilterBase {
 
   /**
