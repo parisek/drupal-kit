@@ -42,13 +42,17 @@ All notable changes to this project are documented in this file. The format foll
 
 **Upgrading from 2.x.** Constraint only for most consumers: `composer require parisek/drupal-kit:^3.0`. One breaking change is visible on a site, and it needs one command.
 
-`hook_file_download()` now returns `-1` for an anonymous visitor instead of redirecting to `/user/login` itself. Core answers that with a 403, so a site that serves private files needs a 403 handler:
+`hook_file_download()` now returns `-1` for an anonymous visitor instead of redirecting to `/user/login` itself. Core answers that with a 403, so a site that serves private files needs something that turns that 403 into a way to log in. Any one of these is enough:
 
-```
-composer require drupal/r4032login && drush en -y r4032login
-```
+- `system.site:page.403` set to `/user/login`. Core renders the login form as the 403 page and passes `destination` into that subrequest (`DefaultExceptionHtmlSubscriber::makeSubrequest()`), so the visitor lands on the file after logging in.
+- Webform's `file.file_private_redirect: true`, for files under `private://webform/`. Webform redirects to `/user/login?destination=…` itself (`WebformDefaultExceptionHtmlSubscriber::on403RedirectPrivateFileAccess()`).
+- `drupal/r4032login`, which redirects every anonymous 403 to the login page with `destination`:
 
-Measured across the consuming projects at release time: `drupal-base` and `htdvere` use private files and need the module; `proficio` already had it enabled. The replacement is better than what it removes — `r4032login` preserves `destination`, so a visitor returns to the page they asked for after logging in, which the old redirect did not do.
+  ```
+  composer require drupal/r4032login && drush en -y r4032login
+  ```
+
+Check the site before adding the module. Measured across the consuming projects: `proficio` already had `r4032login` enabled. `htdvere` does **not** need it: all 501 of its private files are Webform uploads, `file_private_redirect` is on, and `page.403` is `/user/login` — tested on 2026-09-24, anonymous gets a 302 to `/user/login?destination=…` and lands on the file after login. `drupal-base` has none of the three (`page.403` is empty), so it needs one. Whichever handler a site uses, the result is better than what 2.x did: the old redirect dropped `destination`, so a visitor never got back to the file. (Corrected 2026-09-24: the release text said `htdvere` needs the module.)
 
 Everything else is invisible to a consumer: the Drupal 10 floor, the `#[Hook]` migration, `hook_runtime_requirements`, the `FeatureFlags` service and the `#[Filter]` attributes all keep their existing behaviour and public names.
 
@@ -59,7 +63,7 @@ Everything else is invisible to a consumer: the Drupal 10 floor, the `#[Hook]` m
 
   **The login redirect is not this library's decision**, and the measurement said so plainly. What a site's 403 does belongs to the site, `drupal/r4032login` already does it properly with `destination` preserved, and `proficio` was already running that module while this hook redirected from underneath it. So this is a deletion from the library rather than an exception subscriber written, tested and maintained here.
 
-  **Upgrade note.** A site that uses private files and does not add `drupal/r4032login` will show an anonymous visitor "Access denied" where it previously showed the login form. `drupal-base` and `htdvere` both use private files and both need the module; `proficio` already has it. `system.site:page.403` is empty on `drupal-base`, so there is no fallback there today.
+  **Upgrade note.** A site that uses private files and has no 403 handler will show an anonymous visitor "Access denied" where it previously showed the login form. A handler is any of: `system.site:page.403` = `/user/login`, Webform's `file_private_redirect` (Webform uploads only), or `drupal/r4032login` — see the upgrade section above. `proficio` has `r4032login`; `htdvere` is covered by `page.403` and Webform without it; `drupal-base` has none, because `system.site:page.403` is empty there.
 
   The hook also gets its first test. The old shape could only have been checked as a side effect on a global response, which is part of why none existed. Three kernel cases, mutation-checked, and the interesting one is that an authenticated user must produce an **empty** result array rather than `[NULL]`: `ModuleHandler::invokeAll()` guards each result with `isset()`, so NULL leaves no trace in the list core scans. Returning `0` instead would *grant* access — it survives `isset()`, `0 == -1` is false so core does not deny, and `count($headers)` then makes `FileDownloadController` serve the private file with a nonsense header.
 - **The remaining core deprecations are cleared, and CI can finally fail on one** (#142).
