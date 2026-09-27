@@ -36,7 +36,7 @@ drush en drupal_kit
 - `drupal_kit.typography_twig_extension` — provides the `|typography` Twig filter; delegates to [`parisek/twig-typography`](https://github.com/parisek/twig-typography) and resolves typography config from `{active_theme}/static/typography.yml`.
 - `drupal_kit.route_subscriber` — alters routes for entity access edge cases.
 - `drupal_kit.config_applier` (`Drupal\drupal_kit\Services\ConfigApplier`) — creates (and, opt-in, updates) an explicit list of config objects through the entity/config API, in dependency order. See [Applying config on deploy](#applying-config-on-deploy).
-- `drupal_kit.menu_locations` (`Drupal\drupal_kit\Services\MenuLocations`) — resolves a theme-declared menu "slot" (`menu_locations:` in `<theme>.info.yml`) to the menu assigned to it per language, and returns its items in `EntityHelper::getMenu()`'s shape. Assignment happens on the admin form at `/admin/structure/menu/locations`. See [Menu locations](#menu-locations).
+- `drupal_kit.menu_locations` (`Drupal\drupal_kit\Services\MenuLocations`) — resolves a theme-declared menu "slot" (`menu_locations:` in `<theme>.info.yml`) to the menu assigned to it, and returns its items in `EntityHelper::getMenu()`'s shape. One menu per slot in the default language, assigned on the admin form at `/admin/structure/menu/locations`; a genuinely different menu per language is optional, through Drupal's native `config_translation` module. See [Menu locations](#menu-locations).
 
 **Base classes**
 
@@ -184,17 +184,25 @@ block placement carried no visual meaning — the region was never printed —
 so the block was a menu picker wearing a block. `MenuLocations` is that
 picker, without the block.
 
-**One menu per slot, not one menu per slot per language.** A menu link
+**One menu per slot in the default language.** A menu link
 (`menu_link_content`) is itself content-translatable, and
 `EntityHelper::getMenu()` already returns the current content language's
 translation — that is how every other menu-driven part of this module has
-always worked. A separate, config-level "menu per language" assignment is a
-second translation mechanism sitting next to the real one, and the two
-drift: a real example from a downstream theme carried `main-en` with a
-footer address translated as "ARKERO, DE", while `main`'s own German
-translation read "ARKERO GmbH, DE" — two independent copies of the same
-fact, disagreeing. Point the slot at ONE menu; translate that menu's links
-with content translation, the same as any other translatable content.
+always worked, and it is enough for most sites: one menu, its links
+translated. Point the slot at that one menu; translate its links with
+content translation, the same as any other translatable content, and leave
+the per-language assignment below alone entirely.
+
+A site that genuinely needs a DIFFERENT menu per language — not just
+different translated links in the same menu — gets that through Drupal's
+own, optional **config_translation** module (see
+[Per-language menus](#per-language-menus-optional) below), never through a
+second key bolted onto this config. A config-level "menu per language"
+layer sitting next to content translation is a second translation
+mechanism for the same fact, and the two drift: a real example from a
+downstream theme carried `main-en` with a footer address translated as
+"ARKERO, DE", while `main`'s own German translation read "ARKERO GmbH,
+DE" — two independent copies of the same fact, disagreeing.
 
 ### Declaring slots
 
@@ -250,9 +258,51 @@ locations:
     footer_menu1: footer-company
 ```
 
-An unassigned slot resolves to `NULL` and `items()` returns an empty array —
-there is no per-language fallback logic to reason about, because there is no
-per-language dimension in this config at all.
+An unassigned slot resolves to `NULL` and `items()` returns an empty array.
+
+### Per-language menus (optional)
+
+Install [`config_translation`](https://www.drupal.org/docs/8/core/modules/config-translation)
+(a core module, `drush en config_translation`) and a **Translate** local
+task appears next to the menu locations form's own tabs. It lists every
+enabled language; opening one shows a `<select>` per slot, pre-filled with
+the default-language assignment, offering every menu on the site plus
+"- None -" — the exact same choice the default-language form makes, on a
+per-language override.
+
+This is Drupal's own, native mechanism for translating configuration
+(`config_translation`'s `ConfigTranslationFormBase`), not a bespoke
+per-language field of this module's own — `config/schema/drupal_kit.schema.yml`
+marks the slot value `translatable: true` with a `form_element_class`
+(`Drupal\drupal_kit\FormElement\MenuSelect`) that renders as the same kind
+of `<select>` the default-language form uses, instead of
+`config_translation`'s own default (a plain textfield, wrong for a menu
+machine name a translator should pick from a list). Saved as a language
+config override — `language.<langcode>/drupal_kit.menu_locations` in config
+sync terms — never as a second key in `drupal_kit.menu_locations` itself.
+
+`config_translation` stays entirely **optional**. Nothing in `MenuLocations`
+checks whether it is installed or behaves differently based on it —
+`menuName()` and `items()` read the assignment through the injected config
+factory exactly like any other config value a project might translate, and
+`\Drupal\Core\Config\ConfigFactory::get()` transparently returns the
+current language's override when one exists (via `language` module's own
+`LanguageConfigFactoryOverride`) and the plain default-language value when
+none does. A site with `config_translation` never installed sees exactly
+that second case, always — no code path here treats its absence as
+anything other than "no override exists".
+
+One subtlety worth knowing: that override follows the **interface**
+language (`languages:language_interface`), not the content language this
+module's menu **items** vary by — core's own `LanguageConfigFactoryOverride`
+declares that context, and it is set from the interface language on every
+request. On a site like arkero, where content and interface language are
+both negotiated from the same URL path prefix, the two are always equal in
+practice and this distinction is invisible. A site where they can diverge
+(a multilingual admin UI over otherwise-monolingual content, for instance)
+would see the slot **assignment** follow the interface language while the
+resolved menu's **items** still follow the content language — two
+different translation mechanisms, each answering its own question.
 
 ### Reading a slot from a preprocess function
 
