@@ -8,6 +8,12 @@ parameters:
         # not a shrug: the existing 300-odd findings are mostly mock-typing
         # friction, and what matters is that the number can no longer grow.
         - tests
+        # The module has no .module file (the #[Hook] migration removed it),
+        # so this is the first root-level procedural file — without listing
+        # it, PHPStan never sees the function declaration and reports every
+        # call to it (from the kernel test that requires the file directly)
+        # as undefined.
+        - drupal_kit.post_update.php
     # Measured rather than assumed, 2026-09-22: switching this on reports
     # exactly two findings, both in Resizer, and both would be wrong to
     # "fix". `getDefaultToolkit()` and focal_point's `getCropEntity()` are
