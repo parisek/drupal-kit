@@ -1,0 +1,14 @@
+# Registers drupal_kit.menu_locations with config_translation, so a
+# "Translate" local task appears on /admin/structure/menu/locations once
+# that module is installed. This file is entirely inert without
+# config_translation — nothing else in the module reads it, and
+# config_translation itself only discovers *.config_translation.yml files
+# when it is enabled. See MenuLocations' own class docblock for the model
+# this wires up (native config_translation, not a bespoke per-language
+# field), and config/schema/drupal_kit.schema.yml for the leaf type that
+# makes this config actually have something to translate.
+drupal_kit.menu_locations:
+  title: 'Menu locations'
+  base_route_name: drupal_kit.menu_locations
+  names:
+    - drupal_kit.menu_locations

@@ -83,5 +83,17 @@ parameters:
             identifier: missingType.iterableValue
             path: src/Form/MenuLocationsForm.php
 
+        # \Drupal::entityTypeManager() inside MenuSelect::getTranslationElement().
+        # config_translation's own ElementInterface::create() takes only the
+        # schema element being translated — no container, no constructor
+        # arguments a service definition could inject. Core's own FormElement
+        # classes (DateFormat, TextFormat) reach \Drupal::service() from
+        # inside this exact method for the same reason; this class is under
+        # the same interface constraint they are.
+        -
+            message: '#^\\Drupal calls should be avoided in classes, use dependency injection instead$#'
+            identifier: globalDrupalDependencyInjection.useDependencyInjection
+            path: src/FormElement/MenuSelect.php
+
 includes:
     - phpstan-baseline.neon

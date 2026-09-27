@@ -22,17 +22,53 @@ use Drupal\Core\Theme\ThemeManagerInterface;
  * region only to pick a menu is a menu picker wearing a block, not a real
  * block.
  *
- * One menu per slot, not one menu per slot per language. Translation is
- * `menu_link_content`'s own job: a menu link is a content-translatable
- * entity, and `EntityHelper::getMenu()` already returns the translation for
- * the current content language — that is how every other menu-driven part
- * of this module has always worked. A menu-per-language assignment is a
- * second translation mechanism sitting next to the real one, and the two
- * drift: arkero's own `header_menu` config carried `main-en` with the
- * footer address translated as "ARKERO, DE" alongside `main`'s own German
- * translation reading "ARKERO GmbH, DE" — two independent copies of the
- * same fact, disagreeing. One menu, translated in place, cannot drift from
- * itself.
+ * The DEFAULT-language assignment is one menu per slot, not one menu per
+ * slot per language — a menu link (`menu_link_content`) is itself
+ * content-translatable, and `EntityHelper::getMenu()` already returns the
+ * translation for the current content language, which is how every other
+ * menu-driven part of this module has always worked. A menu-per-language
+ * ASSIGNMENT (as opposed to a menu-per-language CONTENT) is a second
+ * translation mechanism sitting next to the real one, and the two drift: a
+ * downstream theme's own `header_menu` config once carried `main-en` with
+ * the footer address translated as "ARKERO, DE" alongside `main`'s own
+ * German translation reading "ARKERO GmbH, DE" — two independent copies of
+ * the same fact, disagreeing.
+ *
+ * A site that genuinely needs a DIFFERENT menu per language — not just
+ * different translated links in the same menu — gets that through
+ * `config_translation`'s native, optional per-language config override, not
+ * through a second key in this config's own shape. `config/schema/
+ * drupal_kit.schema.yml` marks the slot's value `translatable: true` with a
+ * `form_element_class` (`\Drupal\drupal_kit\FormElement\MenuSelect`) that
+ * renders as a menu SELECT on the "Translate" tab config_translation adds
+ * to the menu locations form (via `drupal_kit.config_translation.yml`) once
+ * that module is installed. `menuName()` and `items()` read the assignment
+ * through the injected config factory, exactly like any other config value
+ * a project might translate — `\Drupal\Core\Config\ConfigFactory::get()`
+ * transparently applies a matching language override (if one exists) via
+ * `LanguageConfigFactoryOverride`, with no special-casing needed here.
+ *
+ * That override follows the **interface** language
+ * (`languages:language_interface`), not the content language this module's
+ * menu ITEMS vary by — `LanguageConfigFactoryOverride::getCacheableMetadata()`
+ * declares that context, and `LanguageRequestSubscriber` sets the override
+ * language from `getCurrentLanguage()`'s default argument
+ * (`LanguageInterface::TYPE_INTERFACE`) on every request. On a site like
+ * arkero, where content and interface language are both negotiated from the
+ * same URL path prefix, the two are always equal in practice and this
+ * distinction is invisible; a site where they can diverge (a multilingual
+ * admin UI over monolingual content, for instance) would see the SLOT
+ * ASSIGNMENT follow the interface language while the resolved menu's ITEMS
+ * still follow the content language, because those are two different
+ * translation mechanisms answering two different questions.
+ *
+ * `config_translation` stays entirely OPTIONAL. Nothing in this class
+ * requires it, checks for it, or behaves differently based on whether it is
+ * installed — `ConfigFactory::get()` returns the plain, unoverridden config
+ * when no language override exists, which is exactly the default-language
+ * behavior a site without `config_translation` gets. `MenuSelect` is loaded
+ * only by `config_translation`'s own code, and only when that module scans
+ * for a `form_element_class` — see its own class docblock.
  *
  * Assignment lives in one config object, `drupal_kit.menu_locations`, keyed
  * `locations.<theme>.<slot>`. A theme is included in the key because two
@@ -70,21 +106,33 @@ class MenuLocations {
   }
 
   /**
-   * The menu assigned to one slot.
+   * The menu assigned to one slot, in the current override language.
    *
    * @param string $slot
    *   The slot machine name, as declared by the theme.
    * @param string|null $theme
    *   The theme the slot belongs to. NULL reads the currently active theme.
+   * @param \Drupal\Core\Cache\CacheableMetadata|null $collected
+   *   Optional accumulator. When given, the config object's own cacheable
+   *   metadata — its `config:drupal_kit.menu_locations` tag, and
+   *   `languages:language_interface` when a config_translation override is
+   *   active for the current interface language — is added to it.
    *
    * @return string|null
    *   The assigned menu's machine name, or NULL when no menu is assigned.
    */
-  public function menuName(string $slot, ?string $theme = NULL): ?string {
+  public function menuName(string $slot, ?string $theme = NULL, ?CacheableMetadata $collected = NULL): ?string {
     $theme ??= $this->activeTheme();
 
-    return $this->configFactory->get('drupal_kit.menu_locations')
-      ->get("locations.$theme.$slot") ?: NULL;
+    // ConfigFactory::get() transparently returns the current interface
+    // language's override when config_translation (or any other
+    // LanguageConfigFactoryOverride consumer) has one — no special-casing
+    // needed here. See this class's own docblock for why that is the
+    // INTERFACE language, not the content language items() varies by.
+    $config = $this->configFactory->get('drupal_kit.menu_locations');
+    $collected?->addCacheableDependency(CacheableMetadata::createFromObject($config));
+
+    return $config->get("locations.$theme.$slot") ?: NULL;
   }
 
   /**
@@ -127,15 +175,19 @@ class MenuLocations {
   public function items(string $slot, ?CacheableMetadata $collected = NULL, ?string $theme = NULL): array {
     $theme ??= $this->activeTheme();
 
-    // The assignment itself is cacheable data: a config change must
+    // The assignment itself is cacheable data: a config change (or a
+    // config_translation override being added, changed or removed) must
     // invalidate every render this method fed, not only the ones taken from
-    // a cache miss below. It does NOT vary by language — one menu per slot,
-    // no per-language assignment — the languages:language_content context
-    // below comes from the menu's OWN translation, not from this lookup.
-    $assignment_metadata = (new CacheableMetadata())
-      ->addCacheTags(['config:drupal_kit.menu_locations']);
-
-    $menu_name = $this->menuName($slot, $theme);
+    // a cache miss below. Sourced from the config object itself — via
+    // menuName()'s own $collected parameter — rather than hand-built, so it
+    // automatically carries languages:language_interface whenever a
+    // language-override PROVIDER is active at all (core's own
+    // LanguageConfigFactoryOverride adds that context based on whether an
+    // override LANGUAGE is set, not on whether THIS config happens to have
+    // an override yet — a translation could be added later), and nothing
+    // extra on a site with no such provider installed.
+    $assignment_metadata = new CacheableMetadata();
+    $menu_name = $this->menuName($slot, $theme, $assignment_metadata);
     if ($menu_name === NULL) {
       $collected?->addCacheableDependency($assignment_metadata);
       return [];
