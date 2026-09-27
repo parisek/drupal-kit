@@ -1,0 +1,11 @@
+drupal_kit.menu_locations:
+  path: '/admin/structure/menu/locations'
+  defaults:
+    _form: '\Drupal\drupal_kit\Form\MenuLocationsForm'
+    _title: 'Menu locations'
+  requirements:
+    # `administer menu` is core's own menu_ui permission — this form only
+    # assigns existing menus to slots, the same authority level as placing a
+    # menu block, so it reuses that permission instead of declaring a new
+    # one.
+    _permission: 'administer menu'
