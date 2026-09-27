@@ -131,3 +131,4 @@ services:
       - "@language_manager"
       - "@drupal_kit.entity_helper"
       - "@variation_cache_factory"
+      - "@theme.manager"

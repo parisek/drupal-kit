@@ -10,6 +10,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ThemeExtensionList;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
+use Drupal\Core\Theme\ThemeManagerInterface;
 
 /**
  * Resolves theme-declared "menu locations" to the menu that fills them.
@@ -36,15 +37,16 @@ class MenuLocations {
     protected LanguageManagerInterface $languageManager,
     protected EntityHelper $entityHelper,
     protected VariationCacheFactoryInterface $variationCacheFactory,
+    protected ThemeManagerInterface $themeManager,
   ) {}
 
   /**
    * The slots a theme declares, machine name => label.
    *
    * @param string|null $theme
-   *   The theme to read. NULL reads the site's default (frontend) theme —
-   *   the same theme a page render uses, regardless of which theme renders
-   *   the admin form calling this method.
+   *   The theme to read. NULL reads the currently active theme — the theme
+   *   negotiation picked for this request, which is not always the site's
+   *   default theme (an admin theme, a domain-negotiated theme, …).
    *
    * @return array<string, string>
    *   Slot machine name => human label, in declaration order. Empty when
@@ -52,7 +54,7 @@ class MenuLocations {
    *   no `regions` key has no regions.
    */
   public function slots(?string $theme = NULL): array {
-    $theme ??= $this->defaultTheme();
+    $theme ??= $this->activeTheme();
     $info = $this->themeExtensionList->getExtensionInfo($theme);
 
     return $info['menu_locations'] ?? [];
@@ -67,7 +69,7 @@ class MenuLocations {
    *   The language to resolve for. NULL resolves the current content
    *   language.
    * @param string|null $theme
-   *   The theme the slot belongs to. NULL reads the site's default theme.
+   *   The theme the slot belongs to. NULL reads the currently active theme.
    *
    * @return string|null
    *   The assigned menu's machine name, or NULL when no menu is assigned —
@@ -75,7 +77,7 @@ class MenuLocations {
    *   language, which is the fallback (see class docs).
    */
   public function menuName(string $slot, ?string $langcode = NULL, ?string $theme = NULL): ?string {
-    $theme ??= $this->defaultTheme();
+    $theme ??= $this->activeTheme();
     $langcode ??= $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
     $assignments = $this->configFactory->get('drupal_kit.menu_locations')
       ->get("locations.$theme.$slot") ?? [];
@@ -102,6 +104,15 @@ class MenuLocations {
    * either the assignment or the menu itself skips the cache write, so nothing
    * conditionally cacheable is cached as if it were not.
    *
+   * The cache key includes the RESOLVED menu name, not just theme and slot.
+   * Two things depend on that: reassigning a slot from menu A to menu B
+   * must not keep serving A's items from an entry keyed only on theme+slot,
+   * and the stored entry's own tags include `config:drupal_kit.menu_locations`
+   * so an assignment change also invalidates whatever entry the OLD menu
+   * name is still sitting under, rather than leaving an orphaned entry that
+   * a very unlucky reassignment sequence (A to B, then back to A) could
+   * serve stale.
+   *
    * @param string $slot
    *   The slot machine name.
    * @param \Drupal\Core\Cache\CacheableMetadata|null $collected
@@ -111,14 +122,14 @@ class MenuLocations {
    *   same instance across several slots (a header call, a footer call) to
    *   accumulate their combined metadata once, as arkero's preprocess does.
    * @param string|null $theme
-   *   The theme the slot belongs to. NULL reads the site's default theme.
+   *   The theme the slot belongs to. NULL reads the currently active theme.
    *
    * @return array<int, array<string, mixed>>
    *   The slot's menu items, or an empty array when no menu is assigned or
    *   the assigned menu has no items for the current language.
    */
   public function items(string $slot, ?CacheableMetadata $collected = NULL, ?string $theme = NULL): array {
-    $theme ??= $this->defaultTheme();
+    $theme ??= $this->activeTheme();
     $langcode = $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
 
     // The assignment itself is cacheable data: a config change must
@@ -135,7 +146,7 @@ class MenuLocations {
     }
 
     $variation_cache = $this->variationCacheFactory->get('render');
-    $keys = ['drupal_kit_menu_location', $theme, $slot];
+    $keys = ['drupal_kit_menu_location', $theme, $slot, $menu_name];
     $initial = new CacheableMetadata();
     $hit = $variation_cache->get($keys, $initial);
     if ($hit) {
@@ -144,8 +155,7 @@ class MenuLocations {
       // is exactly the array stored there — data->items and data->cache,
       // the same two keys set() is given.
       /** @var object{data: array{items: array<int, array<string, mixed>>, cache: array{tags: string[], contexts: string[], max-age: int}}} $hit */
-      $collected?->addCacheableDependency($assignment_metadata)
-        ->addCacheableDependency(CacheableMetadata::createFromRenderArray(['#cache' => $hit->data['cache']]));
+      $collected?->addCacheableDependency(CacheableMetadata::createFromRenderArray(['#cache' => $hit->data['cache']]));
       return $hit->data['items'];
     }
 
@@ -160,32 +170,44 @@ class MenuLocations {
       'route.menu_active_trails:' . $menu_name,
     ]);
 
-    $collected?->addCacheableDependency($assignment_metadata)
-      ->addCacheableDependency($menu_metadata);
+    // merge() returns a NEW object rather than mutating $assignment_metadata
+    // — the CacheableMetadata::merge() pitfall arkero's own preprocess
+    // function documents. The combined metadata, not just $menu_metadata, is
+    // what gets stored: the cache ENTRY must carry
+    // `config:drupal_kit.menu_locations` too, or saving the assignment form
+    // never invalidates an already-cached entry.
+    $full_metadata = $assignment_metadata->merge($menu_metadata);
 
-    if ($menu_metadata->getCacheMaxAge() !== 0) {
+    $collected?->addCacheableDependency($full_metadata);
+
+    if ($full_metadata->getCacheMaxAge() !== 0) {
       $variation_cache->set($keys, [
         'items' => $items,
         'cache' => [
-          'tags' => $menu_metadata->getCacheTags(),
-          'contexts' => $menu_metadata->getCacheContexts(),
-          'max-age' => $menu_metadata->getCacheMaxAge(),
+          'tags' => $full_metadata->getCacheTags(),
+          'contexts' => $full_metadata->getCacheContexts(),
+          'max-age' => $full_metadata->getCacheMaxAge(),
         ],
-      ], $menu_metadata, $initial);
+      ], $full_metadata, $initial);
     }
 
     return $items;
   }
 
   /**
-   * The site's default (frontend) theme.
+   * The currently active theme.
    *
-   * Read from `system.theme:default` rather than the active theme, so a
-   * call made from an admin route (a different active theme) still resolves
-   * slots and assignments for the theme visitors actually see.
+   * Read through theme.manager, not `system.theme:default` — a negotiated
+   * frontend theme (multi-brand domain access, a non-default admin theme
+   * building its own render) must read its OWN declared slots and its own
+   * assignment, not the site's configured default. `MenuLocationsForm`
+   * deliberately does the opposite (always edits `system.theme:default`,
+   * see its own docblock) — an admin editing menu locations expects to
+   * configure the theme visitors normally see, not whichever theme happens
+   * to be active on the admin route they are looking at.
    */
-  protected function defaultTheme(): string {
-    return $this->configFactory->get('system.theme')->get('default');
+  protected function activeTheme(): string {
+    return $this->themeManager->getActiveTheme()->getName();
   }
 
 }

@@ -6,6 +6,7 @@ namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\drupal_kit\Services\MenuLocations;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\system\Entity\Menu;
@@ -132,6 +133,162 @@ class MenuLocationsItemsKernelTest extends KernelTestBase {
 
     $this->assertSame($first, $second);
     $this->assertSame($first_collected->getCacheTags(), $second_collected->getCacheTags());
+    $this->assertSame($first_collected->getCacheContexts(), $second_collected->getCacheContexts());
+    $this->assertSame($first_collected->getCacheMaxAge(), $second_collected->getCacheMaxAge());
+  }
+
+  /**
+   * Reassigning a slot to a different menu is reflected immediately.
+   *
+   * Regression test: the cache used to be keyed on theme+slot only, so a
+   * slot reassigned from menu A to menu B kept serving A's items — the
+   * assignment config tag was never part of the stored entry, and the key
+   * did not change either. Both are fixed: the key now includes the
+   * RESOLVED menu name, and the stored entry's own tags include
+   * `config:drupal_kit.menu_locations`.
+   *
+   * @covers ::items
+   */
+  public function testReassigningSlotReturnsTheNewMenusItems(): void {
+    Menu::create(['id' => 'menu_a', 'label' => 'A'])->save();
+    Menu::create(['id' => 'menu_b', 'label' => 'B'])->save();
+    MenuLinkContent::create([
+      'menu_name' => 'menu_a',
+      'title' => 'From A',
+      'link' => ['uri' => 'internal:/a'],
+      'enabled' => 1,
+    ])->save();
+    MenuLinkContent::create([
+      'menu_name' => 'menu_b',
+      'title' => 'From B',
+      'link' => ['uri' => 'internal:/b'],
+      'enabled' => 1,
+    ])->save();
+
+    $this->assign('stark', 'header_menu', 'en', 'menu_a');
+    $before = $this->menuLocations->items('header_menu', NULL, 'stark');
+    $this->assertNotEmpty($before);
+    $this->assertSame('From A', reset($before)['title']);
+
+    $this->assign('stark', 'header_menu', 'en', 'menu_b');
+    $after = $this->menuLocations->items('header_menu', NULL, 'stark');
+    $this->assertNotEmpty($after);
+    $this->assertSame('From B', reset($after)['title']);
+  }
+
+  /**
+   * Different languages resolve to their own assigned menu and items.
+   *
+   * The items() method itself has no $langcode parameter — it always
+   * resolves the CURRENT content language, the same as a real page render —
+   * so this
+   * asserts through menuName() (which does take one) that two languages
+   * assigned to the same slot resolve to two different menus, and then
+   * confirms items() for the language items() actually runs under (the
+   * kernel default, 'en') returns that language's own menu's items.
+   *
+   * @covers ::items
+   * @covers ::menuName
+   */
+  public function testDifferentLanguagesResolveTheirOwnMenu(): void {
+    Menu::create(['id' => 'main_en', 'label' => 'Main EN'])->save();
+    Menu::create(['id' => 'main_de', 'label' => 'Main DE'])->save();
+    MenuLinkContent::create([
+      'menu_name' => 'main_en',
+      'title' => 'English home',
+      'link' => ['uri' => 'internal:/'],
+      'enabled' => 1,
+    ])->save();
+    MenuLinkContent::create([
+      'menu_name' => 'main_de',
+      'title' => 'Deutsche Startseite',
+      'link' => ['uri' => 'internal:/'],
+      'enabled' => 1,
+    ])->save();
+    $this->assign('stark', 'header_menu', 'en', 'main_en');
+    $this->assign('stark', 'header_menu', 'de', 'main_de');
+
+    $this->assertSame('main_en', $this->menuLocations->menuName('header_menu', 'en', 'stark'));
+    $this->assertSame('main_de', $this->menuLocations->menuName('header_menu', 'de', 'stark'));
+
+    // The kernel test container's current content language is 'en'.
+    $items = $this->menuLocations->items('header_menu', NULL, 'stark');
+    $this->assertNotEmpty($items);
+    $this->assertSame('English home', reset($items)['title']);
+  }
+
+  /**
+   * A max-age of 0 is never written to the render cache.
+   *
+   * A mocked EntityHelper stands in for the real menu tree builder here —
+   * reproducing max-age 0 from a real menu tree needs a cache-context-free
+   * uncacheable dependency the fixtures above don't have a natural source
+   * for, while the service only cares that the metadata SAYS max-age 0.
+   *
+   * @covers ::items
+   */
+  public function testMaxAgeZeroIsNeverCached(): void {
+    Menu::create(['id' => 'main', 'label' => 'Main'])->save();
+    $this->assign('stark', 'header_menu', 'en', 'main');
+
+    $entity_helper = $this->createMock(EntityHelper::class);
+    $entity_helper->expects($this->exactly(2))->method('getMenu')
+      ->with('main')
+      ->willReturn([['id' => 'home', 'title' => 'Home']]);
+    $entity_helper->method('collectCacheMetadata')
+      ->willReturnCallback(static fn () => (new CacheableMetadata())->setCacheMaxAge(0));
+
+    $menu_locations = $this->buildMenuLocations($entity_helper);
+
+    // Called twice: if max-age 0 were cached, the second call would be a
+    // hit and getMenu() would run only once — the mock's exactly(2)
+    // expectation is the assertion.
+    $menu_locations->items('header_menu', NULL, 'stark');
+    $menu_locations->items('header_menu', NULL, 'stark');
+  }
+
+  /**
+   * A render-cache hit does not rebuild the menu tree.
+   *
+   * Proves the "hit" tested above is a REAL hit, not merely an identical
+   * rebuild: getMenu() is expected exactly once across two items() calls.
+   *
+   * @covers ::items
+   */
+  public function testCacheHitDoesNotCallGetMenuAgain(): void {
+    Menu::create(['id' => 'main', 'label' => 'Main'])->save();
+    $this->assign('stark', 'header_menu', 'en', 'main');
+
+    $entity_helper = $this->createMock(EntityHelper::class);
+    $entity_helper->expects($this->once())->method('getMenu')
+      ->with('main')
+      ->willReturn([['id' => 'home', 'title' => 'Home']]);
+    $entity_helper->method('collectCacheMetadata')
+      ->willReturn(new CacheableMetadata());
+
+    $menu_locations = $this->buildMenuLocations($entity_helper);
+
+    $first = $menu_locations->items('header_menu', NULL, 'stark');
+    $second = $menu_locations->items('header_menu', NULL, 'stark');
+
+    $this->assertSame($first, $second);
+  }
+
+  /**
+   * Builds a MenuLocations with a mocked EntityHelper.
+   *
+   * Every other dependency is the real one from the container, so a test
+   * can assert on how many times getMenu() ran.
+   */
+  protected function buildMenuLocations(EntityHelper $entity_helper): MenuLocations {
+    return new MenuLocations(
+      $this->container->get('config.factory'),
+      $this->container->get('extension.list.theme'),
+      $this->container->get('language_manager'),
+      $entity_helper,
+      $this->container->get('variation_cache_factory'),
+      $this->container->get('theme.manager'),
+    );
   }
 
 }
