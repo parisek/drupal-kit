@@ -198,9 +198,14 @@ menu_locations:
   footer_menu3: 'Footer (tertiary)'
 ```
 
-`MenuLocations::slots()` reads this from the site's default (frontend) theme.
-An unset key, or a theme with no such key, returns an empty array — a theme
-with no `menu_locations` behaves exactly as one without any menu slots.
+`MenuLocations::slots()` reads this from the currently **active** theme —
+theme negotiation's answer for the request, read through `theme.manager`,
+not `system.theme:default`. That matters on a site running more than one
+front-end theme (domain-negotiated multi-brand, for instance): each active
+theme reads its own declared slots and its own assignment, not always the
+site's configured default. An unset key, or a theme with no such key,
+returns an empty array — a theme with no `menu_locations` behaves exactly
+as one without any menu slots.
 
 ### Assigning menus
 
@@ -209,6 +214,16 @@ page — lists one `<select>` per slot per enabled language, offering every
 menu on the site plus "- None -". Requires the `administer menu` permission,
 the same one menu_ui itself requires: assigning a menu to a slot needs no
 more authority than placing a menu block does.
+
+Unlike the runtime lookup above, **the form always edits the site's default
+(frontend) theme** (`system.theme:default`), never the theme rendering the
+admin route it lives on — an admin theme's own `menu_locations` (if it
+declared any) has no form of its own. This is deliberate: an editor opening
+this page expects to configure the theme visitors normally see, not
+whichever theme happens to be active on the admin page they are looking at.
+A project running more than one *front-end* theme calls `MenuLocations`
+with an explicit `$theme` argument from its own code for the themes this
+form doesn't cover.
 
 Saved into config object `drupal_kit.menu_locations`, keyed by theme first —
 two themes on one site (a default theme and an admin theme, or a multi-brand
@@ -308,7 +323,26 @@ release, and remove the region-only-for-menus preprocess helper (arkero's
 `arkero_region_items()` and its per-region loop) once every slot reads
 through `MenuLocations` instead.
 
-## Required modules
+### A site that already had drupal_kit enabled
+
+`config/install/drupal_kit.menu_locations.yml` only runs on a fresh
+`drush en drupal_kit` — a site that had the module enabled *before* this
+feature shipped never gets the config object through that path, and
+`drush updb` alone reports nothing pending for it (there is no schema
+change). `drupal_kit_post_update_menu_locations()` is the fix: it runs on
+the next `drush updb` on any site, and creates `drupal_kit.menu_locations`
+(as an empty `locations: {}`) if, and only if, it does not already exist —
+a fresh install, or a site that already ran this update, gets
+`SKIP-EXISTS` and nothing changes. It uses `ConfigApplier` against the
+module's own `config/install` directory, the same `hook_post_update_NAME()`
+pattern documented above.
+
+Both the service and the form already tolerate the config object being
+entirely absent (not just empty) without this update — every read goes
+through `?? []` / `?? NULL`, and Drupal's config system itself returns an
+empty `Config` object for a name nothing has saved yet, never `NULL` — so a
+site that has not run `drush updb` yet sees exactly the same behavior as
+one that has: every slot resolves to "nothing assigned".
 
 Pulled automatically by Composer when you install:
 
