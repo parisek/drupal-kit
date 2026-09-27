@@ -10,6 +10,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ThemeExtensionList;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Language\LanguageDefault;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -40,6 +41,7 @@ final class MenuLocationsForm extends ConfigFormBase {
     TypedConfigManagerInterface $typed_config_manager,
     protected ThemeExtensionList $themeExtensionList,
     protected EntityTypeManagerInterface $entityTypeManager,
+    protected LanguageDefault $languageDefault,
   ) {
     parent::__construct($config_factory, $typed_config_manager);
   }
@@ -53,6 +55,7 @@ final class MenuLocationsForm extends ConfigFormBase {
       $container->get('config.typed'),
       $container->get('extension.list.theme'),
       $container->get('entity_type.manager'),
+      $container->get('language.default'),
     );
   }
 
@@ -156,7 +159,16 @@ final class MenuLocationsForm extends ConfigFormBase {
       }
     }
     $locations[$theme] = $theme_assignment;
-    $config->set('locations', $locations)->save();
+    $config->set('locations', $locations);
+    // This form edits the default-language values, so the object must say
+    // so. config_translation treats a missing langcode as 'en', and then
+    // refuses to translate into English on a site whose default is not.
+    $langcode = $config->get('langcode');
+    $default_langcode = $this->languageDefault->get()->getId();
+    if (empty($langcode) || ($langcode === 'en' && $default_langcode !== 'en')) {
+      $config->set('langcode', $default_langcode);
+    }
+    $config->save();
 
     parent::submitForm($form, $form_state);
   }

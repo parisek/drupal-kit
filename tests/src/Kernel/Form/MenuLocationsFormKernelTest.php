@@ -6,6 +6,7 @@ namespace Drupal\Tests\drupal_kit\Kernel\Form;
 
 use Drupal\Core\Extension\ThemeExtensionList;
 use Drupal\Core\Form\FormState;
+use Drupal\Core\Language\Language;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\drupal_kit\Form\MenuLocationsForm;
 use Drupal\system\Entity\Menu;
@@ -80,6 +81,24 @@ class MenuLocationsFormKernelTest extends KernelTestBase {
 
     $saved = $this->config('drupal_kit.menu_locations')->get('locations');
     $this->assertArrayNotHasKey('header_menu', $saved[$default_theme]);
+  }
+
+  /**
+   * Saving stamps the site's default language on the object.
+   *
+   * The config_translation module reads the source language from
+   * `langcode`. A missing key reads as 'en', and English then cannot be a
+   * translation.
+   *
+   * @covers ::submitForm
+   */
+  public function testSubmitStampsTheDefaultLangcode(): void {
+    $this->container->get('language.default')->set(new Language(['id' => 'cs']));
+
+    $form_state = (new FormState())->setValues(['header_menu' => 'test_main']);
+    \Drupal::formBuilder()->submitForm(MenuLocationsForm::class, $form_state);
+
+    $this->assertSame('cs', $this->config('drupal_kit.menu_locations')->get('langcode'));
   }
 
 }

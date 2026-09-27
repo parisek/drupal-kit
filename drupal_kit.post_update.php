@@ -43,3 +43,29 @@ function drupal_kit_post_update_menu_locations(): void {
     }
   }
 }
+
+/**
+ * Gives drupal_kit.menu_locations the site's default language code.
+ *
+ * The object holds the default-language menu per slot, and config_translation
+ * reads its source language from `langcode`. Without the key it assumes
+ * 'en', so a site whose default language is not English cannot translate the
+ * assignment into English. A fresh install ships `langcode: en`, which
+ * locale's own rewrite skips: the object has no translatable value until a
+ * slot is assigned.
+ *
+ * Changes only a missing key, or 'en' on a site whose default is not English.
+ */
+function drupal_kit_post_update_menu_locations_langcode(): string {
+  $config = \Drupal::configFactory()->getEditable('drupal_kit.menu_locations');
+  if ($config->isNew()) {
+    return 'drupal_kit.menu_locations does not exist. Nothing to do.';
+  }
+  $langcode = $config->get('langcode');
+  $default_langcode = \Drupal::service('language.default')->get()->getId();
+  if (!empty($langcode) && !($langcode === 'en' && $default_langcode !== 'en')) {
+    return "drupal_kit.menu_locations already has langcode '$langcode'.";
+  }
+  $config->set('langcode', $default_langcode)->save();
+  return "Set drupal_kit.menu_locations langcode to '$default_langcode'.";
+}
