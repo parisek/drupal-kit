@@ -39,3 +39,31 @@ drupal_kit.feature_flags:
   #      earlier — without it, nineteen existing sites never see the flag in
   #      a config diff;
   #   5. both branches covered in the kernel test.
+
+# Menu locations: which menu fills each named slot a theme declares under
+# `menu_locations:` in its <theme>.info.yml, per language. Keyed by theme
+# because two themes on one site (a default theme and an admin theme, or a
+# multi-brand site) can declare the same slot name for unrelated content.
+#
+# The nesting is four keyed levels deep (theme, slot, langcode, menu name),
+# and every level but the last is a site's own data — a theme's machine
+# name, a slot it declares, a language it enables. None of those are known
+# to this module, so each level is `sequence`, Drupal config schema's way of
+# saying "a keyed map whose keys are not enumerable here", not an indexed
+# list.
+drupal_kit.menu_locations:
+  type: config_object
+  label: 'Drupal Kit menu locations'
+  mapping:
+    locations:
+      type: sequence
+      label: 'Themes with an assignment'
+      sequence:
+        type: sequence
+        label: 'Slots declared by one theme'
+        sequence:
+          type: sequence
+          label: 'Menu assigned to one slot, per language'
+          sequence:
+            type: string
+            label: 'Menu machine name'

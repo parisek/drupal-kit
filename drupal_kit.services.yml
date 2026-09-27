@@ -123,3 +123,11 @@ services:
       - "@plugin.manager.menu.link"
       - "@breadcrumb"
       - "@current_route_match"
+  drupal_kit.menu_locations:
+    class: Drupal\drupal_kit\Services\MenuLocations
+    arguments:
+      - "@config.factory"
+      - "@extension.list.theme"
+      - "@language_manager"
+      - "@drupal_kit.entity_helper"
+      - "@variation_cache_factory"

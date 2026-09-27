@@ -65,5 +65,17 @@ parameters:
             paths:
                 - src/Hook
 
+        # submitForm()'s by-ref $form parameter. FormInterface itself declares
+        # it as bare `array` (no generics), and the by-ref type has to match
+        # the interface exactly — PHPStan treats a narrower by-ref type as a
+        # variance error, which buildForm()'s plain (non-by-ref) $form does
+        # not run into. Narrowing here would fight the interface, not fix a
+        # real gap: core's own FormBase implementations carry no such
+        # annotation either.
+        -
+            message: '#^Method Drupal\\drupal_kit\\Form\\MenuLocationsForm\:\:submitForm\(\) has parameter \$form with no value type specified in iterable type array\.$#'
+            identifier: missingType.iterableValue
+            path: src/Form/MenuLocationsForm.php
+
 includes:
     - phpstan-baseline.neon
