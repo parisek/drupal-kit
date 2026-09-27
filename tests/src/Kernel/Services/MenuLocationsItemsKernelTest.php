@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Language\LanguageInterface;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\drupal_kit\Services\MenuLocations;
+use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\system\Entity\Menu;
 
@@ -34,6 +36,7 @@ class MenuLocationsItemsKernelTest extends KernelTestBase {
     'link',
     'field',
     'text',
+    'language',
   ];
 
   /**
@@ -52,12 +55,17 @@ class MenuLocationsItemsKernelTest extends KernelTestBase {
   }
 
   /**
-   * Assigns a menu to a slot for the given theme/language in raw config.
+   * Assigns a menu to a slot for the given theme in raw config.
+   *
+   * One menu per slot — no language dimension. See MenuLocations' own class
+   * docblock for why: menu_link_content is itself content-translatable,
+   * and a config-level menu-per-language assignment on top of that is a
+   * second translation mechanism for the same fact.
    */
-  protected function assign(string $theme, string $slot, string $langcode, string $menu_name): void {
+  protected function assign(string $theme, string $slot, string $menu_name): void {
     $config = $this->config('drupal_kit.menu_locations');
     $locations = $config->get('locations') ?? [];
-    $locations[$theme][$slot][$langcode] = $menu_name;
+    $locations[$theme][$slot] = $menu_name;
     $config->set('locations', $locations)->save();
   }
 
@@ -88,7 +96,7 @@ class MenuLocationsItemsKernelTest extends KernelTestBase {
       'link' => ['uri' => 'internal:/'],
       'enabled' => 1,
     ])->save();
-    $this->assign('stark', 'header_menu', 'en', 'main');
+    $this->assign('stark', 'header_menu', 'main');
 
     $collected = new CacheableMetadata();
     $items = $this->menuLocations->items('header_menu', $collected, 'stark');
@@ -123,7 +131,7 @@ class MenuLocationsItemsKernelTest extends KernelTestBase {
       'link' => ['uri' => 'internal:/'],
       'enabled' => 1,
     ])->save();
-    $this->assign('stark', 'header_menu', 'en', 'main');
+    $this->assign('stark', 'header_menu', 'main');
 
     $first_collected = new CacheableMetadata();
     $first = $this->menuLocations->items('header_menu', $first_collected, 'stark');
@@ -165,56 +173,69 @@ class MenuLocationsItemsKernelTest extends KernelTestBase {
       'enabled' => 1,
     ])->save();
 
-    $this->assign('stark', 'header_menu', 'en', 'menu_a');
+    $this->assign('stark', 'header_menu', 'menu_a');
     $before = $this->menuLocations->items('header_menu', NULL, 'stark');
     $this->assertNotEmpty($before);
     $this->assertSame('From A', reset($before)['title']);
 
-    $this->assign('stark', 'header_menu', 'en', 'menu_b');
+    $this->assign('stark', 'header_menu', 'menu_b');
     $after = $this->menuLocations->items('header_menu', NULL, 'stark');
     $this->assertNotEmpty($after);
     $this->assertSame('From B', reset($after)['title']);
   }
 
   /**
-   * Different languages resolve to their own assigned menu and items.
+   * The items() method returns the current content language's translation.
    *
-   * The items() method itself has no $langcode parameter — it always
-   * resolves the CURRENT content language, the same as a real page render —
-   * so this
-   * asserts through menuName() (which does take one) that two languages
-   * assigned to the same slot resolve to two different menus, and then
-   * confirms items() for the language items() actually runs under (the
-   * kernel default, 'en') returns that language's own menu's items.
+   * The slot assignment names exactly one menu; a menu_link_content entity
+   * is itself content-translatable, so the same assignment renders a
+   * different title per language WITHOUT a second, config-level
+   * menu-per-language mechanism — this is the model that replaced it.
    *
    * @covers ::items
-   * @covers ::menuName
    */
-  public function testDifferentLanguagesResolveTheirOwnMenu(): void {
-    Menu::create(['id' => 'main_en', 'label' => 'Main EN'])->save();
-    Menu::create(['id' => 'main_de', 'label' => 'Main DE'])->save();
-    MenuLinkContent::create([
-      'menu_name' => 'main_en',
-      'title' => 'English home',
+  public function testItemsReturnsTheContentLanguageTranslationOfTheMenu(): void {
+    // Both languages need their OWN ConfigurableLanguage entity. 'en' only
+    // ever existed as the implicit default before this — flipping
+    // system.site:default_langcode to 'de' below would otherwise make 'en'
+    // disappear from getLanguages() entirely (it was never a real entity,
+    // only the synthesized default), leaving the site monolingual instead
+    // of switching WHICH language is current.
+    ConfigurableLanguage::createFromLangcode('en')->save();
+    ConfigurableLanguage::createFromLangcode('de')->save();
+
+    Menu::create(['id' => 'main', 'label' => 'Main'])->save();
+    $link = MenuLinkContent::create([
+      'menu_name' => 'main',
+      'title' => 'Home',
       'link' => ['uri' => 'internal:/'],
       'enabled' => 1,
-    ])->save();
-    MenuLinkContent::create([
-      'menu_name' => 'main_de',
-      'title' => 'Deutsche Startseite',
-      'link' => ['uri' => 'internal:/'],
-      'enabled' => 1,
-    ])->save();
-    $this->assign('stark', 'header_menu', 'en', 'main_en');
-    $this->assign('stark', 'header_menu', 'de', 'main_de');
+      'langcode' => 'en',
+    ]);
+    $link->save();
+    $link->addTranslation('de', ['title' => 'Startseite'])->save();
 
-    $this->assertSame('main_en', $this->menuLocations->menuName('header_menu', 'en', 'stark'));
-    $this->assertSame('main_de', $this->menuLocations->menuName('header_menu', 'de', 'stark'));
+    $this->assign('stark', 'header_menu', 'main');
 
-    // The kernel test container's current content language is 'en'.
-    $items = $this->menuLocations->items('header_menu', NULL, 'stark');
-    $this->assertNotEmpty($items);
-    $this->assertSame('English home', reset($items)['title']);
+    $english_items = $this->menuLocations->items('header_menu', NULL, 'stark');
+    $this->assertNotEmpty($english_items);
+    $this->assertSame('Home', reset($english_items)['title']);
+
+    // Switch the negotiated content language to German. With no
+    // negotiation methods configured beyond the site default, flipping
+    // system.site:default_langcode and resetting the language manager is
+    // what the negotiator falls back to.
+    $this->config('system.site')->set('default_langcode', 'de')->save();
+    \Drupal::languageManager()->reset();
+    $this->assertSame(
+      'de',
+      \Drupal::languageManager()->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId(),
+      'Test setup: the current content language must actually be German here.',
+    );
+
+    $german_items = $this->menuLocations->items('header_menu', NULL, 'stark');
+    $this->assertNotEmpty($german_items);
+    $this->assertSame('Startseite', reset($german_items)['title']);
   }
 
   /**
@@ -229,7 +250,7 @@ class MenuLocationsItemsKernelTest extends KernelTestBase {
    */
   public function testMaxAgeZeroIsNeverCached(): void {
     Menu::create(['id' => 'main', 'label' => 'Main'])->save();
-    $this->assign('stark', 'header_menu', 'en', 'main');
+    $this->assign('stark', 'header_menu', 'main');
 
     $entity_helper = $this->createMock(EntityHelper::class);
     $entity_helper->expects($this->exactly(2))->method('getMenu')
@@ -257,7 +278,7 @@ class MenuLocationsItemsKernelTest extends KernelTestBase {
    */
   public function testCacheHitDoesNotCallGetMenuAgain(): void {
     Menu::create(['id' => 'main', 'label' => 'Main'])->save();
-    $this->assign('stark', 'header_menu', 'en', 'main');
+    $this->assign('stark', 'header_menu', 'main');
 
     $entity_helper = $this->createMock(EntityHelper::class);
     $entity_helper->expects($this->once())->method('getMenu')
@@ -284,7 +305,6 @@ class MenuLocationsItemsKernelTest extends KernelTestBase {
     return new MenuLocations(
       $this->container->get('config.factory'),
       $this->container->get('extension.list.theme'),
-      $this->container->get('language_manager'),
       $entity_helper,
       $this->container->get('variation_cache_factory'),
       $this->container->get('theme.manager'),

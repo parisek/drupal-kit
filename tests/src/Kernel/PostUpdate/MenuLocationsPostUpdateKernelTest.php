@@ -47,14 +47,14 @@ class MenuLocationsPostUpdateKernelTest extends KernelTestBase {
    */
   public function testUpdateIsIdempotentAndDoesNotOverwriteAnExistingAssignment(): void {
     $this->config('drupal_kit.menu_locations')
-      ->set('locations', ['arkero' => ['header_menu' => ['en' => 'main']]])
+      ->set('locations', ['arkero' => ['header_menu' => 'main']])
       ->save();
 
     $this->requirePostUpdateFile();
     drupal_kit_post_update_menu_locations();
 
     $this->assertSame(
-      ['arkero' => ['header_menu' => ['en' => 'main']]],
+      ['arkero' => ['header_menu' => 'main']],
       $this->config('drupal_kit.menu_locations')->get('locations'),
     );
   }

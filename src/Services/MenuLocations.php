@@ -8,8 +8,6 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\VariationCacheFactoryInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ThemeExtensionList;
-use Drupal\Core\Language\LanguageInterface;
-use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Theme\ThemeManagerInterface;
 
 /**
@@ -17,24 +15,35 @@ use Drupal\Core\Theme\ThemeManagerInterface;
  *
  * A theme declares named slots under `menu_locations:` in its
  * `<theme>.info.yml`, the same way it declares `regions:`. A site builder
- * assigns a menu to each slot, per language, on the form this module
- * provides. A theme then reads a slot's items as data — see items() — the
- * same way `region_items` in arkero reads a block's items today. That block
- * pattern is the antipattern this service replaces: a "menu_block" placed in
- * a region only to pick a menu is a menu picker wearing a block, not a real
+ * assigns ONE menu to each slot on the form this module provides. A theme
+ * then reads a slot's items as data — see items() — the same way
+ * `region_items` in arkero reads a block's items today. That block pattern
+ * is the antipattern this service replaces: a "menu_block" placed in a
+ * region only to pick a menu is a menu picker wearing a block, not a real
  * block.
  *
+ * One menu per slot, not one menu per slot per language. Translation is
+ * `menu_link_content`'s own job: a menu link is a content-translatable
+ * entity, and `EntityHelper::getMenu()` already returns the translation for
+ * the current content language — that is how every other menu-driven part
+ * of this module has always worked. A menu-per-language assignment is a
+ * second translation mechanism sitting next to the real one, and the two
+ * drift: arkero's own `header_menu` config carried `main-en` with the
+ * footer address translated as "ARKERO, DE" alongside `main`'s own German
+ * translation reading "ARKERO GmbH, DE" — two independent copies of the
+ * same fact, disagreeing. One menu, translated in place, cannot drift from
+ * itself.
+ *
  * Assignment lives in one config object, `drupal_kit.menu_locations`, keyed
- * `locations.<theme>.<slot>.<langcode>`. A theme is included in the key
- * because two themes on one site (default + admin, or a multi-brand site)
- * can declare the same slot name with unrelated content.
+ * `locations.<theme>.<slot>`. A theme is included in the key because two
+ * themes on one site (default + admin, or a multi-brand site) can declare
+ * the same slot name with unrelated content.
  */
 class MenuLocations {
 
   public function __construct(
     protected ConfigFactoryInterface $configFactory,
     protected ThemeExtensionList $themeExtensionList,
-    protected LanguageManagerInterface $languageManager,
     protected EntityHelper $entityHelper,
     protected VariationCacheFactoryInterface $variationCacheFactory,
     protected ThemeManagerInterface $themeManager,
@@ -61,36 +70,21 @@ class MenuLocations {
   }
 
   /**
-   * The menu assigned to one slot, for one language.
+   * The menu assigned to one slot.
    *
    * @param string $slot
    *   The slot machine name, as declared by the theme.
-   * @param string|null $langcode
-   *   The language to resolve for. NULL resolves the current content
-   *   language.
    * @param string|null $theme
    *   The theme the slot belongs to. NULL reads the currently active theme.
    *
    * @return string|null
-   *   The assigned menu's machine name, or NULL when no menu is assigned —
-   *   neither for the requested language nor for the site's default
-   *   language, which is the fallback (see class docs).
+   *   The assigned menu's machine name, or NULL when no menu is assigned.
    */
-  public function menuName(string $slot, ?string $langcode = NULL, ?string $theme = NULL): ?string {
+  public function menuName(string $slot, ?string $theme = NULL): ?string {
     $theme ??= $this->activeTheme();
-    $langcode ??= $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
-    $assignments = $this->configFactory->get('drupal_kit.menu_locations')
-      ->get("locations.$theme.$slot") ?? [];
 
-    if (!empty($assignments[$langcode])) {
-      return $assignments[$langcode];
-    }
-
-    // Fall back to the site's default language's menu. A language added
-    // after the slot was configured, or one a builder skipped, would
-    // otherwise render nothing rather than the site's usual content.
-    $default_langcode = $this->languageManager->getDefaultLanguage()->getId();
-    return $assignments[$default_langcode] ?? NULL;
+    return $this->configFactory->get('drupal_kit.menu_locations')
+      ->get("locations.$theme.$slot") ?: NULL;
   }
 
   /**
@@ -100,8 +94,10 @@ class MenuLocations {
    * block's items: building a menu tree on every request that misses the
    * page and dynamic page caches is the cost this replaces, and the cache
    * varies by exactly the same things — the assigned menu's own cache
-   * metadata, plus language and the active trail. A max age of 0 from
-   * either the assignment or the menu itself skips the cache write, so nothing
+   * metadata, which includes `languages:language_content` (menu links are
+   * content-translatable, so the SAME menu name can render two different
+   * translations) and the active trail. A max age of 0 from either the
+   * assignment or the menu itself skips the cache write, so nothing
    * conditionally cacheable is cached as if it were not.
    *
    * The cache key includes the RESOLVED menu name, not just theme and slot.
@@ -130,16 +126,16 @@ class MenuLocations {
    */
   public function items(string $slot, ?CacheableMetadata $collected = NULL, ?string $theme = NULL): array {
     $theme ??= $this->activeTheme();
-    $langcode = $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
 
     // The assignment itself is cacheable data: a config change must
     // invalidate every render this method fed, not only the ones taken from
-    // a cache miss below.
+    // a cache miss below. It does NOT vary by language — one menu per slot,
+    // no per-language assignment — the languages:language_content context
+    // below comes from the menu's OWN translation, not from this lookup.
     $assignment_metadata = (new CacheableMetadata())
-      ->addCacheTags(['config:drupal_kit.menu_locations'])
-      ->addCacheContexts(['languages:language_content']);
+      ->addCacheTags(['config:drupal_kit.menu_locations']);
 
-    $menu_name = $this->menuName($slot, $langcode, $theme);
+    $menu_name = $this->menuName($slot, $theme);
     if ($menu_name === NULL) {
       $collected?->addCacheableDependency($assignment_metadata);
       return [];

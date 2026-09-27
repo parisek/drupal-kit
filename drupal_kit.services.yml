@@ -128,7 +128,6 @@ services:
     arguments:
       - "@config.factory"
       - "@extension.list.theme"
-      - "@language_manager"
       - "@drupal_kit.entity_helper"
       - "@variation_cache_factory"
       - "@theme.manager"

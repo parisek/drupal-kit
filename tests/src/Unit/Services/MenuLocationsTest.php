@@ -8,8 +8,6 @@ use Drupal\Core\Cache\VariationCacheFactoryInterface;
 use Drupal\Core\Config\Config;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ThemeExtensionList;
-use Drupal\Core\Language\Language;
-use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Theme\ActiveTheme;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\drupal_kit\Services\EntityHelper;
@@ -17,7 +15,7 @@ use Drupal\drupal_kit\Services\MenuLocations;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Tests slot discovery and per-language resolution on MenuLocations.
+ * Tests slot discovery and assignment resolution on MenuLocations.
  *
  * The items() method is covered by a kernel test — it needs the real menu
  * tree and variation-cache services. These tests cover the parts that only
@@ -45,7 +43,6 @@ class MenuLocationsTest extends TestCase {
     $locations = new MenuLocations(
       $this->configFactory([]),
       $theme_list,
-      $this->createMock(LanguageManagerInterface::class),
       $this->createMock(EntityHelper::class),
       $this->createMock(VariationCacheFactoryInterface::class),
       $this->themeManager('arkero'),
@@ -67,7 +64,6 @@ class MenuLocationsTest extends TestCase {
     $locations = new MenuLocations(
       $this->configFactory([]),
       $theme_list,
-      $this->createMock(LanguageManagerInterface::class),
       $this->createMock(EntityHelper::class),
       $this->createMock(VariationCacheFactoryInterface::class),
       $this->themeManager('olivero'),
@@ -79,12 +75,12 @@ class MenuLocationsTest extends TestCase {
   /**
    * @covers ::menuName
    */
-  public function testMenuNameResolvesForRequestedLanguage(): void {
+  public function testMenuNameResolvesTheAssignedMenu(): void {
     $config_data = [
       'drupal_kit.menu_locations' => [
         'locations' => [
           'arkero' => [
-            'header_menu' => ['cs' => 'main', 'en' => 'main-en'],
+            'header_menu' => 'main',
           ],
         ],
       ],
@@ -93,46 +89,12 @@ class MenuLocationsTest extends TestCase {
     $locations = new MenuLocations(
       $this->configFactory($config_data),
       $this->createMock(ThemeExtensionList::class),
-      $this->languageManager('cs'),
       $this->createMock(EntityHelper::class),
       $this->createMock(VariationCacheFactoryInterface::class),
       $this->themeManager('arkero'),
     );
 
-    $this->assertSame('main', $locations->menuName('header_menu', 'cs'));
-    $this->assertSame('main-en', $locations->menuName('header_menu', 'en'));
-  }
-
-  /**
-   * A missing language falls back to the default language's menu.
-   *
-   * A language with no assignment of its own falls back to the site's
-   * default language's menu, rather than resolving to nothing.
-   *
-   * @covers ::menuName
-   */
-  public function testMenuNameFallsBackToDefaultLanguage(): void {
-    $config_data = [
-      'drupal_kit.menu_locations' => [
-        'locations' => [
-          'arkero' => [
-            'header_menu' => ['cs' => 'main'],
-          ],
-        ],
-      ],
-    ];
-
-    $locations = new MenuLocations(
-      $this->configFactory($config_data),
-      $this->createMock(ThemeExtensionList::class),
-      $this->languageManager('cs', 'cs'),
-      $this->createMock(EntityHelper::class),
-      $this->createMock(VariationCacheFactoryInterface::class),
-      $this->themeManager('arkero'),
-    );
-
-    // 'de' has no assignment; 'cs' is the default language's menu.
-    $this->assertSame('main', $locations->menuName('header_menu', 'de'));
+    $this->assertSame('main', $locations->menuName('header_menu'));
   }
 
   /**
@@ -144,13 +106,12 @@ class MenuLocationsTest extends TestCase {
         'drupal_kit.menu_locations' => ['locations' => []],
       ]),
       $this->createMock(ThemeExtensionList::class),
-      $this->languageManager('cs', 'cs'),
       $this->createMock(EntityHelper::class),
       $this->createMock(VariationCacheFactoryInterface::class),
       $this->themeManager('arkero'),
     );
 
-    $this->assertNull($locations->menuName('header_menu', 'cs'));
+    $this->assertNull($locations->menuName('header_menu'));
   }
 
   /**
@@ -182,18 +143,6 @@ class MenuLocationsTest extends TestCase {
       return $config;
     });
     return $factory;
-  }
-
-  /**
-   * Builds a mocked language manager for the given current/default language.
-   */
-  protected function languageManager(string $current, ?string $default = NULL): LanguageManagerInterface {
-    $manager = $this->createMock(LanguageManagerInterface::class);
-    $manager->method('getCurrentLanguage')
-      ->willReturn(new Language(['id' => $current]));
-    $manager->method('getDefaultLanguage')
-      ->willReturn(new Language(['id' => $default ?? $current]));
-    return $manager;
   }
 
   /**
@@ -229,11 +178,10 @@ class MenuLocationsTest extends TestCase {
     $locations = new MenuLocations(
       $this->configFactory([
         'drupal_kit.menu_locations' => [
-          'locations' => ['admin_theme' => ['header_menu' => ['en' => 'admin-menu']]],
+          'locations' => ['admin_theme' => ['header_menu' => 'admin-menu']],
         ],
       ]),
       $theme_list,
-      $this->languageManager('en'),
       $this->createMock(EntityHelper::class),
       $this->createMock(VariationCacheFactoryInterface::class),
       // The active theme is 'admin_theme' — a different theme than a site's
@@ -243,7 +191,7 @@ class MenuLocationsTest extends TestCase {
     );
 
     $this->assertSame(['header_menu' => 'Header'], $locations->slots());
-    $this->assertSame('admin-menu', $locations->menuName('header_menu', 'en'));
+    $this->assertSame('admin-menu', $locations->menuName('header_menu'));
   }
 
 }

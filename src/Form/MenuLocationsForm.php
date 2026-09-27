@@ -10,17 +10,21 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ThemeExtensionList;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Language\LanguageManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Assigns a menu to each of the default theme's menu locations, per language.
+ * Assigns a menu to each of the default theme's menu locations.
  *
  * WordPress calls this pattern `register_nav_menus()`: a theme declares
  * named slots, a site builder assigns a menu to each one. This form is the
  * assignment step. The theme reads the result through
  * \Drupal\drupal_kit\Services\MenuLocations::items() from a preprocess
- * function — see docs/menu-locations.md.
+ * function — see the README's Menu locations section.
+ *
+ * One select per slot, no per-language fieldsets — see MenuLocations'
+ * own class docblock for why a slot takes exactly one menu.
+ * `menu_link_content`'s content translation is what varies a slot's
+ * items by language, not this form.
  *
  * Always edits the site's default (frontend) theme, not the theme currently
  * rendering the admin UI — a site builder configuring menu locations expects
@@ -36,7 +40,6 @@ final class MenuLocationsForm extends ConfigFormBase {
     TypedConfigManagerInterface $typed_config_manager,
     protected ThemeExtensionList $themeExtensionList,
     protected EntityTypeManagerInterface $entityTypeManager,
-    protected LanguageManagerInterface $languageManager,
   ) {
     parent::__construct($config_factory, $typed_config_manager);
   }
@@ -50,7 +53,6 @@ final class MenuLocationsForm extends ConfigFormBase {
       $container->get('config.typed'),
       $container->get('extension.list.theme'),
       $container->get('entity_type.manager'),
-      $container->get('language_manager'),
     );
   }
 
@@ -116,23 +118,14 @@ final class MenuLocationsForm extends ConfigFormBase {
     }
 
     $config = $this->config('drupal_kit.menu_locations');
-    $languages = $this->languageManager->getLanguages();
 
     foreach ($slots as $slot => $label) {
       $form[$slot] = [
-        '#type' => 'details',
+        '#type' => 'select',
         '#title' => $label,
-        '#open' => TRUE,
-        '#tree' => TRUE,
+        '#options' => $menu_options,
+        '#default_value' => $config->get("locations.$theme.$slot") ?? '',
       ];
-      foreach ($languages as $langcode => $language) {
-        $form[$slot][$langcode] = [
-          '#type' => 'select',
-          '#title' => $language->getName(),
-          '#options' => $menu_options,
-          '#default_value' => $config->get("locations.$theme.$slot.$langcode") ?? '',
-        ];
-      }
     }
 
     return parent::buildForm($form, $form_state);
@@ -154,17 +147,13 @@ final class MenuLocationsForm extends ConfigFormBase {
     $locations = $config->get('locations') ?? [];
     $theme_assignment = [];
     foreach (array_keys($slots) as $slot) {
-      $values = $form_state->getValue((string) $slot) ?? [];
-      $slot_assignment = [];
-      foreach ($values as $langcode => $menu_name) {
-        // Blank ("- None -") is a real choice, not a missing key: a slot
-        // that was assigned and is now cleared must not keep resolving to
-        // the old menu through a stale array key.
-        if ($menu_name !== '') {
-          $slot_assignment[$langcode] = $menu_name;
-        }
+      $menu_name = (string) ($form_state->getValue((string) $slot) ?? '');
+      // Blank ("- None -") is a real choice, not a missing key: a slot that
+      // was assigned and is now cleared must not keep resolving to the old
+      // menu through a stale array key.
+      if ($menu_name !== '') {
+        $theme_assignment[$slot] = $menu_name;
       }
-      $theme_assignment[$slot] = $slot_assignment;
     }
     $locations[$theme] = $theme_assignment;
     $config->set('locations', $locations)->save();

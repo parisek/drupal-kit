@@ -22,6 +22,11 @@ declare(strict_types=1);
  * Create-only and idempotent: a site where the object already exists (a
  * fresh install, or a site that already ran this update) gets
  * `SKIP-EXISTS` and nothing changes.
+ *
+ * Only ever installs the empty default (`locations: {}`) — it never wrote
+ * an assignment, so the config shape changing from "one menu per slot per
+ * language" to "one menu per slot" (this branch, unreleased) needed no
+ * migration here.
  */
 function drupal_kit_post_update_menu_locations(): void {
   /** @var \Drupal\drupal_kit\Services\ConfigApplier $applier */

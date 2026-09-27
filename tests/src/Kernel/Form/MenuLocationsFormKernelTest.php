@@ -53,13 +53,11 @@ class MenuLocationsFormKernelTest extends KernelTestBase {
   public function testSubmitSavesTheAssignmentUnderTheDefaultTheme(): void {
     $default_theme = $this->config('system.theme')->get('default');
 
-    $form_state = (new FormState())->setValues([
-      'header_menu' => ['en' => 'test_main'],
-    ]);
+    $form_state = (new FormState())->setValues(['header_menu' => 'test_main']);
     \Drupal::formBuilder()->submitForm(MenuLocationsForm::class, $form_state);
 
     $saved = $this->config('drupal_kit.menu_locations')->get('locations');
-    $this->assertSame('test_main', $saved[$default_theme]['header_menu']['en']);
+    $this->assertSame('test_main', $saved[$default_theme]['header_menu']);
   }
 
   /**
@@ -74,16 +72,14 @@ class MenuLocationsFormKernelTest extends KernelTestBase {
   public function testSubmitWithNoneMenuClearsPreviousAssignment(): void {
     $default_theme = $this->config('system.theme')->get('default');
     $this->config('drupal_kit.menu_locations')
-      ->set("locations.$default_theme.header_menu.en", 'test_main')
+      ->set("locations.$default_theme.header_menu", 'test_main')
       ->save();
 
-    $form_state = (new FormState())->setValues([
-      'header_menu' => ['en' => ''],
-    ]);
+    $form_state = (new FormState())->setValues(['header_menu' => '']);
     \Drupal::formBuilder()->submitForm(MenuLocationsForm::class, $form_state);
 
     $saved = $this->config('drupal_kit.menu_locations')->get('locations');
-    $this->assertArrayNotHasKey('en', $saved[$default_theme]['header_menu']);
+    $this->assertArrayNotHasKey('header_menu', $saved[$default_theme]);
   }
 
 }
