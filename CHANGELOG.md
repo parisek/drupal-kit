@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- **Menu locations** — `drupal_kit.menu_locations` service, config object and admin form (`Drupal\drupal_kit\Services\MenuLocations`, `Drupal\drupal_kit\Form\MenuLocationsForm`, route `drupal_kit.menu_locations` at `/admin/structure/menu/locations`). A theme declares named menu "slots" under `menu_locations:` in its `<theme>.info.yml` — the same shape as `regions:` — a site builder assigns a menu to each slot per language on the new form, and the theme reads the slot's items as data through `MenuLocations::items()`, in `EntityHelper::getMenu()`'s own shape. `items()` render-caches its build in the `render` bin, keyed by theme and slot, and bubbles the full cache metadata (the assignment config tag, the resolved menu's own tags/contexts, the active-trail context) into an optional accumulator, the same pattern arkero's own `arkero_region_items()` used ad hoc. Replaces the "menu_block placed in a region only to pick a menu per language" antipattern several downstream themes grew independently — see the README's [Menu locations](README.md#menu-locations) section for the migration path off it. New dependency: `drupal:menu_ui`, reusing its `administer menu` permission rather than declaring a new one.
+
 ## [3.2.0] — 2026-09-23
 
 ### Changed

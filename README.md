@@ -36,6 +36,7 @@ drush en drupal_kit
 - `drupal_kit.typography_twig_extension` — provides the `|typography` Twig filter; delegates to [`parisek/twig-typography`](https://github.com/parisek/twig-typography) and resolves typography config from `{active_theme}/static/typography.yml`.
 - `drupal_kit.route_subscriber` — alters routes for entity access edge cases.
 - `drupal_kit.config_applier` (`Drupal\drupal_kit\Services\ConfigApplier`) — creates (and, opt-in, updates) an explicit list of config objects through the entity/config API, in dependency order. See [Applying config on deploy](#applying-config-on-deploy).
+- `drupal_kit.menu_locations` (`Drupal\drupal_kit\Services\MenuLocations`) — resolves a theme-declared menu "slot" (`menu_locations:` in `<theme>.info.yml`) to the menu assigned to it per language, and returns its items in `EntityHelper::getMenu()`'s shape. Assignment happens on the admin form at `/admin/structure/menu/locations`. See [Menu locations](#menu-locations).
 
 **Base classes**
 
@@ -167,6 +168,145 @@ no-op — every name comes back `SKIP-EXISTS`. Ship the config as a
 `config/deploy`-style directory shipped with the module (not `config/sync`,
 which is the site's own export), so the fixture travels with the code that
 needs it.
+
+## Menu locations
+
+A theme declares named "slots" for the menus it renders — header, hamburger,
+footer columns. A site builder assigns a real menu to each slot, per
+language, on one admin form. The theme reads the slot's items as data. This
+is the pattern WordPress calls `register_nav_menus()`; `MenuLocations` is the
+Drupal equivalent.
+
+It replaces a pattern several projects grew independently: a "menu_block"
+block plugin placed in a theme region, configured with a per-language menu
+select, used only to hand that menu's items to a component template. The
+block placement carried no visual meaning — the region was never printed —
+so the block was a menu picker wearing a block. `MenuLocations` is that
+picker, without the block.
+
+### Declaring slots
+
+Add a `menu_locations` key to the theme's `<theme>.info.yml`, machine name to
+label, the same shape as `regions:`:
+
+```yaml
+menu_locations:
+  header_menu: 'Header'
+  hamburger_menu: 'Header (mobile)'
+  footer_menu1: 'Footer (primary)'
+  footer_menu2: 'Footer (secondary)'
+  footer_menu3: 'Footer (tertiary)'
+```
+
+`MenuLocations::slots()` reads this from the site's default (frontend) theme.
+An unset key, or a theme with no such key, returns an empty array — a theme
+with no `menu_locations` behaves exactly as one without any menu slots.
+
+### Assigning menus
+
+`/admin/structure/menu/locations` — a local task next to core's own **Menus**
+page — lists one `<select>` per slot per enabled language, offering every
+menu on the site plus "- None -". Requires the `administer menu` permission,
+the same one menu_ui itself requires: assigning a menu to a slot needs no
+more authority than placing a menu block does.
+
+Saved into config object `drupal_kit.menu_locations`, keyed by theme first —
+two themes on one site (a default theme and an admin theme, or a multi-brand
+site) can declare the same slot name for unrelated content:
+
+```yaml
+locations:
+  arkero:
+    header_menu:
+      cs: main
+      en: main-en
+      de: main-de
+```
+
+A language with no assignment of its own falls back to the site's default
+language's menu, so a language added after the form was last saved still
+renders something instead of nothing.
+
+### Reading a slot from a preprocess function
+
+`MenuLocations::items()` returns a slot's items in `EntityHelper::getMenu()`'s
+shape — the array a component template already expects:
+
+```php
+function mytheme_preprocess_page(array &$variables): void {
+  /** @var \Drupal\drupal_kit\Services\MenuLocations $menu_locations */
+  $menu_locations = \Drupal::service('drupal_kit.menu_locations');
+
+  $collected = new CacheableMetadata();
+  $header_items = $menu_locations->items('header_menu', $collected);
+  $hamburger_items = $menu_locations->items('hamburger_menu', $collected);
+
+  $header = [
+    '#theme' => 'custom_component',
+    '#template' => 'header',
+    '#content' => [
+      'menu' => $header_items,
+      'hamburger_menu' => $hamburger_items,
+    ],
+    '#cache' => ['keys' => ['mytheme_layout', 'header']],
+  ];
+  $collected->applyTo($header);
+  $variables['header_output'] = $header;
+}
+```
+
+Pass the **same** `CacheableMetadata` instance across several `items()` calls
+that feed one render element — the metadata accumulates once and applies
+once, rather than needing a separate `merge()` per call.
+
+`items()` render-caches its own build in the `render` cache bin, keyed by
+theme and slot, the same way a placed block's build is cached. A cache hit
+carries the same tags, contexts and max-age the original build had, so a
+cached slot is indistinguishable from a fresh one to the caller.
+
+### Migrating from a menu-block-in-a-region theme
+
+A theme that placed a `menu_block`-family plugin in a region only to pick a
+menu per language moves the assignment into config with a `post_update`
+hook, then deletes the blocks:
+
+```php
+/**
+ * Move menu-picker block config into drupal_kit.menu_locations.
+ */
+function mytheme_post_update_menu_locations(): void {
+  $region_to_slot = [
+    'header_menu' => 'header_menu',
+    'hamburger_menu' => 'hamburger_menu',
+    'footer_menu1' => 'footer_menu1',
+    'footer_menu2' => 'footer_menu2',
+    'footer_menu3' => 'footer_menu3',
+  ];
+
+  $theme = \Drupal::configFactory()->get('system.theme')->get('default');
+  $config = \Drupal::configFactory()->getEditable('drupal_kit.menu_locations');
+  $locations = $config->get('locations') ?? [];
+
+  $blocks = \Drupal::entityTypeManager()->getStorage('block')->loadByProperties([
+    'theme' => $theme,
+  ]);
+  foreach ($blocks as $block) {
+    $region = $block->getRegion();
+    if (!isset($region_to_slot[$region])) {
+      continue;
+    }
+    $locations[$theme][$region_to_slot[$region]] = $block->get('settings')['menu'] ?? [];
+    $block->delete();
+  }
+
+  $config->set('locations', $locations)->save();
+}
+```
+
+Add the theme's `menu_locations:` key to its `.info.yml` in the same
+release, and remove the region-only-for-menus preprocess helper (arkero's
+`arkero_region_items()` and its per-region loop) once every slot reads
+through `MenuLocations` instead.
 
 ## Required modules
 
