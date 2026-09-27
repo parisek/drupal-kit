@@ -104,3 +104,9 @@ msgstr "Sa"
 msgctxt "Abbreviated weekday"
 msgid "Sun"
 msgstr "So"
+
+msgid "- None -"
+msgstr "- Keine -"
+
+msgid "The default theme (%theme) declares no menu locations. Add a %key key to its %file to declare one."
+msgstr "Das Standardtheme (%theme) deklariert keine Menüpositionen. Fügen Sie den Schlüssel %key zu seiner Datei %file hinzu."
