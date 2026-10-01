@@ -47,6 +47,7 @@ class MenuLocationsFormTranslationKernelTest extends KernelTestBase {
     $form_state = (new FormState())->setValues(['header_menu' => 'main']);
     \Drupal::formBuilder()->submitForm(MenuLocationsForm::class, $form_state);
 
+    /** @var \Drupal\config_translation\ConfigNamesMapper $mapper */
     $mapper = $this->container->get('plugin.manager.config_translation.mapper')
       ->createInstance('drupal_kit.menu_locations');
     $this->assertSame('cs', $mapper->getLangcode());
