@@ -144,9 +144,13 @@ final class MenuLocationsForm extends ConfigFormBase {
     // This form edits the default-language values, so the object must say
     // so. config_translation treats a missing langcode as 'en', and then
     // refuses to translate into English on a site whose default is not.
-    // The key is prefixed because slot names come from the theme and sit at
-    // the same level of $form.
-    $form['drupal_kit_langcode'] = [
+    // Slot names come from the theme and sit at the same level of $form, so
+    // the key steps aside for a slot that already uses it.
+    $langcode_key = 'drupal_kit_langcode';
+    while (isset($slots[$langcode_key])) {
+      $langcode_key .= '_';
+    }
+    $form[$langcode_key] = [
       '#type' => 'value',
       // Core's override notice reads a title from every overridden target.
       '#title' => $this->t('Language'),

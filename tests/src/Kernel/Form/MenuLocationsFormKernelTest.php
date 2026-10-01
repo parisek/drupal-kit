@@ -162,19 +162,21 @@ class MenuLocationsFormKernelTest extends KernelTestBase {
   }
 
   /**
-   * A slot named "langcode" keeps its select.
+   * A slot named like the hidden langcode element keeps its select.
    *
    * @covers ::buildForm
    */
-  public function testSlotNamedLangcodeKeepsItsSelect(): void {
+  public function testSlotNamedLikeAnInternalElementKeepsItsSelect(): void {
     $theme_list = $this->createMock(ThemeExtensionList::class);
     $theme_list->method('getExtensionInfo')
-      ->willReturn(['menu_locations' => ['langcode' => 'Language menu']]);
+      ->willReturn(['menu_locations' => ['langcode' => 'Language menu', 'drupal_kit_langcode' => 'Other']]);
     $this->container->set('extension.list.theme', $theme_list);
 
     $form = \Drupal::formBuilder()->getForm(MenuLocationsForm::class);
 
     $this->assertSame('select', $form['langcode']['#type']);
+    $this->assertSame('select', $form['drupal_kit_langcode']['#type']);
+    $this->assertSame('value', $form['drupal_kit_langcode_']['#type']);
   }
 
   /**
