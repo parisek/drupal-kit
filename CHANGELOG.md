@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [3.3.0] — 2026-10-01
+
 ### Added
 
 - **Menu locations** — `drupal_kit.menu_locations` service, config object and admin form (`Drupal\drupal_kit\Services\MenuLocations`, `Drupal\drupal_kit\Form\MenuLocationsForm`, route `drupal_kit.menu_locations` at `/admin/structure/menu/locations`). A theme declares named menu "slots" under `menu_locations:` in its `<theme>.info.yml` — the same shape as `regions:` — a site builder assigns **one** menu to each slot on the new form (config shape `locations: { <theme>: { <slot>: <menu machine name> } }`), and the theme reads the slot's items as data through `MenuLocations::items()`, in `EntityHelper::getMenu()`'s own shape.
