@@ -8,6 +8,12 @@ parameters:
         # not a shrug: the existing 300-odd findings are mostly mock-typing
         # friction, and what matters is that the number can no longer grow.
         - tests
+        # The module has no .module file (the #[Hook] migration removed it),
+        # so this is the first root-level procedural file — without listing
+        # it, PHPStan never sees the function declaration and reports every
+        # call to it (from the kernel test that requires the file directly)
+        # as undefined.
+        - drupal_kit.post_update.php
     # Measured rather than assumed, 2026-09-22: switching this on reports
     # exactly two findings, both in Resizer, and both would be wrong to
     # "fix". `getDefaultToolkit()` and focal_point's `getCropEntity()` are
@@ -64,6 +70,30 @@ parameters:
             identifier: missingType.iterableValue
             paths:
                 - src/Hook
+
+        # submitForm()'s by-ref $form parameter. FormInterface itself declares
+        # it as bare `array` (no generics), and the by-ref type has to match
+        # the interface exactly — PHPStan treats a narrower by-ref type as a
+        # variance error, which buildForm()'s plain (non-by-ref) $form does
+        # not run into. Narrowing here would fight the interface, not fix a
+        # real gap: core's own FormBase implementations carry no such
+        # annotation either.
+        -
+            message: '#^Method Drupal\\drupal_kit\\Form\\MenuLocationsForm\:\:submitForm\(\) has parameter \$form with no value type specified in iterable type array\.$#'
+            identifier: missingType.iterableValue
+            path: src/Form/MenuLocationsForm.php
+
+        # \Drupal::entityTypeManager() inside MenuSelect::getTranslationElement().
+        # config_translation's own ElementInterface::create() takes only the
+        # schema element being translated — no container, no constructor
+        # arguments a service definition could inject. Core's own FormElement
+        # classes (DateFormat, TextFormat) reach \Drupal::service() from
+        # inside this exact method for the same reason; this class is under
+        # the same interface constraint they are.
+        -
+            message: '#^\\Drupal calls should be avoided in classes, use dependency injection instead$#'
+            identifier: globalDrupalDependencyInjection.useDependencyInjection
+            path: src/FormElement/MenuSelect.php
 
 includes:
     - phpstan-baseline.neon

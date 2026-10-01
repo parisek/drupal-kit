@@ -36,6 +36,7 @@ drush en drupal_kit
 - `drupal_kit.typography_twig_extension` — provides the `|typography` Twig filter; delegates to [`parisek/twig-typography`](https://github.com/parisek/twig-typography) and resolves typography config from `{active_theme}/static/typography.yml`.
 - `drupal_kit.route_subscriber` — alters routes for entity access edge cases.
 - `drupal_kit.config_applier` (`Drupal\drupal_kit\Services\ConfigApplier`) — creates (and, opt-in, updates) an explicit list of config objects through the entity/config API, in dependency order. See [Applying config on deploy](#applying-config-on-deploy).
+- `drupal_kit.menu_locations` (`Drupal\drupal_kit\Services\MenuLocations`) — resolves a theme-declared menu "slot" (`menu_locations:` in `<theme>.info.yml`) to the menu assigned to it, and returns its items in `EntityHelper::getMenu()`'s shape. One menu per slot in the default language, assigned on the admin form at `/admin/structure/menu/locations`; a genuinely different menu per language is optional, through Drupal's native `config_translation` module. See [Menu locations](#menu-locations).
 
 **Base classes**
 
@@ -168,7 +169,260 @@ no-op — every name comes back `SKIP-EXISTS`. Ship the config as a
 which is the site's own export), so the fixture travels with the code that
 needs it.
 
-## Required modules
+## Menu locations
+
+A theme declares named "slots" for the menus it renders — header, hamburger,
+footer columns. A site builder assigns ONE real menu to each slot on one
+admin form. The theme reads the slot's items as data. This is the pattern
+WordPress calls `register_nav_menus()`; `MenuLocations` is the Drupal
+equivalent.
+
+It replaces a pattern several projects grew independently: a "menu_block"
+block plugin placed in a theme region, configured with a per-language menu
+select, used only to hand that menu's items to a component template. The
+block placement carried no visual meaning — the region was never printed —
+so the block was a menu picker wearing a block. `MenuLocations` is that
+picker, without the block.
+
+**One menu per slot in the default language.** A menu link
+(`menu_link_content`) is itself content-translatable, and
+`EntityHelper::getMenu()` already returns the current content language's
+translation — that is how every other menu-driven part of this module has
+always worked, and it is enough for most sites: one menu, its links
+translated. Point the slot at that one menu; translate its links with
+content translation, the same as any other translatable content, and leave
+the per-language assignment below alone entirely.
+
+A site that genuinely needs a DIFFERENT menu per language — not just
+different translated links in the same menu — gets that through Drupal's
+own, optional **config_translation** module (see
+[Per-language menus](#per-language-menus-optional) below), never through a
+second key bolted onto this config. A config-level "menu per language"
+layer sitting next to content translation is a second translation
+mechanism for the same fact, and the two drift: a real example from a
+downstream theme carried `main-en` with a footer address translated as
+"ARKERO, DE", while `main`'s own German translation read "ARKERO GmbH,
+DE" — two independent copies of the same fact, disagreeing.
+
+### Declaring slots
+
+Add a `menu_locations` key to the theme's `<theme>.info.yml`, machine name to
+label, the same shape as `regions:`:
+
+```yaml
+menu_locations:
+  header_menu: 'Header'
+  hamburger_menu: 'Header (mobile)'
+  footer_menu1: 'Footer (primary)'
+  footer_menu2: 'Footer (secondary)'
+  footer_menu3: 'Footer (tertiary)'
+```
+
+`MenuLocations::slots()` reads this from the currently **active** theme —
+theme negotiation's answer for the request, read through `theme.manager`,
+not `system.theme:default`. That matters on a site running more than one
+front-end theme (domain-negotiated multi-brand, for instance): each active
+theme reads its own declared slots and its own assignment, not always the
+site's configured default. An unset key, or a theme with no such key,
+returns an empty array — a theme with no `menu_locations` behaves exactly
+as one without any menu slots.
+
+### Assigning menus
+
+`/admin/structure/menu/locations` — a local task next to core's own **Menus**
+page — lists ONE `<select>` per slot, offering every menu on the site plus
+"- None -". No per-language fieldsets: a slot takes one menu, full stop.
+Requires the `administer menu` permission, the same one menu_ui itself
+requires: assigning a menu to a slot needs no more authority than placing a
+menu block does.
+
+Unlike the runtime lookup above, **the form always edits the site's default
+(frontend) theme** (`system.theme:default`), never the theme rendering the
+admin route it lives on — an admin theme's own `menu_locations` (if it
+declared any) has no form of its own. This is deliberate: an editor opening
+this page expects to configure the theme visitors normally see, not
+whichever theme happens to be active on the admin page they are looking at.
+A project running more than one *front-end* theme calls `MenuLocations`
+with an explicit `$theme` argument from its own code for the themes this
+form doesn't cover.
+
+Saved into config object `drupal_kit.menu_locations`, keyed by theme first —
+two themes on one site (a default theme and an admin theme, or a multi-brand
+site) can declare the same slot name for unrelated content:
+
+```yaml
+locations:
+  arkero:
+    header_menu: main
+    hamburger_menu: main
+    footer_menu1: footer-company
+```
+
+An unassigned slot resolves to `NULL` and `items()` returns an empty array.
+
+### Per-language menus (optional)
+
+Install [`config_translation`](https://www.drupal.org/docs/8/core/modules/config-translation)
+(a core module, `drush en config_translation`) and a **Translate** local
+task appears next to the menu locations form's own tabs. It lists every
+enabled language; opening one shows a `<select>` per slot, pre-filled with
+the default-language assignment, offering every menu on the site plus
+"- None -" — the exact same choice the default-language form makes, on a
+per-language override.
+
+This is Drupal's own, native mechanism for translating configuration
+(`config_translation`'s `ConfigTranslationFormBase`), not a bespoke
+per-language field of this module's own — `config/schema/drupal_kit.schema.yml`
+marks the slot value `translatable: true` with a `form_element_class`
+(`Drupal\drupal_kit\FormElement\MenuSelect`) that renders as the same kind
+of `<select>` the default-language form uses, instead of
+`config_translation`'s own default (a plain textfield, wrong for a menu
+machine name a translator should pick from a list). Saved as a language
+config override — `language.<langcode>/drupal_kit.menu_locations` in config
+sync terms — never as a second key in `drupal_kit.menu_locations` itself.
+
+`config_translation` stays entirely **optional**. Nothing in `MenuLocations`
+checks whether it is installed or behaves differently based on it —
+`menuName()` and `items()` read the assignment through the injected config
+factory exactly like any other config value a project might translate, and
+`\Drupal\Core\Config\ConfigFactory::get()` transparently returns the
+current language's override when one exists (via `language` module's own
+`LanguageConfigFactoryOverride`) and the plain default-language value when
+none does. A site with `config_translation` never installed sees exactly
+that second case, always — no code path here treats its absence as
+anything other than "no override exists".
+
+One subtlety worth knowing: that override follows the **interface**
+language (`languages:language_interface`), not the content language this
+module's menu **items** vary by — core's own `LanguageConfigFactoryOverride`
+declares that context, and it is set from the interface language on every
+request. On a site like arkero, where content and interface language are
+both negotiated from the same URL path prefix, the two are always equal in
+practice and this distinction is invisible. A site where they can diverge
+(a multilingual admin UI over otherwise-monolingual content, for instance)
+would see the slot **assignment** follow the interface language while the
+resolved menu's **items** still follow the content language — two
+different translation mechanisms, each answering its own question.
+
+### Reading a slot from a preprocess function
+
+`MenuLocations::items()` returns a slot's items in `EntityHelper::getMenu()`'s
+shape — the array a component template already expects:
+
+```php
+function mytheme_preprocess_page(array &$variables): void {
+  /** @var \Drupal\drupal_kit\Services\MenuLocations $menu_locations */
+  $menu_locations = \Drupal::service('drupal_kit.menu_locations');
+
+  $collected = new CacheableMetadata();
+  $header_items = $menu_locations->items('header_menu', $collected);
+  $hamburger_items = $menu_locations->items('hamburger_menu', $collected);
+
+  $header = [
+    '#theme' => 'custom_component',
+    '#template' => 'header',
+    '#content' => [
+      'menu' => $header_items,
+      'hamburger_menu' => $hamburger_items,
+    ],
+    '#cache' => ['keys' => ['mytheme_layout', 'header']],
+  ];
+  $collected->applyTo($header);
+  $variables['header_output'] = $header;
+}
+```
+
+Pass the **same** `CacheableMetadata` instance across several `items()` calls
+that feed one render element — the metadata accumulates once and applies
+once, rather than needing a separate `merge()` per call.
+
+`items()` render-caches its own build in the `render` cache bin, keyed by
+theme, slot AND the resolved menu name (so a reassignment is reflected
+immediately rather than serving the old menu from a stale entry). The
+`languages:language_content` cache context on the entry — carried by the
+menu's own cache metadata, not by the assignment — is what makes the SAME
+key correctly serve a different translation per language: the entry varies
+by content language because `EntityHelper::getMenu()`'s own output does, not
+because of anything MenuLocations adds. A cache hit carries the same tags,
+contexts and max-age the original build had, so a cached slot is
+indistinguishable from a fresh one to the caller.
+
+### Migrating from a menu-block-in-a-region theme
+
+A theme that placed a `menu_block`-family plugin in a region only to pick a
+menu moves the assignment into config with a `post_update` hook, then
+deletes the blocks:
+
+```php
+/**
+ * Move menu-picker block config into drupal_kit.menu_locations.
+ */
+function mytheme_post_update_menu_locations(): void {
+  $region_to_slot = [
+    'header_menu' => 'header_menu',
+    'hamburger_menu' => 'hamburger_menu',
+    'footer_menu1' => 'footer_menu1',
+    'footer_menu2' => 'footer_menu2',
+    'footer_menu3' => 'footer_menu3',
+  ];
+
+  $theme = \Drupal::configFactory()->get('system.theme')->get('default');
+  $config = \Drupal::configFactory()->getEditable('drupal_kit.menu_locations');
+  $locations = $config->get('locations') ?? [];
+
+  $default_langcode = \Drupal::languageManager()->getDefaultLanguage()->getId();
+  $blocks = \Drupal::entityTypeManager()->getStorage('block')->loadByProperties([
+    'theme' => $theme,
+  ]);
+  foreach ($blocks as $block) {
+    $region = $block->getRegion();
+    if (!isset($region_to_slot[$region])) {
+      continue;
+    }
+    // The old block config carried one menu PER LANGUAGE. Content
+    // translation replaces that: point the slot at the site's default
+    // language's menu, and translate that menu's LINKS from there on —
+    // never assign the other languages' separate menu copies. If those
+    // copies diverged from the default (see the drift example above), that
+    // divergence is now a content-translation task, not a config choice.
+    $per_language_menu = $block->get('settings')['menu'] ?? [];
+    $locations[$theme][$region_to_slot[$region]] = $per_language_menu[$default_langcode] ?? reset($per_language_menu) ?: NULL;
+    $block->delete();
+  }
+
+  $config->set('locations', $locations)->save();
+}
+```
+
+Add the theme's `menu_locations:` key to its `.info.yml` in the same
+release, and remove the region-only-for-menus preprocess helper (arkero's
+`arkero_region_items()` and its per-region loop) once every slot reads
+through `MenuLocations` instead. Translate the KEPT menu's links for every
+other language the site needs, through the normal content translation UI —
+`/admin/structure/menu/manage/<menu_name>` → *Translate* on each link — and
+delete the other languages' now-redundant menu copies once their content is
+confirmed to be folded into the kept menu's translations.
+
+### A site that already had drupal_kit enabled
+
+`config/install/drupal_kit.menu_locations.yml` only runs on a fresh
+`drush en drupal_kit` — a site that had the module enabled *before* this
+feature shipped never gets the config object through that path, and
+`drush updb` alone reports nothing pending for it (there is no schema
+change). `drupal_kit_post_update_menu_locations()` is the fix: it runs on
+the next `drush updb` on any site, and creates `drupal_kit.menu_locations`
+(as an empty `locations: {}`) if, and only if, it does not already exist —
+a fresh install, or a site that already ran this update, gets
+`SKIP-EXISTS` and nothing changes. It uses `ConfigApplier` against the
+module's own `config/install` directory, the same `hook_post_update_NAME()`
+pattern documented above.
+
+Both the service and the form already tolerate the config object being
+entirely absent (not just empty) without this update — every read goes
+through `?? []` / `?? NULL`, and Drupal's config system itself returns an
+empty `Config` object for a name nothing has saved yet, never `NULL` — so a
+site that has not run `drush updb` yet sees exactly the same behavior as
+one that has: every slot resolves to "nothing assigned".
 
 Pulled automatically by Composer when you install:
 

@@ -1,0 +1,7 @@
+# A local task next to core menu_ui's own tasks on entity.menu.collection
+# ("Menus" / "Add menu"), so "Locations" reads as a peer of managing menus
+# themselves rather than a separate, harder-to-find admin page.
+drupal_kit.menu_locations:
+  title: 'Locations'
+  route_name: drupal_kit.menu_locations
+  base_route: entity.menu.collection

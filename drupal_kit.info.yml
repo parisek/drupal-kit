@@ -17,5 +17,6 @@ dependencies:
   - drupal:components
   - drupal:config_pages
   - drupal:extra_field
+  - drupal:menu_ui
   - drupal:twig_real_content
   - drupal:twig_tweak

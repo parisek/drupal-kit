@@ -39,3 +39,65 @@ drupal_kit.feature_flags:
   #      earlier — without it, nineteen existing sites never see the flag in
   #      a config diff;
   #   5. both branches covered in the kernel test.
+
+# Menu locations: which menu fills each named slot a theme declares under
+# `menu_locations:` in its <theme>.info.yml. Keyed by theme because two
+# themes on one site (a default theme and an admin theme, or a multi-brand
+# site) can declare the same slot name for unrelated content.
+#
+# ONE menu per slot in the DEFAULT language — not one per slot per
+# language. A menu link (menu_link_content) is itself content-translatable,
+# and EntityHelper::getMenu() already returns the current content
+# language's translation, so a second, config-level "menu per language"
+# layer next to it would be a second translation mechanism for the same
+# fact, and the two would drift (a real example: a downstream theme's own
+# per-language assignment carried the footer address translated two
+# different, disagreeing ways under 'main' vs 'main-en').
+#
+# A site that genuinely needs a DIFFERENT menu per language — not just
+# different translated links in the same menu — assigns that through
+# config_translation's own, optional per-language override mechanism, which
+# is what `translatable: true` and `form_element_class` on the leaf type
+# below wire up. See MenuLocations' own class docblock for the full
+# rationale, including which language (interface, not content) that
+# override follows.
+#
+# The nesting is three keyed levels deep (theme, slot, menu name), and every
+# level but the last is a site's own data — a theme's machine name, a slot
+# it declares. Neither is known to this module, so each level is `sequence`,
+# Drupal config schema's way of saying "a keyed map whose keys are not
+# enumerable here", not an indexed list.
+drupal_kit.menu_locations:
+  type: config_object
+  label: 'Drupal Kit menu locations'
+  mapping:
+    locations:
+      type: sequence
+      label: 'Themes with an assignment'
+      sequence:
+        type: sequence
+        label: 'Menu assigned to each slot declared by one theme'
+        sequence:
+          type: drupal_kit.menu_locations.menu_name
+
+# A dedicated leaf type, not a bare `string`, purely to carry two things a
+# bare string cannot: `translatable: true` (config_translation only offers a
+# "Translate" tab for config that has at least one translatable leaf) and
+# `form_element_class` (which widget renders on that tab). Modeled on core's
+# own `label` type (core.data_types.schema.yml) — same shape, different
+# leaf: `label` is free text and gets `Textfield`; this is a menu machine
+# name picked from a closed list, so it gets a dedicated `MenuSelect` instead
+# — see that class's own docblock for why a select, not a textfield.
+#
+# `config_translation` is never required to load this file — schema entries
+# that no installed module happens to use are simply inert. The
+# form_element_class STRING is only ever resolved into a loaded PHP class by
+# config_translation's own ConfigTranslationFormBase::createFormElement(),
+# which only runs when that module is both installed and asked to build a
+# translation form for this specific config object (via
+# drupal_kit.config_translation.yml).
+drupal_kit.menu_locations.menu_name:
+  type: string
+  label: 'Menu'
+  translatable: true
+  form_element_class: '\Drupal\drupal_kit\FormElement\MenuSelect'
