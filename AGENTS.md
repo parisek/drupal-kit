@@ -83,7 +83,7 @@ New behavior that changes rendered output, data shapes, or anything a consumer c
 
 ### Review-thread resolution
 
-After pushing a fix that addresses a specific Copilot (or human) inline review comment, resolve the corresponding thread programmatically:
+After pushing a fix that addresses a specific inline review comment, resolve the corresponding thread programmatically:
 
 ```bash
 # List threads on a PR (get node IDs of unresolved threads).
@@ -114,8 +114,6 @@ gh api graphql -f query='
 ```
 
 Resolve only threads whose underlying concern the latest commit actually addresses. If the fix is a polite disagreement (e.g. a documented false positive), leave a reply and *don't* resolve — let the reviewer or maintainer close it.
-
-Re-requesting Copilot review programmatically is unreliable — the REST `requested_reviewers` POST succeeds with the bot login but doesn't trigger a new run. Ask the human to click *Re-request review* in the UI.
 
 ## Conventions
 
