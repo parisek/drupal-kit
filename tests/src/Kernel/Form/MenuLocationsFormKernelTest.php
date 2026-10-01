@@ -49,6 +49,51 @@ class MenuLocationsFormKernelTest extends KernelTestBase {
   }
 
   /**
+   * A value pinned in settings.php shows the core "overridden" notice.
+   *
+   * The form lists the stored value in the select. Core's config binding
+   * adds the notice so the site builder knows the stored value is not the
+   * one in use.
+   *
+   * @covers ::buildForm
+   */
+  public function testOverriddenSlotShowsTheCoreNotice(): void {
+    $default_theme = $this->config('system.theme')->get('default');
+    $this->config('drupal_kit.menu_locations')
+      ->set("locations.$default_theme.header_menu", 'test_main')
+      ->save();
+    $GLOBALS['config']['drupal_kit.menu_locations']['locations'][$default_theme]['header_menu'] = 'test_other';
+    $this->container->get('config.factory')->clearStaticCache();
+
+    $form = \Drupal::formBuilder()->getForm(MenuLocationsForm::class);
+
+    $this->assertArrayHasKey('config_override_status_messages', $form);
+    $links = $form['config_override_status_messages']['message']['#message_list']['status'][0]['#links'];
+    $this->assertCount(1, $links);
+    $this->assertSame('Header', $links[0]['title']);
+    $this->assertSame('test_main', $form['header_menu']['#default_value']);
+  }
+
+  /**
+   * Saving with an override in place stores the form value, not the override.
+   *
+   * @covers ::submitForm
+   */
+  public function testSubmitStoresTheFormValueNotTheOverride(): void {
+    $default_theme = $this->config('system.theme')->get('default');
+    $GLOBALS['config']['drupal_kit.menu_locations']['locations'][$default_theme]['header_menu'] = 'test_other';
+    $this->container->get('config.factory')->clearStaticCache();
+
+    $form_state = (new FormState())->setValues(['header_menu' => 'test_main']);
+    \Drupal::formBuilder()->submitForm(MenuLocationsForm::class, $form_state);
+
+    $stored = $this->container->get('config.factory')
+      ->getEditable('drupal_kit.menu_locations')
+      ->get("locations.$default_theme.header_menu");
+    $this->assertSame('test_main', $stored);
+  }
+
+  /**
    * @covers ::submitForm
    */
   public function testSubmitSavesTheAssignmentUnderTheDefaultTheme(): void {
@@ -79,8 +124,8 @@ class MenuLocationsFormKernelTest extends KernelTestBase {
     $form_state = (new FormState())->setValues(['header_menu' => '']);
     \Drupal::formBuilder()->submitForm(MenuLocationsForm::class, $form_state);
 
-    $saved = $this->config('drupal_kit.menu_locations')->get('locations');
-    $this->assertArrayNotHasKey('header_menu', $saved[$default_theme]);
+    $this->assertNull($this->config('drupal_kit.menu_locations')->get("locations.$default_theme.header_menu"));
+    $this->assertArrayNotHasKey('header_menu', $this->config('drupal_kit.menu_locations')->get("locations.$default_theme") ?? []);
   }
 
   /**
@@ -99,6 +144,53 @@ class MenuLocationsFormKernelTest extends KernelTestBase {
     \Drupal::formBuilder()->submitForm(MenuLocationsForm::class, $form_state);
 
     $this->assertSame('cs', $this->config('drupal_kit.menu_locations')->get('langcode'));
+  }
+
+  /**
+   * A langcode a site builder already set is not overwritten on save.
+   *
+   * @covers ::buildForm
+   */
+  public function testSubmitKeepsAnExistingNonEnglishLangcode(): void {
+    $this->container->get('language.default')->set(new Language(['id' => 'cs']));
+    $this->config('drupal_kit.menu_locations')->set('langcode', 'de')->save();
+
+    $form_state = (new FormState())->setValues(['header_menu' => 'test_main']);
+    \Drupal::formBuilder()->submitForm(MenuLocationsForm::class, $form_state);
+
+    $this->assertSame('de', $this->config('drupal_kit.menu_locations')->get('langcode'));
+  }
+
+  /**
+   * A slot named "langcode" keeps its select.
+   *
+   * @covers ::buildForm
+   */
+  public function testSlotNamedLangcodeKeepsItsSelect(): void {
+    $theme_list = $this->createMock(ThemeExtensionList::class);
+    $theme_list->method('getExtensionInfo')
+      ->willReturn(['menu_locations' => ['langcode' => 'Language menu']]);
+    $this->container->set('extension.list.theme', $theme_list);
+
+    $form = \Drupal::formBuilder()->getForm(MenuLocationsForm::class);
+
+    $this->assertSame('select', $form['langcode']['#type']);
+  }
+
+  /**
+   * A theme without slots gets a message and no Save button.
+   *
+   * @covers ::buildForm
+   */
+  public function testThemeWithoutSlotsHasNoSaveButton(): void {
+    $theme_list = $this->createMock(ThemeExtensionList::class);
+    $theme_list->method('getExtensionInfo')->willReturn([]);
+    $this->container->set('extension.list.theme', $theme_list);
+
+    $form = \Drupal::formBuilder()->getForm(MenuLocationsForm::class);
+
+    $this->assertArrayHasKey('no_slots', $form);
+    $this->assertArrayNotHasKey('actions', $form);
   }
 
 }
