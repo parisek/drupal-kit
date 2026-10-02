@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\drupal_kit\EventSubscriber;
 
-use Drupal\Core\Config\Config;
 use Drupal\Core\Config\ConfigCollectionEvents;
 use Drupal\Core\Config\ConfigCrudEvent;
 use Drupal\Core\Config\ConfigEvents;
 use Drupal\Core\Config\StorableConfigBase;
+use Drupal\Core\Config\StorageInterface;
 use Drupal\Core\Language\LanguageDefault;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -65,40 +65,46 @@ final class MenuLocationsChangeLogger implements EventSubscriberInterface {
   }
 
   /**
-   * Logs a change saved to the default-language config object.
+   * Logs a change saved through ConfigEvents::SAVE.
+   *
+   * That event also fires for a plain config object in a language collection,
+   * which the config importer builds when no override service claims it.
    */
   public function onSave(ConfigCrudEvent $event): void {
-    $config = $event->getConfig();
-    if ($config->getName() !== self::CONFIG_NAME) {
-      return;
-    }
-    $langcode = $config->get('langcode') ?: $this->languageDefault->get()->getId();
-    $this->logChanges($config, $langcode, FALSE);
+    $this->logEvent($event, FALSE);
   }
 
   /**
    * Logs a change saved as a language override.
    */
   public function onSaveInCollection(ConfigCrudEvent $event): void {
-    $this->logOverride($event, FALSE);
+    $this->logEvent($event, FALSE);
   }
 
   /**
    * Logs an override removed, so the slot inherits the default again.
    */
   public function onDeleteInCollection(ConfigCrudEvent $event): void {
-    $this->logOverride($event, TRUE);
+    $this->logEvent($event, TRUE);
   }
 
   /**
-   * Logs the change of one language override.
+   * Logs the changes of one event for the language its collection names.
    */
-  private function logOverride(ConfigCrudEvent $event, bool $deleted): void {
+  private function logEvent(ConfigCrudEvent $event, bool $deleted): void {
     $config = $event->getConfig();
-    if ($config->getName() !== self::CONFIG_NAME || !method_exists($config, 'getLangcode')) {
+    if ($config->getName() !== self::CONFIG_NAME) {
       return;
     }
-    $this->logChanges($config, $config->getLangcode(), $deleted);
+    $collection = $config->getStorage()->getCollectionName();
+    if ($collection === StorageInterface::DEFAULT_COLLECTION) {
+      $langcode = $config->get('langcode') ?: $this->languageDefault->get()->getId();
+      $this->logChanges($config, $langcode, FALSE, FALSE);
+      return;
+    }
+    if (str_starts_with($collection, 'language.')) {
+      $this->logChanges($config, substr($collection, strlen('language.')), TRUE, $deleted);
+    }
   }
 
   /**
@@ -108,10 +114,12 @@ final class MenuLocationsChangeLogger implements EventSubscriberInterface {
    *   The saved object, still holding its original data.
    * @param string $langcode
    *   The language the values apply to.
+   * @param bool $override
+   *   TRUE for a language override, FALSE for the default-language object.
    * @param bool $deleted
    *   TRUE when a language override was removed.
    */
-  private function logChanges(StorableConfigBase $config, string $langcode, bool $deleted): void {
+  private function logChanges(StorableConfigBase $config, string $langcode, bool $override, bool $deleted): void {
     if (!$this->featureFlags->enabled(FeatureFlags::FLAG_MENU_LOCATIONS_LOG)) {
       return;
     }
@@ -119,7 +127,7 @@ final class MenuLocationsChangeLogger implements EventSubscriberInterface {
     $new = $deleted ? [] : $this->flatten($config->get('locations') ?? []);
     // A language override that has no value inherits the default language.
     // The default-language object has no parent to inherit from.
-    $absent = $this->isOverride($config) ? '(inherited)' : '(none)';
+    $absent = $override ? '(inherited)' : '(none)';
 
     foreach (array_keys($old + $new) as $path) {
       $before = $old[$path] ?? $absent;
@@ -156,13 +164,6 @@ final class MenuLocationsChangeLogger implements EventSubscriberInterface {
       }
     }
     return $flat;
-  }
-
-  /**
-   * Whether the object is a language override, not the default-language one.
-   */
-  private function isOverride(StorableConfigBase $config): bool {
-    return !($config instanceof Config);
   }
 
   /**

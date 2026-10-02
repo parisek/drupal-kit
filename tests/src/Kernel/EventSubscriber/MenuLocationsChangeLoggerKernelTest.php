@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\drupal_kit\Kernel\EventSubscriber;
 
+use Drupal\Core\Config\Config;
 use Drupal\Core\Extension\ThemeExtensionList;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Session\UserSession;
@@ -185,6 +186,33 @@ class MenuLocationsChangeLoggerKernelTest extends KernelTestBase {
       ->save();
 
     $this->assertSame([], $this->collector->entries);
+  }
+
+  /**
+   * A plain config object in a language collection logs that language.
+   *
+   * The config importer builds a plain Config for a collection that no
+   * override service claims. Its save fires ConfigEvents::SAVE, so the
+   * subscriber must tell the collection apart from the default language.
+   *
+   * @covers ::onSave
+   */
+  public function testPlainConfigInLanguageCollectionLogsItsLanguage(): void {
+    $storage = $this->container->get('config.storage')->createCollection('language.cs');
+    $config = new Config(
+      'drupal_kit.menu_locations',
+      $storage,
+      $this->container->get('event_dispatcher'),
+      $this->container->get('config.typed'),
+    );
+    $config->setData(['locations' => [$this->theme() => ['header' => 'main-cs']]]);
+
+    $config->save();
+
+    $this->assertSame(
+      ['header (cs) [' . $this->theme() . ']: (inherited) -> main-cs, by anonymous (cli)'],
+      $this->collector->entries,
+    );
   }
 
 }
