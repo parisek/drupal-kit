@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Fixed
+
+- **The menu locations form shows a menu pinned in `settings.php`** (#157) — `MenuLocationsForm` now binds each slot select to its config key with `#config_target` (`ConfigTarget`) instead of setting `#default_value` and saving in its own `submitForm()`. Core's `ConfigFormBase` then adds the "These values are overridden" notice, so a site builder no longer sees one menu in the form while the site uses another. The select still shows the stored value, as every core config form does; the notice is what tells the override wins. Choosing "- None -" still removes the key (`ToConfig::DeleteKey`). The `langcode` stamp moved into a hidden `#config_target` element with the same rule as before, so the form has no `submitForm()` of its own. A theme that declares no slots now gets the message without a Save button, because there is nothing for core's binding to save.
+
 ## [3.3.0] — 2026-10-01
 
 ### Added

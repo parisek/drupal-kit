@@ -110,3 +110,6 @@ msgstr "- Brak -"
 
 msgid "The default theme (%theme) declares no menu locations. Add a %key key to its %file to declare one."
 msgstr "Domyślny motyw (%theme) nie deklaruje żadnych lokalizacji menu. Dodaj klucz %key do jego pliku %file."
+
+msgid "Language"
+msgstr "Język"
