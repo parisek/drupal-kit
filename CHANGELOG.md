@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- **Change log for menu location assignments** (#156) — with the new `menu_locations_log` feature flag on (`drupal_kit.feature_flags`, off by default), `MenuLocationsChangeLogger` writes one `notice` entry to the `drupal_kit` log channel for each real change to a menu location: `header (en) [arkero]: main-en -> main-de, by editor (uid 5)`. One event subscriber covers the admin form, the Translate tab and a direct config write such as `drush config:set`. A language override is stored in a config collection and fires the collection events, not `ConfigEvents::SAVE`, so the subscriber listens to both. A save that changes no assignment writes nothing. A change without a logged-in user reads `anonymous (cli)`. Removing an override reads `(inherited)`. The log adds the IP address and the time. `drupal_kit_post_update_feature_flag_menu_locations_log()` declares the flag as `FALSE` on a site that already had the module enabled. See the README's [Change log](README.md#change-log-optional) section for retention.
+
 ## [3.3.0] — 2026-10-01
 
 ### Added

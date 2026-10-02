@@ -29,6 +29,14 @@ class FeatureFlags {
   public const CONFIG_NAME = 'drupal_kit.feature_flags';
 
   /**
+   * Log every change to a menu location assignment.
+   *
+   * It writes to the log, so a site opts in: a site that never asked for the
+   * entries must not find them in its log after an upgrade.
+   */
+  public const FLAG_MENU_LOCATIONS_LOG = 'menu_locations_log';
+
+  /**
    * Every flag this module ships.
    *
    * Why the list exists: schema validation is not runtime enforcement. It
@@ -51,13 +59,14 @@ class FeatureFlags {
    * and a subclass that misspells a `protected bool` simply declares a new
    * property. All three patterns are equally silent about a typo.
    *
-   * Empty until the first flag ships. A flag joins this list, the schema and
-   * config/install in the same commit.
+   * A flag joins this list, the schema and config/install in the same commit.
    *
    * Read through `static::` so a test can subclass and declare one — with no
    * flag shipped, that is the only way to exercise the TRUE branch at all.
    */
-  protected const KNOWN_FLAGS = [];
+  protected const KNOWN_FLAGS = [
+    self::FLAG_MENU_LOCATIONS_LOG,
+  ];
 
   public function __construct(
     protected ConfigFactoryInterface $configFactory,

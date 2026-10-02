@@ -125,4 +125,28 @@ class MenuLocationsPostUpdateKernelTest extends KernelTestBase {
     require_once $this->root . '/' . $module_path . '/drupal_kit.post_update.php';
   }
 
+  /**
+   * The flag update declares the flag off on a site that predates it.
+   */
+  public function testFeatureFlagUpdateDeclaresTheFlagOff(): void {
+    $this->assertNull($this->config('drupal_kit.feature_flags')->get('menu_locations_log'));
+
+    $this->requirePostUpdateFile();
+    drupal_kit_post_update_feature_flag_menu_locations_log();
+
+    $this->assertFalse($this->config('drupal_kit.feature_flags')->get('menu_locations_log'));
+  }
+
+  /**
+   * The flag update keeps a value a site already chose.
+   */
+  public function testFeatureFlagUpdateKeepsAnEnabledFlag(): void {
+    $this->config('drupal_kit.feature_flags')->set('menu_locations_log', TRUE)->save();
+
+    $this->requirePostUpdateFile();
+    drupal_kit_post_update_feature_flag_menu_locations_log();
+
+    $this->assertTrue($this->config('drupal_kit.feature_flags')->get('menu_locations_log'));
+  }
+
 }
