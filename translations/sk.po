@@ -110,3 +110,6 @@ msgstr "- Žiadne -"
 
 msgid "The default theme (%theme) declares no menu locations. Add a %key key to its %file to declare one."
 msgstr "Predvolená téma (%theme) nedeklaruje žiadne umiestnenia menu. Pridajte kľúč %key do jej súboru %file."
+
+msgid "Language"
+msgstr "Jazyk"

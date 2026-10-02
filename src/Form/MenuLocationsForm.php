@@ -9,7 +9,9 @@ use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ThemeExtensionList;
 use Drupal\Core\Form\ConfigFormBase;
+use Drupal\Core\Form\ConfigTarget;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Form\ToConfig;
 use Drupal\Core\Language\LanguageDefault;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -111,7 +113,9 @@ final class MenuLocationsForm extends ConfigFormBase {
           ],
         ),
       ];
-      return parent::buildForm($form, $form_state);
+      // No Save button: with no #config_target element core's config binding
+      // has nothing to save, so a button would do nothing.
+      return $form;
     }
 
     $menu_options = ['' => $this->t('- None -')];
@@ -120,57 +124,52 @@ final class MenuLocationsForm extends ConfigFormBase {
       $menu_options[$menu_name] = $menu->label();
     }
 
-    $config = $this->config('drupal_kit.menu_locations');
-
     foreach ($slots as $slot => $label) {
       $form[$slot] = [
         '#type' => 'select',
         '#title' => $label,
         '#options' => $menu_options,
-        '#default_value' => $config->get("locations.$theme.$slot") ?? '',
+        '#config_target' => new ConfigTarget(
+          'drupal_kit.menu_locations',
+          "locations.$theme.$slot",
+          fromConfig: static fn(?string $menu_name): string => $menu_name ?? '',
+          // Blank ("- None -") is a real choice, not a missing key: a slot
+          // that was assigned and is now cleared must not keep resolving to
+          // the old menu. NULL would be stored as NULL, not removed.
+          toConfig: static fn(string $menu_name): string|ToConfig => $menu_name === '' ? ToConfig::DeleteKey : $menu_name,
+        ),
       ];
     }
 
-    return parent::buildForm($form, $form_state);
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * $form keeps the bare `array` type FormStateInterface's by-ref parameter
-   * declares — PHPStan treats a narrower by-ref type as a variance error,
-   * so `array<string, mixed>` cannot go here the way it does on buildForm().
-   */
-  public function submitForm(array &$form, FormStateInterface $form_state): void {
-    $theme = $this->theme();
-    /** @var array<string, string> $slots */
-    $slots = $this->themeExtensionList->getExtensionInfo($theme)['menu_locations'] ?? [];
-
-    $config = $this->config('drupal_kit.menu_locations');
-    $locations = $config->get('locations') ?? [];
-    $theme_assignment = [];
-    foreach (array_keys($slots) as $slot) {
-      $menu_name = (string) ($form_state->getValue((string) $slot) ?? '');
-      // Blank ("- None -") is a real choice, not a missing key: a slot that
-      // was assigned and is now cleared must not keep resolving to the old
-      // menu through a stale array key.
-      if ($menu_name !== '') {
-        $theme_assignment[$slot] = $menu_name;
-      }
-    }
-    $locations[$theme] = $theme_assignment;
-    $config->set('locations', $locations);
     // This form edits the default-language values, so the object must say
     // so. config_translation treats a missing langcode as 'en', and then
     // refuses to translate into English on a site whose default is not.
-    $langcode = $config->get('langcode');
-    $default_langcode = $this->languageDefault->get()->getId();
-    if (empty($langcode) || ($langcode === 'en' && $default_langcode !== 'en')) {
-      $config->set('langcode', $default_langcode);
+    // Slot names come from the theme and sit at the same level of $form, so
+    // the key steps aside for a slot that already uses it.
+    $langcode_key = 'drupal_kit_langcode';
+    while (isset($slots[$langcode_key])) {
+      $langcode_key .= '_';
     }
-    $config->save();
+    $form[$langcode_key] = [
+      '#type' => 'value',
+      // Core's override notice reads a title from every overridden target.
+      '#title' => $this->t('Language'),
+      '#config_target' => new ConfigTarget(
+        'drupal_kit.menu_locations',
+        'langcode',
+        toConfig: function (): string|ToConfig {
+          $langcode = $this->config('drupal_kit.menu_locations')->get('langcode');
+          $default_langcode = $this->languageDefault->get()->getId();
+          // A stamp already set by a site builder stays, unless it is the
+          // implicit 'en' on a site whose default language is not English.
+          return empty($langcode) || ($langcode === 'en' && $default_langcode !== 'en')
+            ? $default_langcode
+            : ToConfig::NoOp;
+        },
+      ),
+    ];
 
-    parent::submitForm($form, $form_state);
+    return parent::buildForm($form, $form_state);
   }
 
 }
