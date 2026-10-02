@@ -16,10 +16,11 @@ drupal_kit.feature_flags:
     # requirement with `requiredKey: false`, so a site whose export predates
     # a flag stays valid.
     FullyValidatable: ~
-  mapping: {}
-  # The object itself does not exist yet, and cannot: Drupal skips a
-  # config/install file with no keys (FileStorage::decode() returns FALSE for
-  # empty data), so an empty object is unshippable. The first flag brings it.
+  mapping:
+    menu_locations_log:
+      type: boolean
+      label: 'Log changes to menu location assignments'
+      requiredKey: false
   #
   # What a flag ships, all in one commit:
   #

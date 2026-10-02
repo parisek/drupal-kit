@@ -34,6 +34,15 @@ services:
       # point: getFocalPointHash() guards on having received this, not on
       # moduleExists().
       - "@?focal_point.manager"
+  drupal_kit.menu_locations_change_logger:
+    class: Drupal\drupal_kit\EventSubscriber\MenuLocationsChangeLogger
+    arguments:
+      - "@logger.factory"
+      - "@current_user"
+      - "@language.default"
+      - "@drupal_kit.feature_flags"
+    tags:
+      - { name: event_subscriber }
   drupal_kit.route_subscriber:
     class: Drupal\drupal_kit\Routing\RouteSubscriber
     tags:

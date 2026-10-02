@@ -347,6 +347,34 @@ because of anything MenuLocations adds. A cache hit carries the same tags,
 contexts and max-age the original build had, so a cached slot is
 indistinguishable from a fresh one to the caller.
 
+### Change log (optional)
+
+A wrong menu in a header or footer changes every page of the site. With
+the `menu_locations_log` flag in `drupal_kit.feature_flags` on, the
+module writes one `notice` entry to the `drupal_kit` log channel for each
+real change to an assignment:
+
+```
+header (en) [arkero]: main-en -> main-de, by editor (uid 5)
+```
+
+The entry names the slot, the language, the theme, the old and the new menu,
+and the user. One listener covers the form, the Translate tab and a direct
+config write such as `drush config:set`. A save that changes no assignment
+writes nothing. A change without a logged-in user (drush, an update hook)
+reads `by anonymous (cli)`. Removing a language override reads
+`main-de -> (inherited)`. A slot with no menu reads `(none)`.
+
+The flag is on by default, on a fresh install and, through an update
+function, on a site that already had the module enabled. A site that does not
+want the entries sets `menu_locations_log: false` in `drupal_kit.feature_flags`.
+The log itself adds the IP address, the time and the request, so the module
+does not add them again.
+
+`dblog` keeps 100000 rows by default and then drops the oldest. A site that
+needs a permanent record sends the `drupal_kit` channel to `syslog` or
+another log service. That is site configuration, not module code.
+
 ### Migrating from a menu-block-in-a-region theme
 
 A theme that placed a `menu_block`-family plugin in a region only to pick a
