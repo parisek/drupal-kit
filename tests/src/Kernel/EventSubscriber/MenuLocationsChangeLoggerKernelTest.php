@@ -41,10 +41,6 @@ class MenuLocationsChangeLoggerKernelTest extends KernelTestBase {
     parent::setUp();
     $this->installConfig(['system', 'language', 'drupal_kit']);
 
-    $this->config(FeatureFlags::CONFIG_NAME)
-      ->set(FeatureFlags::FLAG_MENU_LOCATIONS_LOG, TRUE)
-      ->save();
-
     $theme_list = $this->createMock(ThemeExtensionList::class);
     $theme_list->method('getExtensionInfo')
       ->willReturn(['menu_locations' => ['header' => 'Header']]);

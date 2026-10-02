@@ -31,8 +31,10 @@ class FeatureFlags {
   /**
    * Log every change to a menu location assignment.
    *
-   * It writes to the log, so a site opts in: a site that never asked for the
-   * entries must not find them in its log after an upgrade.
+   * On by default, unlike the opt-in rule in AGENTS.md: the entries are the
+   * only record of who changed a menu that every page shows, and the module
+   * owner chose to have them on every site. A site turns them off by setting
+   * the flag FALSE.
    */
   public const FLAG_MENU_LOCATIONS_LOG = 'menu_locations_log';
 

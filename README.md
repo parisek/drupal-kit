@@ -349,8 +349,8 @@ indistinguishable from a fresh one to the caller.
 
 ### Change log (optional)
 
-A wrong menu in a header or footer changes every page of the site. Switch
-on the `menu_locations_log` flag in `drupal_kit.feature_flags` and the
+A wrong menu in a header or footer changes every page of the site. With
+the `menu_locations_log` flag in `drupal_kit.feature_flags` on, the
 module writes one `notice` entry to the `drupal_kit` log channel for each
 real change to an assignment:
 
@@ -365,9 +365,11 @@ writes nothing. A change without a logged-in user (drush, an update hook)
 reads `by anonymous (cli)`. Removing a language override reads
 `main-de -> (inherited)`. A slot with no menu reads `(none)`.
 
-The flag is off by default, so an upgrade adds nothing to the log. The log
-itself adds the IP address, the time and the request, so the module does not
-add them again.
+The flag is on by default, on a fresh install and, through an update
+function, on a site that already had the module enabled. A site that does not
+want the entries sets `menu_locations_log: false` in `drupal_kit.feature_flags`.
+The log itself adds the IP address, the time and the request, so the module
+does not add them again.
 
 `dblog` keeps 100000 rows by default and then drops the oldest. A site that
 needs a permanent record sends the `drupal_kit` channel to `syslog` or

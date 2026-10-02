@@ -71,17 +71,19 @@ function drupal_kit_post_update_menu_locations_langcode(): string {
 }
 
 /**
- * Declares the menu_locations_log feature flag, off.
+ * Declares the menu_locations_log feature flag, on.
  *
  * config/install only runs on a fresh install. A site that already had the
  * module enabled never gets drupal_kit.feature_flags, so the key is set to
- * FALSE here and shows in a config diff. A value a site already set stays.
+ * TRUE here and shows in a config diff. The flag ships on: the owner of the
+ * module decided that the log is worth having everywhere. A value a site
+ * already set stays, so a site turns the log off by setting the key FALSE.
  */
 function drupal_kit_post_update_feature_flag_menu_locations_log(): string {
   $config = \Drupal::configFactory()->getEditable('drupal_kit.feature_flags');
   if ($config->get('menu_locations_log') !== NULL) {
     return 'menu_locations_log already declared. Nothing to do.';
   }
-  $config->set('menu_locations_log', FALSE)->save();
-  return 'Declared menu_locations_log as FALSE.';
+  $config->set('menu_locations_log', TRUE)->save();
+  return 'Declared menu_locations_log as TRUE.';
 }

@@ -160,13 +160,14 @@ class FeatureFlagsKernelTest extends KernelTestBase {
    *
    * Drupal skips a config/install file with no keys — FileStorage::decode()
    * returns FALSE for empty data — so an empty object cannot ship at all.
-   * The first flag brings the object with it. This test is the tripwire: the
-   * moment an install file appears, it must declare flags and they must all
-   * be FALSE.
+   * The first flag brings the object with it. This test is the tripwire: a
+   * flag ships FALSE unless it is on the list below. The list holds the
+   * flags the module owner decided to ship on, each with a reason in
+   * FeatureFlags.
    *
    * @covers ::enabled
    */
-  public function testTheModuleShipsNoFlagsOn(): void {
+  public function testTheModuleShipsOnlyTheDeclaredFlagsOn(): void {
     $this->installConfig(['drupal_kit']);
 
     $shipped = array_filter(
@@ -175,7 +176,11 @@ class FeatureFlagsKernelTest extends KernelTestBase {
       ARRAY_FILTER_USE_KEY,
     );
 
-    $this->assertSame([], array_filter($shipped), 'no shipped default turns a flag on');
+    $this->assertSame(
+      [FeatureFlags::FLAG_MENU_LOCATIONS_LOG],
+      array_keys(array_filter($shipped)),
+      'no shipped default turns a flag on without being declared here',
+    );
   }
 
   /**

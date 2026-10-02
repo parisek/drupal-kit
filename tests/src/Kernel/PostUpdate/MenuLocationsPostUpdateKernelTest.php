@@ -126,27 +126,27 @@ class MenuLocationsPostUpdateKernelTest extends KernelTestBase {
   }
 
   /**
-   * The flag update declares the flag off on a site that predates it.
+   * The flag update declares the flag on for a site that predates it.
    */
-  public function testFeatureFlagUpdateDeclaresTheFlagOff(): void {
+  public function testFeatureFlagUpdateDeclaresTheFlagOn(): void {
     $this->assertNull($this->config('drupal_kit.feature_flags')->get('menu_locations_log'));
 
     $this->requirePostUpdateFile();
     drupal_kit_post_update_feature_flag_menu_locations_log();
 
-    $this->assertFalse($this->config('drupal_kit.feature_flags')->get('menu_locations_log'));
+    $this->assertTrue($this->config('drupal_kit.feature_flags')->get('menu_locations_log'));
   }
 
   /**
    * The flag update keeps a value a site already chose.
    */
-  public function testFeatureFlagUpdateKeepsAnEnabledFlag(): void {
-    $this->config('drupal_kit.feature_flags')->set('menu_locations_log', TRUE)->save();
+  public function testFeatureFlagUpdateKeepsDisabledFlag(): void {
+    $this->config('drupal_kit.feature_flags')->set('menu_locations_log', FALSE)->save();
 
     $this->requirePostUpdateFile();
     drupal_kit_post_update_feature_flag_menu_locations_log();
 
-    $this->assertTrue($this->config('drupal_kit.feature_flags')->get('menu_locations_log'));
+    $this->assertFalse($this->config('drupal_kit.feature_flags')->get('menu_locations_log'));
   }
 
 }
