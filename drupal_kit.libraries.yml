@@ -1,4 +1,4 @@
-# The dataLayer feature (#160). Both libraries load only when the datalayer
+# The dataLayer feature. Both libraries load only when the datalayer
 # flag is on and the matching setting asks for them.
 
 # Applies the lead command a completed webform submission returns.

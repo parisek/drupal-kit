@@ -9,7 +9,7 @@ use Drupal\KernelTests\KernelTestBase;
 use Drupal\drupal_kit\DataLayer\DataLayerCollectEvent;
 
 /**
- * Tests the cacheability a subscriber declares on the collect event (#160).
+ * Tests the cacheability a subscriber declares on the collect event.
  *
  * CacheableMetadata validates cache contexts against the container, so this
  * cannot run as a unit test.

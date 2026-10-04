@@ -54,6 +54,30 @@ final class DataLayerLeadEvent extends Event {
   }
 
   /**
+   * The event name the push carries.
+   */
+  public function event(): string {
+    return $this->event;
+  }
+
+  /**
+   * The form type the push carries.
+   */
+  public function formType(): string {
+    return $this->formType;
+  }
+
+  /**
+   * The values the push carries.
+   *
+   * @return array<string, mixed>
+   *   The values the site chose to send.
+   */
+  public function formData(): array {
+    return $this->formData;
+  }
+
+  /**
    * Sets the event name the push carries.
    */
   public function setEvent(string $event): static {

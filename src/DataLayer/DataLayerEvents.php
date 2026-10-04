@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\drupal_kit\DataLayer;
 
 /**
- * Names of the events the dataLayer layer dispatches (#160).
+ * Names of the events the dataLayer layer dispatches.
  *
  * A project never edits the layer. It subscribes to one of these.
  */

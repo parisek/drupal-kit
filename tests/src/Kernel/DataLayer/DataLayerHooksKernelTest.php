@@ -12,7 +12,6 @@ use Drupal\drupal_kit\DataLayer\DataLayerCollectEvent;
 use Drupal\drupal_kit\DataLayer\DataLayerEvents;
 use Drupal\drupal_kit\DataLayer\DataLayerLeadEvent;
 use Drupal\drupal_kit\Hook\DataLayerHooks;
-use Drupal\drupal_kit\Hook\Requirements;
 use Drupal\drupal_kit\Services\FeatureFlags;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
@@ -25,7 +24,7 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 use Symfony\Component\Routing\Route;
 
 /**
- * Tests what the dataLayer layer adds to a page (#160).
+ * Tests what the dataLayer layer adds to a page.
  *
  * The hook is built by hand with a route match and a request, because the
  * page under test is not the one the kernel test itself runs on.
@@ -202,6 +201,40 @@ class DataLayerHooksKernelTest extends KernelTestBase {
   }
 
   /**
+   * A draft is not a lead, even with a valid token.
+   *
+   * Webform puts ?token= on the link back to a saved draft. Visiting it must
+   * not report a lead that was never submitted.
+   */
+  public function testDraftTokenPushesNothing(): void {
+    $this->enable();
+    Webform::create(['id' => 'lead_test', 'title' => 'Lead test'])->save();
+    $draft = WebformSubmission::create(['webform_id' => 'lead_test', 'in_draft' => TRUE, 'data' => ['a' => 'b']]);
+    $draft->save();
+
+    $attachments = $this->attachments('<front>', query: ['token' => $draft->getToken()]);
+
+    $this->assertSame([], $this->pushes($attachments));
+  }
+
+  /**
+   * The page depends on the submission it carries data from.
+   *
+   * Without the tag, deleting or changing the submission would leave a cached
+   * page that still emits the old personal data.
+   */
+  public function testTokenPageDependsOnTheSubmission(): void {
+    $this->enable();
+    Webform::create(['id' => 'lead_test', 'title' => 'Lead test'])->save();
+    $submission = WebformSubmission::create(['webform_id' => 'lead_test', 'data' => ['a' => 'b']]);
+    $submission->save();
+
+    $attachments = $this->attachments('<front>', query: ['token' => $submission->getToken()]);
+
+    $this->assertContains('webform_submission:' . $submission->id(), $attachments['#cache']['tags']);
+  }
+
+  /**
    * An unknown token pushes nothing.
    */
   public function testUnknownTokenPushesNothing(): void {
@@ -232,7 +265,7 @@ class DataLayerHooksKernelTest extends KernelTestBase {
     $handler = $this->createMock(ModuleHandlerInterface::class);
     $handler->method('moduleExists')->willReturn(TRUE);
 
-    $requirements = $this->requirements($handler);
+    $requirements = $this->hooks($handler)->runtimeRequirements();
 
     $this->assertSame(RequirementSeverity::Warning, $requirements['drupal_kit_datalayer']['severity']);
     $this->assertStringContainsString('custom_datalayer', (string) $requirements['drupal_kit_datalayer']['description']);
@@ -242,18 +275,17 @@ class DataLayerHooksKernelTest extends KernelTestBase {
    * No requirement is reported when nothing is paused.
    */
   public function testStatusReportIsSilentOtherwise(): void {
-    $this->assertSame([], $this->requirements(), 'flag off');
+    $this->assertSame([], $this->hooks()->runtimeRequirements(), 'flag off');
 
     $this->enable();
-    $this->assertSame([], $this->requirements(), 'flag on, no site-local module');
+    $this->assertSame([], $this->hooks()->runtimeRequirements(), 'flag on, no site-local module');
   }
 
   /**
-   * The module's one page_attachments_alter reaches the layer.
+   * The layer is registered as a page_attachments_alter implementation.
    *
-   * The other tests call the hook class directly. Core allows one
-   * implementation of the hook per module, so the layer runs from
-   * PageWarnings, and only a call through the module handler proves the wiring.
+   * The other tests call the hook class directly. Only a call through the
+   * module handler proves the #[Hook] registration.
    */
   public function testThePageHookRunsTheLayerThroughTheModuleHandler(): void {
     $this->enable();
@@ -271,22 +303,6 @@ class DataLayerHooksKernelTest extends KernelTestBase {
       ['{"event":"generate_lead","form_type":"lead_test","form_data":{"a":"b"}}'],
       $this->pushes($attachments),
     );
-  }
-
-  /**
-   * The registered Requirements service receives what the datalayer row needs.
-   *
-   * The other tests build the class by hand. A service definition that does not
-   * pass the flag reader and the module handler would leave the row silent on
-   * a real site while every test stayed green.
-   */
-  public function testRegisteredRequirementsServiceCanReportTheDataLayerRow(): void {
-    $service = $this->container->get(Requirements::class);
-
-    foreach (['featureFlags', 'moduleHandler'] as $property) {
-      $reflection = new \ReflectionProperty($service, $property);
-      $this->assertNotNull($reflection->getValue($service), "$property is injected");
-    }
   }
 
   /**
@@ -320,22 +336,6 @@ class DataLayerHooksKernelTest extends KernelTestBase {
     $this->hooks($moduleHandler, $route_match, $stack)->pageAttachmentsAlter($attachments);
 
     return $attachments;
-  }
-
-  /**
-   * What the module's runtime_requirements reports about the layer.
-   *
-   * @return array<string, array<string, mixed>>
-   *   The requirements.
-   */
-  private function requirements(?ModuleHandlerInterface $moduleHandler = NULL): array {
-    return (new Requirements(
-      $this->container->get('language_manager'),
-      NULL,
-      NULL,
-      $this->container->get('drupal_kit.feature_flags'),
-      $moduleHandler ?? $this->container->get('module_handler'),
-    ))->runtime();
   }
 
   /**

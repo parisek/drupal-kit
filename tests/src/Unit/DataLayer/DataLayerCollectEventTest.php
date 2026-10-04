@@ -9,7 +9,7 @@ use Drupal\drupal_kit\DataLayer\DataLayerCollectEvent;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Tests the event a project subscribes to for its own page-load pushes (#160).
+ * Tests the event a project subscribes to for its own page-load pushes.
  *
  * @coversDefaultClass \Drupal\drupal_kit\DataLayer\DataLayerCollectEvent
  * @group drupal_kit

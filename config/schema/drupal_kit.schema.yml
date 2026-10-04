@@ -109,7 +109,7 @@ drupal_kit.menu_locations.menu_name:
 
 # What the datalayer feature sends once its flag is on. Every extra is off by
 # default, so a site that turns the flag on gets the webform lead and nothing
-# else, and adds the rest one switch at a time (#160).
+# else, and adds the rest one switch at a time.
 drupal_kit.datalayer:
   type: config_object
   label: 'Drupal Kit dataLayer settings'

@@ -10,7 +10,7 @@ use Drupal\drupal_kit\DataLayer\DataLayerLeadEvent;
 use Drupal\drupal_kit\Services\DataLayer;
 
 /**
- * Tests the service that builds a lead and writes a push as a script (#160).
+ * Tests the service that builds a lead and writes a push as a script.
  *
  * @group drupal_kit
  */

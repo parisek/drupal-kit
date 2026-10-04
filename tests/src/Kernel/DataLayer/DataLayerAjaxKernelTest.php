@@ -23,7 +23,7 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 
 /**
- * Tests the AJAX confirmation path of the lead (#160).
+ * Tests the AJAX confirmation path of the lead.
  *
  * @group drupal_kit
  */

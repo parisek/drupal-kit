@@ -8,7 +8,7 @@ use Drupal\drupal_kit\DataLayer\DataLayerCommand;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Tests the AJAX command that carries a finished push to the browser (#160).
+ * Tests the AJAX command that carries a finished push to the browser.
  *
  * @coversDefaultClass \Drupal\drupal_kit\DataLayer\DataLayerCommand
  * @group drupal_kit

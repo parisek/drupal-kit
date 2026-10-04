@@ -40,18 +40,10 @@ class PageWarnings {
     protected MessengerInterface $messenger,
     #[Autowire(service: 'drupal_kit.schedule_announcer')]
     protected ScheduleAnnouncer $scheduleAnnouncer,
-    protected DataLayerHooks $dataLayerHooks,
   ) {}
 
   /**
    * Implements hook_page_attachments_alter().
-   *
-   * Warns a privileged viewer, then hands the page to the dataLayer layer.
-   * Core allows one implementation of this hook per module, which is why the
-   * layer is called from here instead of declaring its own.
-   *
-   * @param array<mixed> $page
-   *   The page attachments.
    */
   #[Hook('page_attachments_alter')]
   public function pageAttachmentsAlter(array &$page): void {
@@ -79,8 +71,6 @@ class PageWarnings {
     foreach ($this->scheduleAnnouncer->getMessages($entity) as $message) {
       $this->messenger->addWarning($message);
     }
-
-    $this->dataLayerHooks->pageAttachmentsAlter($page);
   }
 
 }

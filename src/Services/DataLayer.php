@@ -12,6 +12,10 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 /**
  * Builds the pushes the dataLayer layer sends and writes one as a script.
  *
+ * @internal
+ *   The layer's own plumbing. A project changes what is sent by subscribing
+ *   to DataLayerEvents::COLLECT and ::LEAD, not by calling this.
+ *
  * The server decides what a lead looks like, for the redirect path and the
  * AJAX path alike. The browser only pushes the finished object. One place
  * decides the event name, the form type and which values leave the site.

@@ -1,0 +1,5 @@
+name: 'Site-local custom_datalayer (test stand-in)'
+type: module
+description: 'Stands in for the module a site carries today. Its name is what the dataLayer feature looks for.'
+package: 'Drupal Kit tests'
+core_version_requirement: ^11.4

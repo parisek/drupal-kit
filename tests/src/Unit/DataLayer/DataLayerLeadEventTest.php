@@ -8,7 +8,7 @@ use Drupal\drupal_kit\DataLayer\DataLayerLeadEvent;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Tests the lead event a subscriber reads and changes (#160).
+ * Tests the lead event a subscriber reads and changes.
  *
  * @coversDefaultClass \Drupal\drupal_kit\DataLayer\DataLayerLeadEvent
  * @group drupal_kit
@@ -42,6 +42,23 @@ class DataLayerLeadEventTest extends TestCase {
       'form_data' => ['n' => 1],
     ], $event->item());
     $this->assertSame('contact', $event->webformId());
+  }
+
+  /**
+   * A subscriber can read what it is about to change.
+   */
+  public function testSubscriberCanReadEveryPart(): void {
+    $event = new DataLayerLeadEvent('contact', ['email' => 'a@example.com']);
+
+    $this->assertSame('generate_lead', $event->event());
+    $this->assertSame('contact', $event->formType());
+    $this->assertSame(['email' => 'a@example.com'], $event->formData());
+
+    $event->setEvent('x')->setFormType('y')->setFormData([]);
+
+    $this->assertSame('x', $event->event());
+    $this->assertSame('y', $event->formType());
+    $this->assertSame([], $event->formData());
   }
 
   /**

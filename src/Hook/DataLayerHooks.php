@@ -9,9 +9,11 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\EntityFormInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\drupal_kit\DataLayer\DataLayerCollectEvent;
 use Drupal\drupal_kit\DataLayer\DataLayerEvents;
 use Drupal\drupal_kit\Services\DataLayer;
@@ -23,9 +25,11 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
- * Puts the dataLayer pushes on the page (#160).
+ * Puts the dataLayer pushes on the page.
  */
 class DataLayerHooks {
+
+  use StringTranslationTrait;
 
   /**
    * The site-local module this layer replaces.
@@ -50,11 +54,7 @@ class DataLayerHooks {
   ) {}
 
   /**
-   * Adds the dataLayer pushes to a page.
-   *
-   * Core allows one hook_page_attachments_alter() implementation per module,
-   * and PageWarnings already is it, so this is no #[Hook] of its own: that
-   * class calls it.
+   * Implements hook_page_attachments_alter().
    *
    * Adds, in order: the status code of the 403 and 404 pages, the lead of a
    * webform submission the redirect carries a token for, and whatever a
@@ -67,6 +67,7 @@ class DataLayerHooks {
    * @param array<mixed> $attachments
    *   The page attachments.
    */
+  #[Hook('page_attachments_alter')]
   public function pageAttachmentsAlter(array &$attachments): void {
     $settings = $this->configFactory->get('drupal_kit.datalayer');
     $cacheability = new CacheableMetadata();
@@ -148,6 +149,15 @@ class DataLayerHooks {
     if (!$submission instanceof WebformSubmissionInterface) {
       return NULL;
     }
+    // The page now carries this submission's data. Without the dependency, a
+    // cached page would keep emitting it after the submission is changed or
+    // deleted.
+    $cacheability->addCacheableDependency($submission);
+    // Webform also puts ?token= on the link back to a saved draft, and a
+    // draft is not a lead.
+    if (!$submission->isCompleted()) {
+      return NULL;
+    }
 
     return $this->dataLayer->lead((string) $submission->getWebform()->id(), $submission->getData());
   }
@@ -184,6 +194,32 @@ class DataLayerHooks {
     if ($submission->getWebform()->getSetting('confirmation_type') === 'inline') {
       $form['#attached']['library'][] = 'drupal_kit/datalayer';
     }
+  }
+
+  /**
+   * Implements hook_runtime_requirements().
+   *
+   * Says why the layer sends nothing when the flag is on and the site-local
+   * module is still installed. Without it, a project that turned the flag on
+   * and sees no push has nowhere to look.
+   *
+   * @return array<string, array<string, mixed>>
+   *   The requirement, or nothing when the layer is not paused.
+   */
+  #[Hook('runtime_requirements')]
+  public function runtimeRequirements(): array {
+    if (!$this->featureFlags->enabled(FeatureFlags::FLAG_DATALAYER) || !$this->moduleHandler->moduleExists(self::SITE_LOCAL_MODULE)) {
+      return [];
+    }
+
+    return [
+      'drupal_kit_datalayer' => [
+        'title' => $this->t('Drupal Kit: dataLayer'),
+        'value' => $this->t('Paused'),
+        'severity' => RequirementSeverity::Warning,
+        'description' => $this->t('The datalayer feature is on, but the module <code>custom_datalayer</code> is still installed and pushes its own leads. Sending both would report every lead twice, so the feature sends nothing until that module is uninstalled.'),
+      ],
+    ];
   }
 
 }
