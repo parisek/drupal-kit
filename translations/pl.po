@@ -47,6 +47,15 @@ msgid "Neither <code>menu.language_menu_link_tree_manipulator</code> nor <code>m
 msgstr "Nie istnieje ani <code>menu.language_menu_link_tree_manipulator</code>, ani <code>menu.language_tree_manipulator</code>, więc menu budowane przez Drupal Kit nie są filtrowane według bieżącego języka treści — pojawią się odnośniki ze wszystkich języków. Jedną z tych dwóch usług dostarcza łatka rdzenia Drupala z <a href=\":url\">zgłoszenia #2466553</a>, zależnie od tego, która rewizja została nałożona."
 
 
+msgid "Drupal Kit: dataLayer"
+msgstr "Drupal Kit: dataLayer"
+
+msgid "Paused"
+msgstr "Wstrzymane"
+
+msgid "The datalayer feature is on, but the module <code>custom_datalayer</code> is still installed and pushes its own leads. Sending both would report every lead twice, so the feature sends nothing until that module is uninstalled."
+msgstr "Funkcja datalayer jest włączona, ale moduł <code>custom_datalayer</code> jest nadal zainstalowany i wysyła własne leady. Wysyłanie obu zgłaszałoby każdy lead dwukrotnie, więc funkcja nic nie wysyła, dopóki ten moduł nie zostanie odinstalowany."
+
 msgid "Typography Filter"
 msgstr "Filtr typografii"
 

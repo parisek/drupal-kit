@@ -47,6 +47,15 @@ msgid "Neither <code>menu.language_menu_link_tree_manipulator</code> nor <code>m
 msgstr "Neexistuje ani <code>menu.language_menu_link_tree_manipulator</code>, ani <code>menu.language_tree_manipulator</code>, takže menu zostavené modulom Drupal Kit sa nefiltrujú podľa aktuálneho jazyka obsahu — objavia sa odkazy zo všetkých jazykov. Jednu z tých dvoch služieb prináša patch jadra Drupalu z <a href=\":url\">issue #2466553</a>, podľa toho, ktorá revízia je nasadená."
 
 
+msgid "Drupal Kit: dataLayer"
+msgstr "Drupal Kit: dataLayer"
+
+msgid "Paused"
+msgstr "Pozastavené"
+
+msgid "The datalayer feature is on, but the module <code>custom_datalayer</code> is still installed and pushes its own leads. Sending both would report every lead twice, so the feature sends nothing until that module is uninstalled."
+msgstr "Funkcia datalayer je zapnutá, ale modul <code>custom_datalayer</code> je stále nainštalovaný a posiela vlastné leady. Odosielanie oboch by nahlásilo každý lead dvakrát, preto funkcia nič neodosiela, kým sa tento modul neodinštaluje."
+
 msgid "Typography Filter"
 msgstr "Filter typografie"
 

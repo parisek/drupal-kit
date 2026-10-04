@@ -50,7 +50,11 @@ class DataLayerHooks {
   ) {}
 
   /**
-   * Implements hook_page_attachments_alter().
+   * Adds the dataLayer pushes to a page.
+   *
+   * Core allows one hook_page_attachments_alter() implementation per module,
+   * and PageWarnings already is it, so this is no #[Hook] of its own: that
+   * class calls it.
    *
    * Adds, in order: the status code of the 403 and 404 pages, the lead of a
    * webform submission the redirect carries a token for, and whatever a
@@ -63,7 +67,6 @@ class DataLayerHooks {
    * @param array<mixed> $attachments
    *   The page attachments.
    */
-  #[Hook('page_attachments_alter')]
   public function pageAttachmentsAlter(array &$attachments): void {
     $settings = $this->configFactory->get('drupal_kit.datalayer');
     $cacheability = new CacheableMetadata();

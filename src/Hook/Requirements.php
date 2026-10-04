@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\drupal_kit\Hook;
 
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\drupal_kit\Services\FeatureFlags;
 
 /**
  * What this module needs from the site, reported on the status page.
@@ -55,6 +57,8 @@ class Requirements {
     protected LanguageManagerInterface $languageManager,
     protected ?object $languageTreeManipulator = NULL,
     protected ?object $contextualLanguageTreeManipulator = NULL,
+    protected ?FeatureFlags $featureFlags = NULL,
+    protected ?ModuleHandlerInterface $moduleHandler = NULL,
   ) {}
 
   /**
@@ -62,6 +66,16 @@ class Requirements {
    */
   #[Hook('runtime_requirements')]
   public function runtime(): array {
+    return $this->menuLanguageFiltering() + $this->dataLayerPaused();
+  }
+
+  /**
+   * The menu language filtering row, on a multilingual site.
+   *
+   * @return array<string, array<string, mixed>>
+   *   The requirement, or nothing on a monolingual site.
+   */
+  protected function menuLanguageFiltering(): array {
     // MenuTreeBuilder filters menu links by the current content language
     // only when the `menu.language_tree_manipulator` service exists — it
     // ships via a Drupal core patch
@@ -89,6 +103,35 @@ class Requirements {
     }
 
     return ['drupal_kit_language_tree_manipulator' => $requirement];
+  }
+
+  /**
+   * Says why the dataLayer feature sends nothing, when it is paused.
+   *
+   * The feature is on and the site-local custom_datalayer module is still
+   * installed. Without this row, a project that turned the flag on and sees
+   * no push has nowhere to look. Core allows one implementation of a hook per
+   * module, so the row lives here, in the module's one runtime_requirements.
+   *
+   * @return array<string, array<string, mixed>>
+   *   The requirement, or nothing when the feature is not paused.
+   */
+  protected function dataLayerPaused(): array {
+    if ($this->featureFlags === NULL || $this->moduleHandler === NULL) {
+      return [];
+    }
+    if (!$this->featureFlags->enabled(FeatureFlags::FLAG_DATALAYER) || !$this->moduleHandler->moduleExists(DataLayerHooks::SITE_LOCAL_MODULE)) {
+      return [];
+    }
+
+    return [
+      'drupal_kit_datalayer' => [
+        'title' => $this->t('Drupal Kit: dataLayer'),
+        'value' => $this->t('Paused'),
+        'severity' => RequirementSeverity::Warning,
+        'description' => $this->t('The datalayer feature is on, but the module <code>custom_datalayer</code> is still installed and pushes its own leads. Sending both would report every lead twice, so the feature sends nothing until that module is uninstalled.'),
+      ],
+    ];
   }
 
 }

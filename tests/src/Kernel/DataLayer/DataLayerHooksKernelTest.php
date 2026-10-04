@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Drupal\Tests\drupal_kit\Kernel\DataLayer;
 
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\drupal_kit\DataLayer\DataLayerCollectEvent;
 use Drupal\drupal_kit\DataLayer\DataLayerEvents;
 use Drupal\drupal_kit\DataLayer\DataLayerLeadEvent;
 use Drupal\drupal_kit\Hook\DataLayerHooks;
+use Drupal\drupal_kit\Hook\Requirements;
 use Drupal\drupal_kit\Services\FeatureFlags;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
@@ -18,6 +20,8 @@ use Drupal\webform\Entity\Webform;
 use Drupal\webform\Entity\WebformSubmission;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 use Symfony\Component\Routing\Route;
 
 /**
@@ -221,6 +225,71 @@ class DataLayerHooksKernelTest extends KernelTestBase {
   }
 
   /**
+   * The status report says so while the site-local module keeps the layer quiet.
+   */
+  public function testStatusReportWarnsWhileTheSiteLocalModuleIsInstalled(): void {
+    $this->enable();
+    $handler = $this->createMock(ModuleHandlerInterface::class);
+    $handler->method('moduleExists')->willReturn(TRUE);
+
+    $requirements = $this->requirements($handler);
+
+    $this->assertSame(RequirementSeverity::Warning, $requirements['drupal_kit_datalayer']['severity']);
+    $this->assertStringContainsString('custom_datalayer', (string) $requirements['drupal_kit_datalayer']['description']);
+  }
+
+  /**
+   * No requirement is reported when nothing is paused.
+   */
+  public function testStatusReportIsSilentOtherwise(): void {
+    $this->assertSame([], $this->requirements(), 'flag off');
+
+    $this->enable();
+    $this->assertSame([], $this->requirements(), 'flag on, no site-local module');
+  }
+
+  /**
+   * The module's one page_attachments_alter reaches the layer.
+   *
+   * The other tests call the hook class directly. Core allows one
+   * implementation of the hook per module, so the layer runs from
+   * PageWarnings, and only a call through the module handler proves the wiring.
+   */
+  public function testThePageHookRunsTheLayerThroughTheModuleHandler(): void {
+    $this->enable();
+    Webform::create(['id' => 'lead_test', 'title' => 'Lead test'])->save();
+    $submission = WebformSubmission::create(['webform_id' => 'lead_test', 'data' => ['a' => 'b']]);
+    $submission->save();
+    $request = Request::create('/', 'GET', ['token' => $submission->getToken()]);
+    $request->setSession(new Session(new MockArraySessionStorage()));
+    $this->container->get('request_stack')->push($request);
+
+    $attachments = [];
+    $this->container->get('module_handler')->alter('page_attachments', $attachments);
+
+    $this->assertSame(
+      ['{"event":"generate_lead","form_type":"lead_test","form_data":{"a":"b"}}'],
+      $this->pushes($attachments),
+    );
+  }
+
+  /**
+   * The registered Requirements service receives what the datalayer row needs.
+   *
+   * The other tests build the class by hand. A service definition that does not
+   * pass the flag reader and the module handler would leave the row silent on
+   * a real site while every test stayed green.
+   */
+  public function testRegisteredRequirementsServiceCanReportTheDataLayerRow(): void {
+    $service = $this->container->get(Requirements::class);
+
+    foreach (['featureFlags', 'moduleHandler'] as $property) {
+      $reflection = new \ReflectionProperty($service, $property);
+      $this->assertNotNull($reflection->getValue($service), "$property is injected");
+    }
+  }
+
+  /**
    * Turns the flag on.
    */
   private function enable(): void {
@@ -245,21 +314,44 @@ class DataLayerHooksKernelTest extends KernelTestBase {
   private function attachments(string $route_name, array $parameters = [], array $query = [], ?ModuleHandlerInterface $moduleHandler = NULL): array {
     $stack = new RequestStack();
     $stack->push(Request::create('/', 'GET', $query));
-    $hooks = new DataLayerHooks(
+    $route_match = new RouteMatch($route_name, new Route('/' . implode('/', array_map(static fn (string $name): string => '{' . $name . '}', array_keys($parameters)))), $parameters, $parameters);
+
+    $attachments = [];
+    $this->hooks($moduleHandler, $route_match, $stack)->pageAttachmentsAlter($attachments);
+
+    return $attachments;
+  }
+
+  /**
+   * What the module's runtime_requirements reports about the layer.
+   *
+   * @return array<string, array<string, mixed>>
+   *   The requirements.
+   */
+  private function requirements(?ModuleHandlerInterface $moduleHandler = NULL): array {
+    return (new Requirements(
+      $this->container->get('language_manager'),
+      NULL,
+      NULL,
+      $this->container->get('drupal_kit.feature_flags'),
+      $moduleHandler ?? $this->container->get('module_handler'),
+    ))->runtime();
+  }
+
+  /**
+   * The hook class, built with real services and the given stand-ins.
+   */
+  private function hooks(?ModuleHandlerInterface $moduleHandler = NULL, ?RouteMatch $route_match = NULL, ?RequestStack $stack = NULL): DataLayerHooks {
+    return new DataLayerHooks(
       $this->container->get('drupal_kit.feature_flags'),
       $this->container->get('config.factory'),
       $moduleHandler ?? $this->container->get('module_handler'),
-      new RouteMatch($route_name, new Route('/' . implode('/', array_map(static fn (string $name): string => '{' . $name . '}', array_keys($parameters)))), $parameters, $parameters),
-      $stack,
+      $route_match ?? $this->container->get('current_route_match'),
+      $stack ?? $this->container->get('request_stack'),
       $this->container->get('entity_type.manager'),
       $this->container->get('event_dispatcher'),
       $this->container->get('drupal_kit.datalayer'),
     );
-
-    $attachments = [];
-    $hooks->pageAttachmentsAlter($attachments);
-
-    return $attachments;
   }
 
   /**

@@ -461,6 +461,83 @@ Pulled automatically by Composer when you install:
 - [`drupal/twig_tweak`](https://www.drupal.org/project/twig_tweak) — collection of helpful Twig extensions.
 - [`parisek/twig-typography`](https://github.com/parisek/twig-typography) — upstream typography filter (powers `|typography`).
 
+## dataLayer
+
+One thin layer that replaces the `custom_datalayer` module each site used to carry. It pushes the objects a tag manager reads onto `window.dataLayer`. It ships off: nothing is sent until a site turns the flag on.
+
+```yaml
+# config/sync/drupal_kit.feature_flags.yml
+datalayer: true
+```
+
+With the flag on and every setting at its default, the layer sends one thing: `generate_lead` after a webform submission. A site adds the rest one switch at a time in `drupal_kit.datalayer`:
+
+| Setting | Default | What it adds |
+| --- | --- | --- |
+| `status_codes` | `false` | `{statusCode: 403}` or `{statusCode: 404}` on the error pages |
+| `page_context` | `false` | `drupalSettings.drupal_kit.datalayer.page`: `type`, `name`, `id` of the current node |
+| `click_events` | `false` | A click on an element with a `gtm-event-*` class pushes an event |
+| `lead_form_data` | `all` | Which submitted values the lead carries: `all`, `none`, or `keys` |
+| `lead_form_keys` | `[]` | The submission keys sent when `lead_form_data` is `keys` |
+
+### The lead
+
+A completed webform submission becomes:
+
+```js
+{event: 'generate_lead', form_type: '<webform id>', form_data: {…}}
+```
+
+It reaches the page two ways. A webform that redirects carries `?token=` to its confirmation page, and the layer builds the push there. A webform that confirms inline gets the push in its AJAX response, and `js/datalayer.js` applies it. Both are built by one call, so the event name, the form type and the values are decided in one place.
+
+`form_data` carries the values the visitor typed: names, e-mail addresses, phone numbers, messages. They go to the tag manager and on to every tag in the container. `all` keeps a container that reads them working. Set `none`, or `keys` with a list, to send only what the tags use.
+
+### Click events
+
+With `click_events` on, a click inside an element with a `gtm-event-foo-bar` class pushes `{event: 'foo_bar'}`. Each `data-gtm-*` attribute becomes a key (`data-gtm-item-id="7"` becomes `item_id: "7"`) and overrides the page context.
+
+```twig
+<a href="/pdf" class="gtm-event-download" data-gtm-file-name="brochure">Download</a>
+```
+
+### Adding your own pushes
+
+Do not edit the layer. Subscribe to one of two events.
+
+`DataLayerEvents::COLLECT` runs on every page build. Add a push, add page context, and say what the push depends on:
+
+```php
+public function onCollect(DataLayerCollectEvent $event): void {
+  $node = $event->routeMatch()->getParameter('node');
+  if ($node instanceof NodeInterface && $node->bundle() === 'product') {
+    $event->add(['event' => 'view_item', 'item_id' => $node->id()]);
+    $event->cacheability()->addCacheableDependency($node);
+  }
+}
+```
+
+The page is cached. A push that reads the session, a cookie or a query argument has to declare it through `$event->cacheability()`, or a cached page shows it to the wrong visitor or not at all. This is why the layer has no "push on the next page" helper: a flag in the session cannot be delivered correctly through a cached page, and each site that needs one has to decide what to do about that.
+
+`DataLayerEvents::LEAD` runs once for each completed submission. Rename the event for a container that expects an old name, change the form type or the data, or suppress the push:
+
+```php
+public function onLead(DataLayerLeadEvent $event): void {
+  if ($event->webformId() === 'newsletter') {
+    $event->setEvent('newsletterSubmitted');
+  }
+}
+```
+
+The values a LEAD subscriber sees are already filtered by `lead_form_data`.
+
+### Migrating from a site-local `custom_datalayer`
+
+1. Turn the flag on and set the switches so the output matches what the site sends today. A site that sends only the lead changes nothing but the flag.
+2. Move the site's own events into a subscriber.
+3. Uninstall `custom_datalayer`, then delete its code. While that module is installed, this layer sends nothing and the status report shows a warning, so the two never send every lead twice.
+
+Drupal cannot uninstall a module whose code is gone. Uninstall it in a deploy that still has the code, or in the same deploy before the code is removed.
+
 ## Optional integrations
 
 The following modules are optional. When present, `EntityHelper` automatically exposes additional fields and renderers; when absent, those code paths gracefully no-op.

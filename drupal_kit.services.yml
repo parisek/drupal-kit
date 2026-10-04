@@ -19,6 +19,10 @@ services:
       - "@language_manager"
       - "@?menu.language_tree_manipulator"
       - "@?menu.language_menu_link_tree_manipulator"
+      - "@drupal_kit.feature_flags"
+      - "@module_handler"
+      - "@drupal_kit.feature_flags"
+      - "@module_handler"
   drupal_kit.feature_flags:
     class: Drupal\drupal_kit\Services\FeatureFlags
     arguments:
