@@ -32,6 +32,9 @@ final class DataLayerCollectEvent extends Event {
    */
   private array $pageContext = [];
 
+  /**
+   * What the added pushes depend on.
+   */
   private readonly CacheableMetadata $cacheability;
 
   public function __construct(private readonly RouteMatchInterface $routeMatch) {

@@ -161,6 +161,10 @@ class DataLayerHooks {
    *
    * @param array<mixed> $form
    *   The form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   * @param string $form_id
+   *   The form id.
    */
   #[Hook('webform_submission_form_alter')]
   public function webformSubmissionFormAlter(array &$form, FormStateInterface $form_state, string $form_id): void {

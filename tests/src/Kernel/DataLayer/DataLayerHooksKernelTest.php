@@ -225,7 +225,7 @@ class DataLayerHooksKernelTest extends KernelTestBase {
   }
 
   /**
-   * The status report says so while the site-local module keeps the layer quiet.
+   * The status report says so while the site-local module silences the layer.
    */
   public function testStatusReportWarnsWhileTheSiteLocalModuleIsInstalled(): void {
     $this->enable();

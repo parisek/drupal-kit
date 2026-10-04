@@ -16,10 +16,19 @@ use Drupal\Component\EventDispatcher\Event;
  */
 final class DataLayerLeadEvent extends Event {
 
+  /**
+   * The event name the push carries.
+   */
   private string $event = 'generate_lead';
 
+  /**
+   * The form type the push carries.
+   */
   private string $formType;
 
+  /**
+   * Whether a subscriber stopped the push.
+   */
   private bool $suppressed = FALSE;
 
   /**

@@ -7,7 +7,7 @@ namespace Drupal\Tests\drupal_kit\Kernel\DataLayer;
 use Drupal\KernelTests\KernelTestBase;
 
 /**
- * Pins that the libraries the hooks attach exist and point at real files (#160).
+ * Pins that the attached libraries exist and point at real files (#160).
  *
  * A hook that attaches a library name nobody declared fails silently in the
  * browser, so the names are checked against the library discovery.

@@ -8,8 +8,10 @@ use Drupal\KernelTests\KernelTestBase;
 use Drupal\drupal_kit\Services\FeatureFlags;
 
 /**
- * Pins what the datalayer feature ships: a flag that is off, and settings
- * that make a site that turns it on send exactly one thing, the lead (#160).
+ * Pins what the datalayer feature ships (#160).
+ *
+ * A flag that is off, and settings that make a site that turns it on send
+ * exactly one thing, the lead.
  *
  * @group drupal_kit
  */

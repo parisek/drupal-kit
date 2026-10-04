@@ -42,9 +42,9 @@ class FeatureFlags {
    * Send dataLayer events from the module.
    *
    * The webform lead, and, behind their own settings, status codes, page
-   * context and click events. Off by default, as AGENTS.md requires. A site that still has its own
-   * custom_datalayer module keeps it until it migrates; while that module is
-   * installed this layer sends nothing (#160).
+   * context and click events. Off by default, as AGENTS.md requires. A site
+   * that still has its own custom_datalayer module keeps it until it
+   * migrates; while that module is installed this layer sends nothing (#160).
    */
   public const FLAG_DATALAYER = 'datalayer';
 
