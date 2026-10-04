@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- **`datalayer` feature** (#160) — one thin dataLayer layer to replace the site-local `custom_datalayer` copies. Off by default behind the `datalayer` flag in `drupal_kit.feature_flags`; its settings live in the new `drupal_kit.datalayer` config object. `drupal_kit_post_update_feature_flag_datalayer()` declares the flag and the settings on a site that already has the module.
+
 ## [3.4.0] — 2026-10-02
 
 ### Added
