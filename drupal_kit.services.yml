@@ -145,3 +145,11 @@ services:
     arguments:
       - "@event_dispatcher"
       - "@config.factory"
+  drupal_kit.datalayer_ajax_subscriber:
+    class: Drupal\drupal_kit\EventSubscriber\DataLayerAjaxSubscriber
+    arguments:
+      - "@drupal_kit.feature_flags"
+      - "@module_handler"
+      - "@drupal_kit.datalayer"
+    tags:
+      - { name: event_subscriber }

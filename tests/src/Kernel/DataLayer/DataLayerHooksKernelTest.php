@@ -209,6 +209,18 @@ class DataLayerHooksKernelTest extends KernelTestBase {
   }
 
   /**
+   * The click handler loads only when click_events is on.
+   */
+  public function testClickEventsLibrary(): void {
+    $this->enable();
+    $this->assertNotContains('drupal_kit/datalayer_events', $this->attachments('entity.node.canonical')['#attached']['library'] ?? []);
+
+    $this->config('drupal_kit.datalayer')->set('click_events', TRUE)->save();
+
+    $this->assertContains('drupal_kit/datalayer_events', $this->attachments('entity.node.canonical')['#attached']['library']);
+  }
+
+  /**
    * Turns the flag on.
    */
   private function enable(): void {

@@ -7,7 +7,9 @@ namespace Drupal\drupal_kit\Hook;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\EntityFormInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\drupal_kit\DataLayer\DataLayerCollectEvent;
@@ -113,6 +115,9 @@ class DataLayerHooks {
           'drupal_kit_datalayer_' . $key,
         ];
       }
+      if ($settings->get('click_events')) {
+        $attachments['#attached']['library'][] = 'drupal_kit/datalayer_events';
+      }
       if ($page_context !== []) {
         $attachments['#attached']['drupalSettings']['drupal_kit']['datalayer']['page'] = $page_context;
       }
@@ -142,6 +147,36 @@ class DataLayerHooks {
     }
 
     return $this->dataLayer->lead((string) $submission->getWebform()->id(), $submission->getData());
+  }
+
+  /**
+   * Implements hook_webform_submission_form_alter().
+   *
+   * Loads the script that applies the lead command, on a webform that
+   * confirms inline. A webform that redirects carries the lead in the page
+   * that follows, and needs no script.
+   *
+   * @param array<mixed> $form
+   *   The form.
+   */
+  #[Hook('webform_submission_form_alter')]
+  public function webformSubmissionFormAlter(array &$form, FormStateInterface $form_state, string $form_id): void {
+    if (!$this->featureFlags->enabled(FeatureFlags::FLAG_DATALAYER) || $this->moduleHandler->moduleExists(self::SITE_LOCAL_MODULE)) {
+      return;
+    }
+
+    $form_object = $form_state->getFormObject();
+    if (!$form_object instanceof EntityFormInterface) {
+      return;
+    }
+    $submission = $form_object->getEntity();
+    if (!$submission instanceof WebformSubmissionInterface) {
+      return;
+    }
+
+    if ($submission->getWebform()->getSetting('confirmation_type') === 'inline') {
+      $form['#attached']['library'][] = 'drupal_kit/datalayer';
+    }
   }
 
 }
