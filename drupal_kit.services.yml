@@ -140,3 +140,8 @@ services:
       - "@drupal_kit.entity_helper"
       - "@variation_cache_factory"
       - "@theme.manager"
+  drupal_kit.datalayer:
+    class: Drupal\drupal_kit\Services\DataLayer
+    arguments:
+      - "@event_dispatcher"
+      - "@config.factory"
