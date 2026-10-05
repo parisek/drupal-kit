@@ -528,7 +528,15 @@ public function onLead(DataLayerLeadEvent $event): void {
 }
 ```
 
-The values a LEAD subscriber sees are already filtered by `lead_form_data`.
+The values a LEAD subscriber sees are already filtered by `lead_form_data`. The event also carries the submission, for a subscriber that needs more than the values the site chose to send. A site that sends no values can add back one field:
+
+```php
+public function onLead(DataLayerLeadEvent $event): void {
+  $event->setFormData(['topic' => $event->submission()?->getElementData('topic')]);
+}
+```
+
+The submission holds every value, so a subscriber that reads from it decides for itself what leaves the site.
 
 ### Migrating from a site-local `custom_datalayer`
 

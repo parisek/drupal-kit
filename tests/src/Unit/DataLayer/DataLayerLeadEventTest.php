@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\drupal_kit\Unit\DataLayer;
 
 use Drupal\drupal_kit\DataLayer\DataLayerLeadEvent;
+use Drupal\webform\WebformSubmissionInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -59,6 +60,16 @@ class DataLayerLeadEventTest extends TestCase {
     $this->assertSame('x', $event->event());
     $this->assertSame('y', $event->formType());
     $this->assertSame([], $event->formData());
+  }
+
+  /**
+   * The event carries the submission when there is one.
+   */
+  public function testSubmissionIsAvailableToTheSubscriber(): void {
+    $submission = $this->createMock(WebformSubmissionInterface::class);
+
+    $this->assertSame($submission, (new DataLayerLeadEvent('contact', [], $submission))->submission());
+    $this->assertNull((new DataLayerLeadEvent('contact', []))->submission());
   }
 
   /**

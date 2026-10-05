@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\drupal_kit\DataLayer;
 
 use Drupal\Component\EventDispatcher\Event;
+use Drupal\webform\WebformSubmissionInterface;
 
 /**
  * A completed webform submission, on its way to the dataLayer.
@@ -38,10 +39,15 @@ final class DataLayerLeadEvent extends Event {
    *   The webform that was submitted.
    * @param array<string, mixed> $formData
    *   The submitted values the site chose to send.
+   * @param \Drupal\webform\WebformSubmissionInterface|null $submission
+   *   The submission, for a subscriber that needs more than the values the
+   *   site chose to send: the webform's title, its source entity, or one
+   *   field added back under lead_form_data "none".
    */
   public function __construct(
     private readonly string $webformId,
     private array $formData,
+    private readonly ?WebformSubmissionInterface $submission = NULL,
   ) {
     $this->formType = $webformId;
   }
@@ -51,6 +57,17 @@ final class DataLayerLeadEvent extends Event {
    */
   public function webformId(): string {
     return $this->webformId;
+  }
+
+  /**
+   * The submission this lead comes from, when there is one.
+   *
+   * It holds every submitted value, including the ones the lead_form_data
+   * setting kept out of formData(). A subscriber that reads from it decides
+   * for itself what leaves the site.
+   */
+  public function submission(): ?WebformSubmissionInterface {
+    return $this->submission;
   }
 
   /**

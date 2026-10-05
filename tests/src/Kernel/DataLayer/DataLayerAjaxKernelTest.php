@@ -93,6 +93,24 @@ class DataLayerAjaxKernelTest extends KernelTestBase {
   }
 
   /**
+   * A subscriber can read the submission on the AJAX path too.
+   */
+  public function testSubscriberCanReadTheSubmissionOnTheAjaxPath(): void {
+    $this->enable();
+    $seen = NULL;
+    $this->container->get('event_dispatcher')->addListener(
+      DataLayerEvents::LEAD,
+      static function (DataLayerLeadEvent $e) use (&$seen): void {
+        $seen = $e->submission()?->getWebform()->id();
+      },
+    );
+
+    $this->respond($this->submission([]));
+
+    $this->assertSame('lead_test', $seen);
+  }
+
+  /**
    * A suppressed lead adds no command.
    */
   public function testSuppressedLeadAddsNoCommand(): void {

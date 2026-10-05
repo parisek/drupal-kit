@@ -55,7 +55,7 @@ final class DataLayerAjaxSubscriber implements EventSubscriberInterface {
       return;
     }
 
-    $item = $this->dataLayer->lead((string) $submission->getWebform()->id(), $submission->getData());
+    $item = $this->dataLayer->lead((string) $submission->getWebform()->id(), $submission->getData(), $submission);
     if ($item !== NULL) {
       $response->addCommand(new DataLayerCommand($item));
     }

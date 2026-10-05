@@ -7,6 +7,7 @@ namespace Drupal\drupal_kit\Services;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\drupal_kit\DataLayer\DataLayerEvents;
 use Drupal\drupal_kit\DataLayer\DataLayerLeadEvent;
+use Drupal\webform\WebformSubmissionInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -43,12 +44,14 @@ class DataLayer {
    *   The webform that was submitted.
    * @param array<string, mixed> $data
    *   Every submitted value.
+   * @param \Drupal\webform\WebformSubmissionInterface|null $submission
+   *   The submission, handed to the subscribers of the lead event.
    *
    * @return array<string, mixed>|null
    *   The push, or NULL when a subscriber suppressed it.
    */
-  public function lead(string $webformId, array $data): ?array {
-    $event = new DataLayerLeadEvent($webformId, $this->filterLeadData($data));
+  public function lead(string $webformId, array $data, ?WebformSubmissionInterface $submission = NULL): ?array {
+    $event = new DataLayerLeadEvent($webformId, $this->filterLeadData($data), $submission);
     $this->eventDispatcher->dispatch($event, DataLayerEvents::LEAD);
 
     return $event->isSuppressed() ? NULL : $event->item();

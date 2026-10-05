@@ -235,6 +235,31 @@ class DataLayerHooksKernelTest extends KernelTestBase {
   }
 
   /**
+   * A lead subscriber can read the submission on the redirect path.
+   *
+   * The use case: the site sends no values, and one subscriber adds one back.
+   */
+  public function testTokenLeadSubscriberCanAddOneFieldBack(): void {
+    $this->enable();
+    $this->config('drupal_kit.datalayer')->set('lead_form_data', 'none')->save();
+    $this->container->get('event_dispatcher')->addListener(
+      DataLayerEvents::LEAD,
+      static fn (DataLayerLeadEvent $e) => $e->setFormData(['topic' => $e->submission()?->getElementData('topic')]),
+    );
+    Webform::create(['id' => 'lead_test', 'title' => 'Lead test'])->save();
+    $submission = WebformSubmission::create([
+      'webform_id' => 'lead_test',
+      'data' => ['topic' => 'sales', 'email' => 'a@example.com'],
+    ]);
+    $submission->save();
+
+    $attachments = $this->attachments('<front>', query: ['token' => $submission->getToken()]);
+
+    $expected = '{"event":"generate_lead","form_type":"lead_test","form_data":{"topic":"sales"}}';
+    $this->assertSame([$expected], $this->pushes($attachments));
+  }
+
+  /**
    * An unknown token pushes nothing.
    */
   public function testUnknownTokenPushesNothing(): void {

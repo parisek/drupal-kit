@@ -159,7 +159,7 @@ class DataLayerHooks {
       return NULL;
     }
 
-    return $this->dataLayer->lead((string) $submission->getWebform()->id(), $submission->getData());
+    return $this->dataLayer->lead((string) $submission->getWebform()->id(), $submission->getData(), $submission);
   }
 
   /**
