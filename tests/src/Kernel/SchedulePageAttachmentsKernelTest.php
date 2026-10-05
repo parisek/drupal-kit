@@ -76,7 +76,7 @@ class SchedulePageAttachmentsKernelTest extends KernelTestBase {
     $this->enterRoute('entity.node.canonical', ['node' => $node]);
 
     $page = [];
-    \Drupal::moduleHandler()->invoke('drupal_kit', 'page_attachments_alter', [&$page]);
+    \Drupal::moduleHandler()->alter('page_attachments', $page);
 
     $warnings = array_map('strval', \Drupal::messenger()->messagesByType('warning'));
     $date = \Drupal::service('date.formatter')->format(self::PUBLISH_ON, 'long');
@@ -92,7 +92,7 @@ class SchedulePageAttachmentsKernelTest extends KernelTestBase {
     $this->enterRoute('system.admin', []);
 
     $page = [];
-    \Drupal::moduleHandler()->invoke('drupal_kit', 'page_attachments_alter', [&$page]);
+    \Drupal::moduleHandler()->alter('page_attachments', $page);
 
     $this->assertSame([], \Drupal::messenger()->messagesByType('warning'));
   }
@@ -108,7 +108,7 @@ class SchedulePageAttachmentsKernelTest extends KernelTestBase {
     $this->enterRoute('entity.node.canonical', ['node' => $node]);
 
     $page = [];
-    \Drupal::moduleHandler()->invoke('drupal_kit', 'page_attachments_alter', [&$page]);
+    \Drupal::moduleHandler()->alter('page_attachments', $page);
 
     foreach (\Drupal::messenger()->messagesByType('warning') as $message) {
       $this->assertStringNotContainsString('Scheduler', (string) $message);

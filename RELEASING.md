@@ -159,6 +159,16 @@ The documented return shapes of `EntityHelper` getters and the builders (image a
 - **Adding** a key → MINOR
 - **Removing/renaming** a key or changing its type → MAJOR
 
+### Events and config objects
+
+The events a project subscribes to: the names in `DataLayerEvents` (`COLLECT`, `LEAD`), and the public methods of `DataLayerCollectEvent` and `DataLayerLeadEvent`. The settings a site writes: the keys and accepted values of `drupal_kit.datalayer` and of `drupal_kit.menu_locations`, and the flags in `drupal_kit.feature_flags`.
+
+- **Adding** an event, a public method on an event, a settings key, or an accepted value → MINOR
+- **Renaming/removing** an event or method, removing or renaming a key, or changing what a value means → MAJOR
+- **Changing the order** in which a subscriber sees data (for example filtering before the event instead of after) → MAJOR
+
+The services behind them (`drupal_kit.datalayer`) are `@internal`: a project changes what is sent through the events, not by calling the service.
+
 ### What is NOT public API
 
 The following change freely without a version bump beyond PATCH:

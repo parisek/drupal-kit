@@ -140,3 +140,16 @@ services:
       - "@drupal_kit.entity_helper"
       - "@variation_cache_factory"
       - "@theme.manager"
+  drupal_kit.datalayer:
+    class: Drupal\drupal_kit\Services\DataLayer
+    arguments:
+      - "@event_dispatcher"
+      - "@config.factory"
+  drupal_kit.datalayer_ajax_subscriber:
+    class: Drupal\drupal_kit\EventSubscriber\DataLayerAjaxSubscriber
+    arguments:
+      - "@drupal_kit.feature_flags"
+      - "@module_handler"
+      - "@drupal_kit.datalayer"
+    tags:
+      - { name: event_subscriber }

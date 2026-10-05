@@ -21,6 +21,10 @@ drupal_kit.feature_flags:
       type: boolean
       label: 'Log changes to menu location assignments'
       requiredKey: false
+    datalayer:
+      type: boolean
+      label: 'Send dataLayer events from the module'
+      requiredKey: false
   #
   # What a flag ships, all in one commit:
   #
@@ -102,3 +106,34 @@ drupal_kit.menu_locations.menu_name:
   label: 'Menu'
   translatable: true
   form_element_class: '\Drupal\drupal_kit\FormElement\MenuSelect'
+
+# What the datalayer feature sends once its flag is on. Every extra is off by
+# default, so a site that turns the flag on gets the webform lead and nothing
+# else, and adds the rest one switch at a time.
+drupal_kit.datalayer:
+  type: config_object
+  label: 'Drupal Kit dataLayer settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    status_codes:
+      type: boolean
+      label: 'Push the status code on the 403 and 404 pages'
+    page_context:
+      type: boolean
+      label: 'Expose the type, name and id of the current node to scripts'
+    click_events:
+      type: boolean
+      label: 'Push an event when a visitor clicks an element with a gtm-event-* class'
+    lead_form_data:
+      type: string
+      label: 'Which submitted values the lead event carries: all, none, or only the keys listed'
+      constraints:
+        Choice:
+          choices: [all, none, keys]
+    lead_form_keys:
+      type: sequence
+      label: 'Submission keys the lead event carries when lead_form_data is "keys"'
+      sequence:
+        type: string
+        label: 'Submission key'

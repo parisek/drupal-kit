@@ -39,6 +39,16 @@ class FeatureFlags {
   public const FLAG_MENU_LOCATIONS_LOG = 'menu_locations_log';
 
   /**
+   * Send dataLayer events from the module.
+   *
+   * The webform lead, and, behind their own settings, status codes, page
+   * context and click events. Off by default, as AGENTS.md requires. A site
+   * that still has its own custom_datalayer module keeps it until it
+   * migrates; while that module is installed this layer sends nothing.
+   */
+  public const FLAG_DATALAYER = 'datalayer';
+
+  /**
    * Every flag this module ships.
    *
    * Why the list exists: schema validation is not runtime enforcement. It
@@ -68,6 +78,7 @@ class FeatureFlags {
    */
   protected const KNOWN_FLAGS = [
     self::FLAG_MENU_LOCATIONS_LOG,
+    self::FLAG_DATALAYER,
   ];
 
   public function __construct(

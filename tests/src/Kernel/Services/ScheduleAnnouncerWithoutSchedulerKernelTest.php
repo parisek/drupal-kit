@@ -97,7 +97,7 @@ class ScheduleAnnouncerWithoutSchedulerKernelTest extends KernelTestBase {
     $this->enterNodeRoute($node);
 
     $page = [];
-    \Drupal::moduleHandler()->invoke('drupal_kit', 'page_attachments_alter', [&$page]);
+    \Drupal::moduleHandler()->alter('page_attachments', $page);
 
     $warnings = array_map('strval', \Drupal::messenger()->messagesByType('warning'));
 

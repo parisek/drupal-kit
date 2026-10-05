@@ -41,12 +41,22 @@ class RequirementsKernelTest extends KernelTestBase {
    *   The requirements this module reports.
    */
   private function requirements(): array {
-    // This module's implementation only. invokeAllWith() would also run
-    // system's, which needs core/includes/install.inc loaded by hand — the
-    // include the old test carried, and the reason it read as if requiring
-    // core internals were normal.
-    return $this->container->get('module_handler')
-      ->invoke('drupal_kit', 'runtime_requirements');
+    // This module's implementations only, merged the way the status report
+    // merges every module's. system's is not called: it needs
+    // core/includes/install.inc loaded by hand. The single-module invoke() is
+    // no option, because it refuses a module that has more than one
+    // implementation of a hook, and this module may have several.
+    $requirements = [];
+    $this->container->get('module_handler')->invokeAllWith(
+      'runtime_requirements',
+      static function (callable $hook, string $module) use (&$requirements): void {
+        if ($module === 'drupal_kit') {
+          $requirements = array_merge($requirements, $hook());
+        }
+      },
+    );
+
+    return $requirements;
   }
 
   /**

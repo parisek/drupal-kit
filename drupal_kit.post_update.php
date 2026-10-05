@@ -87,3 +87,34 @@ function drupal_kit_post_update_feature_flag_menu_locations_log(): string {
   $config->set('menu_locations_log', TRUE)->save();
   return 'Declared menu_locations_log as TRUE.';
 }
+
+/**
+ * Declares the datalayer feature flag, off, and installs its settings.
+ *
+ * config/install only runs on a fresh install, so a site that already had
+ * the module enabled gets neither the flag nor drupal_kit.datalayer. The flag
+ * is declared FALSE: the feature is opt-in. A value a site already set stays.
+ */
+function drupal_kit_post_update_feature_flag_datalayer(): string {
+  $log = [];
+
+  $flags = \Drupal::configFactory()->getEditable('drupal_kit.feature_flags');
+  if ($flags->get('datalayer') === NULL) {
+    $flags->set('datalayer', FALSE)->save();
+    $log[] = 'Declared datalayer as FALSE.';
+  }
+
+  $settings = \Drupal::configFactory()->getEditable('drupal_kit.datalayer');
+  if ($settings->isNew()) {
+    $settings->setData([
+      'status_codes' => FALSE,
+      'page_context' => FALSE,
+      'click_events' => FALSE,
+      'lead_form_data' => 'all',
+      'lead_form_keys' => [],
+    ])->save();
+    $log[] = 'Installed drupal_kit.datalayer.';
+  }
+
+  return $log ? implode(' ', $log) : 'The datalayer feature is already declared. Nothing to do.';
+}

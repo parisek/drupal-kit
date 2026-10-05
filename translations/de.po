@@ -47,6 +47,15 @@ msgid "Neither <code>menu.language_menu_link_tree_manipulator</code> nor <code>m
 msgstr "Weder <code>menu.language_menu_link_tree_manipulator</code> noch <code>menu.language_tree_manipulator</code> existiert, daher werden von Drupal Kit erstellte Menüs nicht nach der aktuellen Inhaltssprache gefiltert — Links aus allen Sprachen erscheinen. Einer der beiden Dienste kommt mit dem Drupal-Core-Patch aus <a href=\":url\">Issue #2466553</a>, je nachdem, welche Revision angewendet wurde."
 
 
+msgid "Drupal Kit: dataLayer"
+msgstr "Drupal Kit: dataLayer"
+
+msgid "Paused"
+msgstr "Pausiert"
+
+msgid "The datalayer feature is on, but the module <code>custom_datalayer</code> is still installed and pushes its own leads. Sending both would report every lead twice, so the feature sends nothing until that module is uninstalled."
+msgstr "Die Funktion datalayer ist aktiviert, aber das Modul <code>custom_datalayer</code> ist noch installiert und sendet eigene Leads. Würden beide senden, würde jeder Lead doppelt gemeldet; die Funktion sendet daher nichts, bis dieses Modul deinstalliert ist."
+
 msgid "Typography Filter"
 msgstr "Typografie-Filter"
 

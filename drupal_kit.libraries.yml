@@ -1,0 +1,17 @@
+# The dataLayer feature. Both libraries load only when the datalayer
+# flag is on and the matching setting asks for them.
+
+# Applies the lead command a completed webform submission returns.
+datalayer:
+  js:
+    js/datalayer.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupal.ajax
+
+# Pushes an event when a visitor clicks an element with a gtm-event-* class.
+datalayer_events:
+  js:
+    js/datalayer-events.js: {}
+  dependencies:
+    - core/drupalSettings
