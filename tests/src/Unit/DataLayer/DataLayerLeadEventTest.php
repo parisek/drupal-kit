@@ -46,6 +46,22 @@ class DataLayerLeadEventTest extends TestCase {
   }
 
   /**
+   * A subscriber can say what the push depends on.
+   *
+   * The redirect path caches the page that carries the push. A subscriber
+   * that reads the webform's title needs the page to follow that title.
+   */
+  public function testSubscriberCanDeclareCacheability(): void {
+    $event = new DataLayerLeadEvent('contact', []);
+
+    $this->assertSame([], $event->cacheability()->getCacheTags());
+
+    $event->cacheability()->addCacheTags(['config:webform.webform.contact']);
+
+    $this->assertSame(['config:webform.webform.contact'], $event->cacheability()->getCacheTags());
+  }
+
+  /**
    * A subscriber can read what it is about to change.
    */
   public function testSubscriberCanReadEveryPart(): void {

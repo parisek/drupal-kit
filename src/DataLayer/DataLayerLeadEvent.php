@@ -5,15 +5,17 @@ declare(strict_types=1);
 namespace Drupal\drupal_kit\DataLayer;
 
 use Drupal\Component\EventDispatcher\Event;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\webform\WebformSubmissionInterface;
 
 /**
  * A completed webform submission, on its way to the dataLayer.
  *
- * The values it carries are already filtered by the lead_form_data setting,
- * so a subscriber never sees a field the site chose not to send. A subscriber
- * can still rename the event for a tag manager container that expects an old
- * name, change the form type, change the data, or suppress the push.
+ * The values in formData() are the ones the lead_form_data setting kept in.
+ * submission() is not filtered: it holds every submitted value, and a
+ * subscriber that reads from it decides what leaves the site. A subscriber can
+ * rename the event for a tag manager container that expects an old name,
+ * change the form type, change the data, or suppress the push.
  */
 final class DataLayerLeadEvent extends Event {
 
@@ -33,6 +35,11 @@ final class DataLayerLeadEvent extends Event {
   private bool $suppressed = FALSE;
 
   /**
+   * What the push depends on, beyond the submission itself.
+   */
+  private readonly CacheableMetadata $cacheability;
+
+  /**
    * Constructs the event.
    *
    * @param string $webformId
@@ -50,6 +57,7 @@ final class DataLayerLeadEvent extends Event {
     private readonly ?WebformSubmissionInterface $submission = NULL,
   ) {
     $this->formType = $webformId;
+    $this->cacheability = new CacheableMetadata();
   }
 
   /**
@@ -148,6 +156,17 @@ final class DataLayerLeadEvent extends Event {
       'form_type' => $this->formType,
       'form_data' => $this->formData,
     ];
+  }
+
+  /**
+   * What the push depends on, beyond the submission itself. Add to it.
+   *
+   * The redirect path caches the page that carries the push. A subscriber that
+   * reads something other than the submission, such as a config entity or a
+   * label, adds a tag here so the page follows it.
+   */
+  public function cacheability(): CacheableMetadata {
+    return $this->cacheability;
   }
 
 }

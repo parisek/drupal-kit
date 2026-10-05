@@ -235,6 +235,41 @@ class DataLayerHooksKernelTest extends KernelTestBase {
   }
 
   /**
+   * The page depends on the webform the submission belongs to.
+   *
+   * The lead event hands the webform to a subscriber, which may put its title
+   * in the push. Renaming the webform must then refresh the cached page.
+   */
+  public function testTokenPageDependsOnTheWebform(): void {
+    $this->enable();
+    Webform::create(['id' => 'lead_test', 'title' => 'Lead test'])->save();
+    $submission = WebformSubmission::create(['webform_id' => 'lead_test', 'data' => ['a' => 'b']]);
+    $submission->save();
+
+    $attachments = $this->attachments('<front>', query: ['token' => $submission->getToken()]);
+
+    $this->assertContains('config:webform.webform.lead_test', $attachments['#cache']['tags']);
+  }
+
+  /**
+   * What a lead subscriber declares reaches the cached page.
+   */
+  public function testTokenPageCarriesLeadSubscriberCacheability(): void {
+    $this->enable();
+    $this->container->get('event_dispatcher')->addListener(
+      DataLayerEvents::LEAD,
+      static fn (DataLayerLeadEvent $e) => $e->cacheability()->addCacheTags(['site:lead_labels']),
+    );
+    Webform::create(['id' => 'lead_test', 'title' => 'Lead test'])->save();
+    $submission = WebformSubmission::create(['webform_id' => 'lead_test', 'data' => ['a' => 'b']]);
+    $submission->save();
+
+    $attachments = $this->attachments('<front>', query: ['token' => $submission->getToken()]);
+
+    $this->assertContains('site:lead_labels', $attachments['#cache']['tags']);
+  }
+
+  /**
    * A lead subscriber can read the submission on the redirect path.
    *
    * The use case: the site sends no values, and one subscriber adds one back.

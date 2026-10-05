@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\drupal_kit\Services;
 
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\drupal_kit\DataLayer\DataLayerEvents;
 use Drupal\drupal_kit\DataLayer\DataLayerLeadEvent;
@@ -46,13 +47,16 @@ class DataLayer {
    *   Every submitted value.
    * @param \Drupal\webform\WebformSubmissionInterface|null $submission
    *   The submission, handed to the subscribers of the lead event.
+   * @param \Drupal\Core\Cache\CacheableMetadata|null $cacheability
+   *   Receives what the subscribers declared the push depends on.
    *
    * @return array<string, mixed>|null
    *   The push, or NULL when a subscriber suppressed it.
    */
-  public function lead(string $webformId, array $data, ?WebformSubmissionInterface $submission = NULL): ?array {
+  public function lead(string $webformId, array $data, ?WebformSubmissionInterface $submission = NULL, ?CacheableMetadata $cacheability = NULL): ?array {
     $event = new DataLayerLeadEvent($webformId, $this->filterLeadData($data), $submission);
     $this->eventDispatcher->dispatch($event, DataLayerEvents::LEAD);
+    $cacheability?->addCacheableDependency($event->cacheability());
 
     return $event->isSuppressed() ? NULL : $event->item();
   }

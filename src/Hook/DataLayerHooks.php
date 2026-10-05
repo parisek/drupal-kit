@@ -26,6 +26,10 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Puts the dataLayer pushes on the page.
+ *
+ * @internal
+ *   A project changes what is pushed through the events in DataLayerEvents, not
+ *   by extending this class.
  */
 class DataLayerHooks {
 
@@ -153,13 +157,20 @@ class DataLayerHooks {
     // cached page would keep emitting it after the submission is changed or
     // deleted.
     $cacheability->addCacheableDependency($submission);
+    // The lead event hands the webform and the source entity to a subscriber,
+    // which may read a title from either.
+    $cacheability->addCacheableDependency($submission->getWebform());
+    $source = $submission->getSourceEntity();
+    if ($source !== NULL) {
+      $cacheability->addCacheableDependency($source);
+    }
     // Webform also puts ?token= on the link back to a saved draft, and a
     // draft is not a lead.
     if (!$submission->isCompleted()) {
       return NULL;
     }
 
-    return $this->dataLayer->lead((string) $submission->getWebform()->id(), $submission->getData(), $submission);
+    return $this->dataLayer->lead((string) $submission->getWebform()->id(), $submission->getData(), $submission, $cacheability);
   }
 
   /**

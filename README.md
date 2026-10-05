@@ -538,6 +538,8 @@ public function onLead(DataLayerLeadEvent $event): void {
 
 The submission holds every value, so a subscriber that reads from it decides for itself what leaves the site.
 
+On the redirect path the page that carries the lead is cached. The layer already makes it depend on the submission, its webform and its source entity. A subscriber that reads anything else adds a tag through `$event->cacheability()`, as a COLLECT subscriber does.
+
 ### Migrating from a site-local `custom_datalayer`
 
 1. Turn the flag on and set the switches so the output matches what the site sends today. A site that sends only the lead changes nothing but the flag.
