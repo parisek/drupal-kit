@@ -16,7 +16,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  *
  * Discovered automatically by Drush's commandfile scan — no service
  * registration needed, per Drush 12+ convention for
- * Drupal\<module>\Commands\*Commands classes.
+ * Drupal\<module>\Drush\Commands\*Commands classes.
  */
 final class ConfigApplierCommands extends DrushCommands {
 

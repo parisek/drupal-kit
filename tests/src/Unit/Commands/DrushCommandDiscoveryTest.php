@@ -8,6 +8,7 @@ use Composer\Autoload\ClassLoader;
 use Robo\ClassDiscovery\RelativeNamespaceDiscovery;
 use Drupal\drupal_kit\Drush\Commands\ConfigApplierCommands;
 use Drupal\drupal_kit\Services\ConfigApplier;
+use Drush\Commands\DrushCommands;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
@@ -49,7 +50,11 @@ final class DrushCommandDiscoveryTest extends TestCase {
   }
 
   /**
-   * Every command class sits under src/Drush/Commands.
+   * No Drush command class sits outside src/Drush/Commands.
+   *
+   * The test loads each class under src and asks whether it extends
+   * DrushCommands, so an alias or an indirect subclass is caught too. A class
+   * that does, anywhere else under src, is a command Drush will not list.
    */
   public function testNoCommandClassSitsOutsideTheDrushDirectory(): void {
     $src = dirname(__DIR__, 4) . '/src';
@@ -59,12 +64,13 @@ final class DrushCommandDiscoveryTest extends TestCase {
       if ($file->getExtension() !== 'php') {
         continue;
       }
-      $path = $file->getPathname();
-      if (str_contains($path, '/Drush/Commands/')) {
+      $relative = substr($file->getPathname(), strlen($src) + 1);
+      if (str_starts_with($relative, 'Drush/Commands/')) {
         continue;
       }
-      if (preg_match('/extends\s+(\\\\?Drush\\\\Commands\\\\)?DrushCommands\b/', (string) file_get_contents($path))) {
-        $misplaced[] = substr($path, strlen($src) + 1);
+      $class = 'Drupal\\drupal_kit\\' . str_replace(['/', '.php'], ['\\', ''], $relative);
+      if (class_exists($class) && is_subclass_of($class, DrushCommands::class)) {
+        $misplaced[] = $relative;
       }
     }
 
