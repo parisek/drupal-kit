@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\drupal_kit\Unit\Commands;
 
-use Drupal\drupal_kit\Commands\ConfigApplierCommands;
+use Drupal\drupal_kit\Drush\Commands\ConfigApplierCommands;
 use Drupal\drupal_kit\Services\ConfigApplier;
 use PHPUnit\Framework\TestCase;
 

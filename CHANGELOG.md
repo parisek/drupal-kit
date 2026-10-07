@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Fixed
+
+- **`drush kit:config-apply` is found by Drush 13** (#162) — the command never appeared in `drush list`, although the `drupal_kit.config_applier` service worked. Two causes. `ConfigApplierCommands` sat in `src/Commands`, and Drush 12 and later discover a module's commands only in `src/Drush/Commands`. Drush 13 also builds a command through a static `create()` method, and the class had none. Checked on Drush 13.8; `AutowireTrait` needs Drush 12.5 or later. The class moved to `src/Drush/Commands` (namespace `Drupal\drupal_kit\Drush\Commands`) and uses Drush's `AutowireTrait` with the service named by `#[Autowire]`. New unit tests ask Drush's own PSR-4 discovery for the class, build it through `create()`, and fail when a class that extends `DrushCommands` sits outside `src/Drush/Commands`. The class is not public API (`RELEASING.md` § Public API surface); the command name, options and output are unchanged. Also fixed a docblock that named a `--show-hash` option that does not exist.
+
 ## [3.5.0] — 2026-10-05
 
 ### Added

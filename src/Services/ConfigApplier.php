@@ -248,8 +248,8 @@ class ConfigApplier {
   /**
    * Hashes a decoded config value the same way for guard and lookup.
    *
-   * Exposed so `kit:config-apply --show-hash` and callers building an
-   * $expectedHashes map compute it identically to the internal guard.
+   * Exposed so callers building an $expectedHashes map compute it
+   * identically to the internal guard.
    *
    * @param array<string, mixed> $data
    *   The decoded config value to hash.
