@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\drupal_kit\Commands;
+namespace Drupal\drupal_kit\Drush\Commands;
 
 use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
 use Drupal\drupal_kit\Services\ConfigApplier;
 use Drush\Attributes as CLI;
+use Drush\Commands\AutowireTrait;
 use Drush\Commands\DrushCommands;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Drush command wrapping ConfigApplier: `drush kit:config-apply`.
@@ -18,7 +20,12 @@ use Drush\Commands\DrushCommands;
  */
 final class ConfigApplierCommands extends DrushCommands {
 
+  // Drush 13 builds a command through create(). The service id is named
+  // because the kit does not register ConfigApplier under its class name.
+  use AutowireTrait;
+
   public function __construct(
+    #[Autowire(service: 'drupal_kit.config_applier')]
     protected readonly ConfigApplier $configApplier,
   ) {
     parent::__construct();
