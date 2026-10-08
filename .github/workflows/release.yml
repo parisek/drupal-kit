@@ -12,8 +12,8 @@ name: Release
 #     don't trigger downstream workflows by design). The stamp workflow calls
 #     `gh workflow run release.yml --field tag=vX.Y.Z` after pushing the tag.
 #
-# There is no registry to notify — consumers install via a `vcs` repository
-# entry, so the pushed tag is immediately consumable (see RELEASING.md).
+# Packagist follows the tags through its webhook, so there is nothing to notify
+# here (see RELEASING.md).
 
 on:
   push:
