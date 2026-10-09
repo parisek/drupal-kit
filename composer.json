@@ -35,7 +35,7 @@
         "drupal/core-dev": "^11.4",
         "drupal/file_mdm": "^3.0",
         "drupal/focal_point": "^2.0",
-        "drupal/image_effects": "^4.0",
+        "drupal/image_effects": "^5.0",
         "drupal/inline_entity_form": "^3.0@RC",
         "drupal/scheduler": "^2.3",
         "drupal/webform": "^6.3",
