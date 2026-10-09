@@ -1,16 +1,17 @@
 # Drupal Kit
 
 [![Packagist Version](https://img.shields.io/packagist/v/parisek/drupal-kit)](https://packagist.org/packages/parisek/drupal-kit)
+[![PHP Version](https://img.shields.io/packagist/php-v/parisek/drupal-kit)](https://packagist.org/packages/parisek/drupal-kit)
 [![Packagist Downloads](https://img.shields.io/packagist/dt/parisek/drupal-kit)](https://packagist.org/packages/parisek/drupal-kit/stats)
 [![CI](https://github.com/parisek/drupal-kit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/parisek/drupal-kit/actions/workflows/ci.yml)
-[![Drupal](https://img.shields.io/badge/Drupal-10%20%7C%2011-0678BE?logo=drupal&logoColor=white)](https://www.drupal.org)
+[![Drupal](https://img.shields.io/badge/Drupal-%5E11.4-0678BE?logo=drupal&logoColor=white)](https://www.drupal.org)
 [![PHPStan](https://img.shields.io/badge/PHPStan-level%208-2ecc40)](https://phpstan.org/)
 [![Coverage](https://img.shields.io/badge/Coverage-78%25-2ecc40)](.github/workflows/ci.yml)
 [![License: GPL-2.0-or-later](https://img.shields.io/badge/License-GPL--2.0--or--later-blue.svg)](https://spdx.org/licenses/GPL-2.0-or-later.html)
 
 `parisek/drupal-kit` — base library module for [Drupal](https://www.drupal.org) sites built on the **PORTA** component pattern. Provides shared infrastructure (services, base classes, [Twig](https://twig.symfony.com/) extensions, image resizer) reused across projects. The [Drupal](https://www.drupal.org) counterpart of [`parisek/timber-kit`](https://github.com/parisek/timber-kit) (WordPress).
 
-Requires [PHP 8.3+](https://www.php.net/releases/8.3/) and [Drupal](https://www.drupal.org/about/10) 10 or 11.
+Requires [PHP 8.3+](https://www.php.net/releases/8.3/) and [Drupal](https://www.drupal.org/about/11) 11.4 or later.
 
 ## Installation
 
