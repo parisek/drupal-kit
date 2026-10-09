@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- **`drupal/config_pages` requirement is `^4.0` (was `^2.19`)**. A site that still runs Config Pages 2 or 3 must update it before it takes this release. The unit and kernel suites pass against 4.x. The `drupal/image_effects` development requirement also moves to `^5.0`; it is not installed on a site.
+
 ## [3.5.1] — 2026-10-07
 
 ### Fixed
