@@ -3,6 +3,20 @@
     "description": "Shared Drupal infrastructure for sites built on the PORTA component pattern: services, base classes, Twig extensions, image resizer.",
     "license": "GPL-2.0-or-later",
     "type": "drupal-module",
+    "keywords": [
+        "drupal",
+        "drupal-module",
+        "twig",
+        "components",
+        "image-resizer",
+        "porta"
+    ],
+    "homepage": "https://github.com/parisek/drupal-kit",
+    "support": {
+        "issues": "https://github.com/parisek/drupal-kit/issues",
+        "source": "https://github.com/parisek/drupal-kit",
+        "security": "https://github.com/parisek/drupal-kit/blob/main/SECURITY.md"
+    },
     "require": {
         "php": ">=8.3",
         "drupal/components": "^3.2",

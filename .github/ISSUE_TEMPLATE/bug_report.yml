@@ -1,0 +1,33 @@
+name: Bug report
+description: Report a problem in drupal-kit.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not report security problems here. Use the private link on the "Contact links" page.
+  - type: input
+    id: version
+    attributes:
+      label: drupal-kit version
+      placeholder: "3.5.1"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Drupal and PHP versions
+      placeholder: "Drupal 11.4, PHP 8.3"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual result
+    validations:
+      required: true

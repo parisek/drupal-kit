@@ -96,6 +96,9 @@ This repo follows [Conventional Commits](https://www.conventionalcommits.org/):
 - `refactor:` for code restructuring without behavior change
 - `ci:` for CI / workflow changes only
 - `chore:` for routine maintenance
+- `docs:`, `perf:`, `build:` and `revert:` are also allowed
+
+The PR title is linted by `.github/workflows/commitlint.yml`. Squash-merge makes it the commit subject, so it ends with `(#N)`.
 
 Subject line under 70 characters; details go in the body explaining the *why*, not the *what*.
 
@@ -105,3 +108,14 @@ Subject line under 70 characters; details go in the body explaining the *why*, n
 - Link the issue with `Closes #N`.
 - Include a short test plan in the description.
 - CI must pass (tests + PHPStan + coverage threshold) before merge.
+- Add an entry under `[Unreleased]` in `CHANGELOG.md` in the same commit as the code.
+- Write tests first. `AGENTS.md` explains the rule.
+- Record design decisions as an ADR in `docs/adr/`.
+
+## Security
+
+Do not report vulnerabilities in a public issue. See `SECURITY.md`.
+
+## AI agents
+
+`AGENTS.md` holds the rules for AI coding assistants.
