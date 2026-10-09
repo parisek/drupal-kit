@@ -2,12 +2,7 @@
 
 ## Supported versions
 
-| Version | Supported |
-|---------|-----------|
-| 3.5.x   | Yes       |
-| < 3.5   | No        |
-
-The latest minor release of the current major version gets security fixes. Older majors do not.
+Only the latest release gets security fixes. That is the newest minor release of the newest major version. Older releases get no fixes. To receive a fix, update to the latest release.
 
 ## Report a vulnerability
 
