@@ -125,6 +125,8 @@ services:
       - "@config.manager"
       - "@config.storage"
       - "@entity_type.manager"
+      - "@module_handler"
+      - "@theme_handler"
   drupal_kit.menu_active_trail_resolver:
     class: Drupal\drupal_kit\Services\MenuActiveTrailResolver
     arguments:

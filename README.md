@@ -107,7 +107,11 @@ Guarantees:
   `dependencies.config` list (`field.storage.*` before `field.field.*`,
   a bundle before its fields, …) — you don't have to list them in order.
   A dependency that is neither in your list nor already active is reported
-  `ERROR` and nothing is applied.
+  `ERROR`.
+- **All or nothing only through `applySlice()`.** `apply()` and the CLI write
+  every `CREATE`/`UPDATE` entry of the plan, even when another entry of the
+  same plan is `ERROR` or `REFUSE`. `applySlice()` writes nothing in that case
+  (see below).
 - **Idempotent.** Safe to run on every deploy; the second run reports
   `SKIP-EXISTS` for everything it already created.
 
@@ -130,45 +134,82 @@ drush kit:config-apply --names=language.content_settings.paragraph.hero \
 
 ### `hook_post_update_NAME()` pattern
 
-The command above is a manual front end for the same PHP API — call it from
-a `hook_post_update_NAME()` in a project module so a new paragraph type (or
-any other config) ships through `drush updb` on deploy, the same way schema
-changes do:
+The command above is a manual front end for the same PHP API. Call
+`applySlice()` from a `hook_post_update_NAME()` in a project module, so a new
+paragraph type (or any other config) ships through `drush updb` on deploy, the
+same way schema changes do.
+
+A slice is a directory shipped with the module. It holds the exported config
+files and a `slice.yml` that names them:
+
+```yaml
+# my_project/config/slices/0001_hero/slice.yml
+names:                  # required: the config to apply, in any order
+  - paragraphs.paragraphs_type.hero
+  - field.storage.paragraph.field_hero_image
+  - field.field.paragraph.hero.field_hero_image
+  - core.entity_view_display.paragraph.hero.default
+  - core.entity_form_display.paragraph.hero.default
+update: []              # optional: names that may be updated when they exist
+hashes: {}              # optional: name => expected sha256 of the active value
+                        # of an update name (ConfigApplier::activeHash())
+```
+
+```
+my_project/config/slices/0001_hero/
+  slice.yml
+  paragraphs.paragraphs_type.hero.yml
+  field.storage.paragraph.field_hero_image.yml
+  field.field.paragraph.hero.field_hero_image.yml
+  core.entity_view_display.paragraph.hero.default.yml
+  core.entity_form_display.paragraph.hero.default.yml
+```
+
+The manifest is YAML on purpose. Drupal's `.htaccess` denies `.yml` files but
+serves `.txt`, so a list in a `.txt` file under `modules/` is web readable.
+`applySlice()` refuses a slice that still holds a `names.txt`, `update.txt` or
+`hashes.txt` from the older, project-local layout.
 
 ```php
 /**
  * Creates the "hero" paragraph type and its fields.
  */
-function my_project_post_update_hero_paragraph_type(): void {
-  /** @var \Drupal\drupal_kit\Services\ConfigApplier $applier */
-  $applier = \Drupal::service('drupal_kit.config_applier');
+function my_project_post_update_0001_hero(): string {
+  $dir = \Drupal::service('extension.list.module')->getPath('my_project') . '/config/slices/0001_hero';
+  $plan = \Drupal::service('drupal_kit.config_applier')->applySlice($dir);
 
-  $names = [
-    'paragraphs.paragraphs_type.hero',
-    'field.storage.paragraph.field_hero_image',
-    'field.field.paragraph.hero.field_hero_image',
-    'core.entity_view_display.paragraph.hero.default',
-    'core.entity_form_display.paragraph.hero.default',
-  ];
-
-  $plan = $applier->apply(
-    \Drupal::service('extension.list.module')->getPath('my_project') . '/config/deploy',
-    $names,
-  );
-
-  foreach ($plan as $entry) {
-    if ($entry['action'] === 'ERROR') {
-      throw new \RuntimeException("kit:config-apply: {$entry['name']}: {$entry['reason']}");
-    }
-  }
+  $created = array_column(array_filter($plan, static fn (array $entry): bool => $entry['action'] === 'CREATE'), 'name');
+  return $created ? 'Created ' . implode(', ', $created) . '.' : 'Nothing to do.';
 }
 ```
 
+`applySlice()` plans the whole slice first. When any entry is `ERROR` or
+`REFUSE`, it throws `UpdateException` before the first write, so `drush updb`
+stops with the site unchanged and runs the update again on the next deploy.
+`planSlice()` returns the same plan and writes nothing.
+
+The slice plan checks more than `apply()` does:
+
+- An entry whose owner (the first segment of its name, `node` in
+  `node.type.hero`) or a `dependencies.module`/`dependencies.theme` extension
+  is not enabled is `ERROR`.
+- `slice.yml` must be a map with only the keys `names`, `update` and
+  `hashes`, and `names` must list at least one config. A list must not repeat
+  a name. An empty `update` or `hashes` may be written as `[]` or `{}`: YAML
+  decodes both to the same empty PHP array.
+- Every `update` name must be in `names`. Every `hashes` key must be an
+  `update` name, with a 64-character sha256 as its value. A typo would
+  otherwise turn the update guard off without a word.
+
+The plan cannot foresee every failure. A database error while creating a
+field table happens during the write, and table creation is not
+transactional, so the entries before it stay written.
+
 Re-running `drush updb` on a site that already has the paragraph type is a
-no-op — every name comes back `SKIP-EXISTS`. Ship the config as a
-`config/deploy`-style directory shipped with the module (not `config/sync`,
-which is the site's own export), so the fixture travels with the code that
-needs it.
+no-op: every name comes back `SKIP-EXISTS`. Keep the slice next to the code
+that needs it, never in `config/sync`. The site's own export keeps changing
+after the update is written; a journaled update must apply what it was
+written for.
 
 ## Menu locations
 
