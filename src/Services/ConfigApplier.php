@@ -13,6 +13,7 @@ use Drupal\Core\Config\FileStorage;
 use Drupal\Core\Config\StorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Extension\ThemeHandlerInterface;
 use Drupal\Core\Utility\UpdateException;
 
 /**
@@ -69,6 +70,7 @@ class ConfigApplier {
     protected readonly StorageInterface $activeStorage,
     protected readonly EntityTypeManagerInterface $entityTypeManager,
     protected readonly ModuleHandlerInterface $moduleHandler,
+    protected readonly ThemeHandlerInterface $themeHandler,
   ) {}
 
   /**
@@ -124,20 +126,6 @@ class ConfigApplier {
     // means the plan can't be trusted to apply cleanly (e.g. a
     // field.field.* whose field.storage.* was left off the list).
     foreach ($data as $name => $item) {
-      // A config owned by a module that is off cannot be saved. Without
-      // this check the save throws halfway through apply(), after the
-      // entries before it were written.
-      foreach ($item['dependencies']['module'] ?? [] as $module) {
-        if (!$this->moduleHandler->moduleExists($module)) {
-          $plan[] = [
-            'name' => $name,
-            'action' => self::ACTION_ERROR,
-            'reason' => "module not enabled: $module",
-          ];
-          unset($data[$name]);
-          continue 2;
-        }
-      }
       foreach ($item['dependencies']['config'] ?? [] as $dependency) {
         if (!isset($data[$dependency]) && !$this->activeStorage->exists($dependency)) {
           $plan[] = [
@@ -235,6 +223,10 @@ class ConfigApplier {
    *   the active value of an update.txt name (see activeHash()).
    * Blank lines and lines that start with `#` are skipped in all three.
    *
+   * On top of plan(), each CREATE or UPDATE entry whose owner or
+   * dependency extension is not enabled becomes ERROR (see
+   * missingExtension()).
+   *
    * @param string $sliceDir
    *   The slice directory.
    *
@@ -246,7 +238,57 @@ class ConfigApplier {
    */
   public function planSlice(string $sliceDir): array {
     [$names, $updateAllowed, $expectedHashes] = $this->readSlice($sliceDir);
-    return $this->plan($sliceDir, $names, $updateAllowed, $expectedHashes);
+    $plan = $this->plan($sliceDir, $names, $updateAllowed, $expectedHashes);
+
+    // Extension preflight. It runs for slices only, so plan() and apply()
+    // keep the behaviour their callers rely on.
+    $source = new FileStorage($sliceDir);
+    foreach ($plan as $index => $entry) {
+      if (!in_array($entry['action'], [self::ACTION_CREATE, self::ACTION_UPDATE], TRUE)) {
+        continue;
+      }
+      $missing = $this->missingExtension($entry['name'], $source->read($entry['name']) ?: []);
+      if ($missing !== NULL) {
+        $plan[$index] = ['name' => $entry['name'], 'action' => self::ACTION_ERROR, 'reason' => $missing];
+      }
+    }
+    return $plan;
+  }
+
+  /**
+   * Names the extension a config needs that is not enabled, if any.
+   *
+   * The owner is the first segment of the name (`node.type.x` belongs to
+   * node), the rule core's config import uses. A config entity often does
+   * not list its provider in `dependencies.module`; when the provider is
+   * off, the entity type is unknown and the object would be saved as simple
+   * config. `dependencies.module` and `dependencies.theme` are checked too,
+   * because a save of such a config throws halfway through the slice.
+   *
+   * @param string $name
+   *   The config name.
+   * @param array<string, mixed> $data
+   *   The decoded config from the slice.
+   *
+   * @return string|null
+   *   The ERROR reason, or NULL when every extension is enabled.
+   */
+  protected function missingExtension(string $name, array $data): ?string {
+    $owner = strstr($name, '.', TRUE) ?: $name;
+    if ($owner !== 'core' && !$this->moduleHandler->moduleExists($owner) && !$this->themeHandler->themeExists($owner)) {
+      return "owner not enabled: $owner";
+    }
+    foreach ($data['dependencies']['module'] ?? [] as $module) {
+      if ($module !== 'core' && !$this->moduleHandler->moduleExists($module)) {
+        return "module not enabled: $module";
+      }
+    }
+    foreach ($data['dependencies']['theme'] ?? [] as $theme) {
+      if (!$this->themeHandler->themeExists($theme)) {
+        return "theme not enabled: $theme";
+      }
+    }
+    return NULL;
   }
 
   /**
@@ -312,7 +354,9 @@ class ConfigApplier {
    *   The names, the update list and the expected hashes.
    *
    * @throws \Drupal\Core\Utility\UpdateException
-   *   When names.txt is missing or names nothing, or hashes.txt is malformed.
+   *   When names.txt is missing or names nothing, update.txt names a config
+   *   names.txt does not, or a hashes.txt line is malformed, repeated or
+   *   names a config update.txt does not.
    */
   protected function readSlice(string $sliceDir): array {
     if (!is_file("$sliceDir/names.txt")) {
@@ -323,16 +367,30 @@ class ConfigApplier {
       throw new UpdateException("Slice $sliceDir: names.txt names no config. Nothing changed.");
     }
 
+    $update = $this->readList("$sliceDir/update.txt");
+    foreach (array_diff($update, $names) as $name) {
+      throw new UpdateException("Slice $sliceDir: update.txt names $name, which names.txt does not. Nothing changed.");
+    }
+
+    // A typo in a hash name would turn the guard off without a word, so
+    // every line must match a name in update.txt, once, with a sha256.
     $hashes = [];
     foreach ($this->readList("$sliceDir/hashes.txt") as $line) {
       [$name, $hash] = array_pad(array_map('trim', explode('=', $line, 2)), 2, '');
-      if ($name === '' || $hash === '') {
-        throw new UpdateException("Slice $sliceDir: hashes.txt line \"$line\" is not name=hash. Nothing changed.");
+      $problem = match (TRUE) {
+        $name === '' || $hash === '' => 'is not name=hash',
+        !preg_match('/^[0-9a-f]{64}$/', $hash) => 'does not hold a sha256 hash',
+        !in_array($name, $update, TRUE) => "names $name, which update.txt does not",
+        isset($hashes[$name]) => "repeats $name",
+        default => NULL,
+      };
+      if ($problem !== NULL) {
+        throw new UpdateException("Slice $sliceDir: hashes.txt line \"$line\" $problem. Nothing changed.");
       }
       $hashes[$name] = $hash;
     }
 
-    return [$names, $this->readList("$sliceDir/update.txt"), $hashes];
+    return [$names, $update, $hashes];
   }
 
   /**

@@ -6,11 +6,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
-- **`ConfigApplier::applySlice()` and `planSlice()`** (#163) — apply a slice directory (`names.txt`, optional `update.txt` and `hashes.txt`, the exported config files) all or nothing. The whole slice is planned first; an `ERROR` or `REFUSE` entry anywhere throws `UpdateException` before the first write, so `drush updb` stops with the site unchanged. A `hook_post_update_NAME()` becomes one call instead of the dry run, check and apply each project copied by hand. `apply()` keeps its signature and behaviour.
+- **`ConfigApplier::applySlice()` and `planSlice()`** (#163) — apply a slice directory (`names.txt`, optional `update.txt` and `hashes.txt`, the exported config files) all or nothing. The whole slice is planned first; an `ERROR` or `REFUSE` entry anywhere throws `UpdateException` before the first write, so `drush updb` stops with the site unchanged. A `hook_post_update_NAME()` becomes one call instead of the dry run, check and apply each project copied by hand. The slice plan also marks an entry `ERROR` when its owner (the first segment of the name) or a `dependencies.module`/`dependencies.theme` extension is not enabled, and the list files are validated: an `update.txt` name must be in `names.txt`, and each `hashes.txt` line must name an `update.txt` entry once, with a sha256. `plan()` and `apply()` keep their signature and behaviour. `ConfigApplier` takes `@module_handler` and `@theme_handler` as new constructor arguments (container-wired, not public API per RELEASING.md).
 
 ### Fixed
 
-- **`ConfigApplier::plan()` reports a config whose module is off** (#163) — an entry with a `dependencies.module` that is not enabled is now `ERROR: module not enabled: <module>`. Before, its save threw halfway through `apply()`, after the entries before it were written. The README no longer claims that an `ERROR` stops `apply()`: it never did; `applySlice()` is the all-or-nothing path. `ConfigApplier` takes `@module_handler` as a fifth constructor argument.
+- **README: `apply()` is not all or nothing** (#163) — the README claimed that an `ERROR` entry stops `apply()`. It never did: `apply()` writes every `CREATE`/`UPDATE` entry of its plan. The README now says so and points to `applySlice()`.
 
 ### Changed
 

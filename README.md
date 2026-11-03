@@ -106,8 +106,8 @@ Guarantees:
 - **Dependency order.** Names are topologically sorted from each config's own
   `dependencies.config` list (`field.storage.*` before `field.field.*`,
   a bundle before its fields, …) — you don't have to list them in order.
-  A dependency that is neither in your list nor already active, or a module
-  in `dependencies.module` that is not enabled, is reported `ERROR`.
+  A dependency that is neither in your list nor already active is reported
+  `ERROR`.
 - **All or nothing only through `applySlice()`.** `apply()` and the CLI write
   every `CREATE`/`UPDATE` entry of the plan, even when another entry of the
   same plan is `ERROR` or `REFUSE`. `applySlice()` writes nothing in that case
@@ -175,6 +175,15 @@ function my_project_post_update_0001_hero(): string {
 `REFUSE`, it throws `UpdateException` before the first write, so `drush updb`
 stops with the site unchanged and runs the update again on the next deploy.
 `planSlice()` returns the same plan and writes nothing.
+
+The slice plan checks more than `apply()` does:
+
+- An entry whose owner (the first segment of its name, `node` in
+  `node.type.hero`) or a `dependencies.module`/`dependencies.theme` extension
+  is not enabled is `ERROR`.
+- Every `update.txt` name must be in `names.txt`. Every `hashes.txt` line must
+  name an `update.txt` entry, once, with a 64-character sha256. A typo would
+  otherwise turn the update guard off without a word.
 
 The plan cannot foresee every failure. A database error while creating a
 field table happens during the write, and table creation is not

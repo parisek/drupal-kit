@@ -209,9 +209,9 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
   }
 
   /**
-   * A config whose module is not enabled is an ERROR in the plan.
+   * A config whose module is not enabled is an ERROR in the slice plan.
    *
-   * Without the check, the save throws halfway through apply() and leaves
+   * Without the check, the save throws halfway through the slice and leaves
    * the entries before it written.
    */
   public function testModuleDependencyNotEnabledIsAnError(): void {
@@ -222,11 +222,18 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
     $data['dependencies']['module'][] = 'kit_module_that_is_off';
     $storage->write('field.field.node.kit_page.field_kit_teaser', $data);
 
-    $plan = $this->configApplier->plan($dir, $this->names());
+    $plan = $this->configApplier->planSlice($dir);
     $errors = array_values(array_filter($plan, static fn (array $entry): bool => $entry['action'] === ConfigApplier::ACTION_ERROR));
     $this->assertCount(1, $errors);
     $this->assertSame('field.field.node.kit_page.field_kit_teaser', $errors[0]['name']);
-    $this->assertStringContainsString('module not enabled: kit_module_that_is_off', $errors[0]['reason']);
+    $this->assertSame('module not enabled: kit_module_that_is_off', $errors[0]['reason']);
+
+    // plan() and apply() keep their behaviour: the check is slice-only.
+    $legacy = $this->configApplier->plan($dir, $this->names());
+    $this->assertSame(
+      [ConfigApplier::ACTION_CREATE, ConfigApplier::ACTION_CREATE, ConfigApplier::ACTION_CREATE],
+      array_column($legacy, 'action'),
+    );
 
     $this->expectException(UpdateException::class);
     try {
@@ -235,6 +242,94 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
     finally {
       $this->assertNothingCreated();
     }
+  }
+
+  /**
+   * A config whose owner is off is an ERROR, even with no dependencies.
+   *
+   * A config entity often leaves its provider out of dependencies.module.
+   * With the provider off, the entity type is unknown and the object would
+   * be saved as simple config.
+   */
+  public function testOwnerNotEnabledIsAnError(): void {
+    $dir = $this->slice($this->names(), [
+      'names.txt' => implode("\n", $this->names()) . "\nkit_off_module.thing.one\n",
+    ]);
+    (new FileStorage($dir))->write('kit_off_module.thing.one', ['id' => 'one']);
+
+    $plan = array_column($this->configApplier->planSlice($dir), 'reason', 'name');
+    $this->assertSame('owner not enabled: kit_off_module', $plan['kit_off_module.thing.one']);
+
+    $this->expectException(UpdateException::class);
+    try {
+      $this->configApplier->applySlice($dir);
+    }
+    finally {
+      $this->assertNothingCreated();
+      $this->assertTrue($this->container->get('config.factory')->get('kit_off_module.thing.one')->isNew());
+    }
+  }
+
+  /**
+   * Broken list relations are refused before any write.
+   *
+   * @param array<string, string> $lists
+   *   The update.txt and hashes.txt content.
+   * @param string $message
+   *   A fragment of the expected message.
+   */
+  #[\PHPUnit\Framework\Attributes\DataProvider('brokenListsProvider')]
+  public function testBrokenListsAreRefused(array $lists, string $message): void {
+    $dir = $this->slice($this->names(), ['names.txt' => implode("\n", $this->names())] + $lists);
+
+    try {
+      $this->configApplier->applySlice($dir);
+      $this->fail('applySlice() accepted broken lists.');
+    }
+    catch (UpdateException $e) {
+      $this->assertStringContainsString($message, $e->getMessage());
+      $this->assertStringContainsString('Nothing changed', $e->getMessage());
+    }
+    $this->assertNothingCreated();
+  }
+
+  /**
+   * Cases for testBrokenListsAreRefused().
+   *
+   * @return array<string, array{0: array<string, string>, 1: string}>
+   *   Lists and the expected message fragment.
+   */
+  public static function brokenListsProvider(): array {
+    $hash = str_repeat('a', 64);
+    return [
+      'hash without update entry' => [
+        ['update.txt' => "node.type.kit_page\n", 'hashes.txt' => "node.type.kit_pag=$hash\n"],
+        'which update.txt does not',
+      ],
+      'repeated hash' => [
+        ['update.txt' => "node.type.kit_page\n", 'hashes.txt' => "node.type.kit_page=$hash\nnode.type.kit_page=$hash\n"],
+        'repeats node.type.kit_page',
+      ],
+      'short hash' => [
+        ['update.txt' => "node.type.kit_page\n", 'hashes.txt' => "node.type.kit_page=abc\n"],
+        'does not hold a sha256 hash',
+      ],
+      'update entry not in names' => [
+        ['update.txt' => "node.type.other\n"],
+        'update.txt names node.type.other',
+      ],
+    ];
+  }
+
+  /**
+   * CRLF line ends are read the same as LF.
+   */
+  public function testCrlfListsAreRead(): void {
+    $dir = $this->slice($this->names(), ['names.txt' => implode("\r\n", $this->names()) . "\r\n"]);
+
+    $plan = $this->configApplier->applySlice($dir);
+
+    $this->assertSame($this->names(), array_column($plan, 'name'));
   }
 
   /**
