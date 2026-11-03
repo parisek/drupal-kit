@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- **`ConfigApplier::applySlice()` and `planSlice()`** (#163) — apply a slice directory (`names.txt`, optional `update.txt` and `hashes.txt`, the exported config files) all or nothing. The whole slice is planned first; an `ERROR` or `REFUSE` entry anywhere throws `UpdateException` before the first write, so `drush updb` stops with the site unchanged. A `hook_post_update_NAME()` becomes one call instead of the dry run, check and apply each project copied by hand. `apply()` keeps its signature and behaviour.
+
+### Fixed
+
+- **`ConfigApplier::plan()` reports a config whose module is off** (#163) — an entry with a `dependencies.module` that is not enabled is now `ERROR: module not enabled: <module>`. Before, its save threw halfway through `apply()`, after the entries before it were written. The README no longer claims that an `ERROR` stops `apply()`: it never did; `applySlice()` is the all-or-nothing path. `ConfigApplier` takes `@module_handler` as a fifth constructor argument.
+
 ### Changed
 
 - **`drupal/config_pages` requirement is `^4.0` (was `^2.19`)**. A site that still runs Config Pages 2 or 3 must update it before it takes this release. The unit and kernel suites pass against 4.x. The `drupal/image_effects` development requirement also moves to `^5.0`; it is not installed on a site.

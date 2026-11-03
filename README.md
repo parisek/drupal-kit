@@ -106,8 +106,12 @@ Guarantees:
 - **Dependency order.** Names are topologically sorted from each config's own
   `dependencies.config` list (`field.storage.*` before `field.field.*`,
   a bundle before its fields, …) — you don't have to list them in order.
-  A dependency that is neither in your list nor already active is reported
-  `ERROR` and nothing is applied.
+  A dependency that is neither in your list nor already active, or a module
+  in `dependencies.module` that is not enabled, is reported `ERROR`.
+- **All or nothing only through `applySlice()`.** `apply()` and the CLI write
+  every `CREATE`/`UPDATE` entry of the plan, even when another entry of the
+  same plan is `ERROR` or `REFUSE`. `applySlice()` writes nothing in that case
+  (see below).
 - **Idempotent.** Safe to run on every deploy; the second run reports
   `SKIP-EXISTS` for everything it already created.
 
@@ -130,45 +134,57 @@ drush kit:config-apply --names=language.content_settings.paragraph.hero \
 
 ### `hook_post_update_NAME()` pattern
 
-The command above is a manual front end for the same PHP API — call it from
-a `hook_post_update_NAME()` in a project module so a new paragraph type (or
-any other config) ships through `drush updb` on deploy, the same way schema
-changes do:
+The command above is a manual front end for the same PHP API. Call
+`applySlice()` from a `hook_post_update_NAME()` in a project module, so a new
+paragraph type (or any other config) ships through `drush updb` on deploy, the
+same way schema changes do.
+
+A slice is a directory shipped with the module. It holds the exported config
+files and these list files (blank lines and `#` comments are skipped):
+
+| File | Required | Content |
+| --- | --- | --- |
+| `names.txt` | yes | The config names to apply, one per line, in any order |
+| `update.txt` | no | Names that may be updated when they already exist |
+| `hashes.txt` | no | `name=<sha256>` lines: the expected active hash of an `update.txt` name (`ConfigApplier::activeHash()`) |
+
+```
+my_project/config/slices/0001_hero/
+  names.txt
+  paragraphs.paragraphs_type.hero.yml
+  field.storage.paragraph.field_hero_image.yml
+  field.field.paragraph.hero.field_hero_image.yml
+  core.entity_view_display.paragraph.hero.default.yml
+  core.entity_form_display.paragraph.hero.default.yml
+```
 
 ```php
 /**
  * Creates the "hero" paragraph type and its fields.
  */
-function my_project_post_update_hero_paragraph_type(): void {
-  /** @var \Drupal\drupal_kit\Services\ConfigApplier $applier */
-  $applier = \Drupal::service('drupal_kit.config_applier');
+function my_project_post_update_0001_hero(): string {
+  $dir = \Drupal::service('extension.list.module')->getPath('my_project') . '/config/slices/0001_hero';
+  $plan = \Drupal::service('drupal_kit.config_applier')->applySlice($dir);
 
-  $names = [
-    'paragraphs.paragraphs_type.hero',
-    'field.storage.paragraph.field_hero_image',
-    'field.field.paragraph.hero.field_hero_image',
-    'core.entity_view_display.paragraph.hero.default',
-    'core.entity_form_display.paragraph.hero.default',
-  ];
-
-  $plan = $applier->apply(
-    \Drupal::service('extension.list.module')->getPath('my_project') . '/config/deploy',
-    $names,
-  );
-
-  foreach ($plan as $entry) {
-    if ($entry['action'] === 'ERROR') {
-      throw new \RuntimeException("kit:config-apply: {$entry['name']}: {$entry['reason']}");
-    }
-  }
+  $created = array_column(array_filter($plan, static fn (array $entry): bool => $entry['action'] === 'CREATE'), 'name');
+  return $created ? 'Created ' . implode(', ', $created) . '.' : 'Nothing to do.';
 }
 ```
 
+`applySlice()` plans the whole slice first. When any entry is `ERROR` or
+`REFUSE`, it throws `UpdateException` before the first write, so `drush updb`
+stops with the site unchanged and runs the update again on the next deploy.
+`planSlice()` returns the same plan and writes nothing.
+
+The plan cannot foresee every failure. A database error while creating a
+field table happens during the write, and table creation is not
+transactional, so the entries before it stay written.
+
 Re-running `drush updb` on a site that already has the paragraph type is a
-no-op — every name comes back `SKIP-EXISTS`. Ship the config as a
-`config/deploy`-style directory shipped with the module (not `config/sync`,
-which is the site's own export), so the fixture travels with the code that
-needs it.
+no-op: every name comes back `SKIP-EXISTS`. Keep the slice next to the code
+that needs it, never in `config/sync`. The site's own export keeps changing
+after the update is written; a journaled update must apply what it was
+written for.
 
 ## Menu locations
 

@@ -12,6 +12,8 @@ use Drupal\Core\Config\Entity\ConfigDependencyManager;
 use Drupal\Core\Config\FileStorage;
 use Drupal\Core\Config\StorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Utility\UpdateException;
 
 /**
  * Applies a named, explicit slice of config through the entity/config API.
@@ -28,6 +30,11 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
  *
  * It never deletes anything and it never operates on "everything in the
  * directory" — the caller always supplies the exact list of config names.
+ *
+ * apply() writes every CREATE and UPDATE entry of its plan, even when the
+ * same plan holds an ERROR or REFUSE entry. applySlice() is the
+ * all-or-nothing front end: it plans the whole slice and writes nothing
+ * unless every entry is clean.
  */
 class ConfigApplier {
 
@@ -61,6 +68,7 @@ class ConfigApplier {
     protected readonly ConfigManagerInterface $configManager,
     protected readonly StorageInterface $activeStorage,
     protected readonly EntityTypeManagerInterface $entityTypeManager,
+    protected readonly ModuleHandlerInterface $moduleHandler,
   ) {}
 
   /**
@@ -116,6 +124,20 @@ class ConfigApplier {
     // means the plan can't be trusted to apply cleanly (e.g. a
     // field.field.* whose field.storage.* was left off the list).
     foreach ($data as $name => $item) {
+      // A config owned by a module that is off cannot be saved. Without
+      // this check the save throws halfway through apply(), after the
+      // entries before it were written.
+      foreach ($item['dependencies']['module'] ?? [] as $module) {
+        if (!$this->moduleHandler->moduleExists($module)) {
+          $plan[] = [
+            'name' => $name,
+            'action' => self::ACTION_ERROR,
+            'reason' => "module not enabled: $module",
+          ];
+          unset($data[$name]);
+          continue 2;
+        }
+      }
       foreach ($item['dependencies']['config'] ?? [] as $dependency) {
         if (!isset($data[$dependency]) && !$this->activeStorage->exists($dependency)) {
           $plan[] = [
@@ -199,6 +221,81 @@ class ConfigApplier {
       return $plan;
     }
 
+    $this->applyPlan($configDir, $plan);
+    return $plan;
+  }
+
+  /**
+   * Plans a slice directory without changing anything.
+   *
+   * A slice is a directory that holds the exported config files and:
+   * - `names.txt` (required): the config names, one per line;
+   * - `update.txt` (optional): names that may be updated when they exist;
+   * - `hashes.txt` (optional): `name=<sha256>` lines, the expected hash of
+   *   the active value of an update.txt name (see activeHash()).
+   * Blank lines and lines that start with `#` are skipped in all three.
+   *
+   * @param string $sliceDir
+   *   The slice directory.
+   *
+   * @return array<int, array{name: string, action: string, reason: string}>
+   *   The plan, as plan() returns it.
+   *
+   * @throws \Drupal\Core\Utility\UpdateException
+   *   When names.txt is missing or names nothing, or hashes.txt is malformed.
+   */
+  public function planSlice(string $sliceDir): array {
+    [$names, $updateAllowed, $expectedHashes] = $this->readSlice($sliceDir);
+    return $this->plan($sliceDir, $names, $updateAllowed, $expectedHashes);
+  }
+
+  /**
+   * Plans a slice and applies it only when every entry is clean.
+   *
+   * Made for hook_post_update_NAME(): one call replaces the dry run, the
+   * check and the apply each project wrote by hand. An ERROR or REFUSE
+   * entry anywhere in the plan throws before the first write, so `drush
+   * updb` stops with the site unchanged and runs the update again next time.
+   *
+   * A write can still fail after the plan, e.g. when the database refuses a
+   * field table. Creating a table is not transactional, so the entries
+   * before it stay written; the plan covers every failure it can foresee.
+   *
+   * @param string $sliceDir
+   *   The slice directory (see planSlice() for the layout).
+   *
+   * @return array<int, array{name: string, action: string, reason: string}>
+   *   The plan that was applied.
+   *
+   * @throws \Drupal\Core\Utility\UpdateException
+   *   When the slice is malformed or any entry is ERROR or REFUSE.
+   */
+  public function applySlice(string $sliceDir): array {
+    $plan = $this->planSlice($sliceDir);
+
+    $problems = [];
+    foreach ($plan as $entry) {
+      if (in_array($entry['action'], [self::ACTION_ERROR, self::ACTION_REFUSE], TRUE)) {
+        $problems[] = "{$entry['name']}: {$entry['action']} ({$entry['reason']})";
+      }
+    }
+    if ($problems !== []) {
+      throw new UpdateException("Slice $sliceDir: " . implode('; ', $problems) . '. Nothing changed.');
+    }
+
+    $this->applyPlan($sliceDir, $plan);
+    return $plan;
+  }
+
+  /**
+   * Writes every CREATE and UPDATE entry of a plan.
+   *
+   * @param string $configDir
+   *   Directory the plan was built from.
+   * @param array<int, array{name: string, action: string, reason: string}> $plan
+   *   The plan.
+   */
+  protected function applyPlan(string $configDir, array $plan): void {
     $source = new FileStorage($configDir);
     foreach ($plan as $entry) {
       if (!in_array($entry['action'], [self::ACTION_CREATE, self::ACTION_UPDATE], TRUE)) {
@@ -206,8 +303,53 @@ class ConfigApplier {
       }
       $this->applyOne($source, $entry['name'], $entry['action']);
     }
+  }
 
-    return $plan;
+  /**
+   * Reads the list files of a slice.
+   *
+   * @return array{0: string[], 1: string[], 2: array<string, string>}
+   *   The names, the update list and the expected hashes.
+   *
+   * @throws \Drupal\Core\Utility\UpdateException
+   *   When names.txt is missing or names nothing, or hashes.txt is malformed.
+   */
+  protected function readSlice(string $sliceDir): array {
+    if (!is_file("$sliceDir/names.txt")) {
+      throw new UpdateException("Slice $sliceDir has no names.txt. Nothing changed.");
+    }
+    $names = $this->readList("$sliceDir/names.txt");
+    if ($names === []) {
+      throw new UpdateException("Slice $sliceDir: names.txt names no config. Nothing changed.");
+    }
+
+    $hashes = [];
+    foreach ($this->readList("$sliceDir/hashes.txt") as $line) {
+      [$name, $hash] = array_pad(array_map('trim', explode('=', $line, 2)), 2, '');
+      if ($name === '' || $hash === '') {
+        throw new UpdateException("Slice $sliceDir: hashes.txt line \"$line\" is not name=hash. Nothing changed.");
+      }
+      $hashes[$name] = $hash;
+    }
+
+    return [$names, $this->readList("$sliceDir/update.txt"), $hashes];
+  }
+
+  /**
+   * Reads one list file: trimmed lines, no blanks, no `#` comments.
+   *
+   * @return string[]
+   *   The lines, or [] when the file does not exist.
+   */
+  protected function readList(string $path): array {
+    if (!is_file($path)) {
+      return [];
+    }
+    $lines = array_map('trim', file($path, FILE_IGNORE_NEW_LINES) ?: []);
+    return array_values(array_filter(
+      $lines,
+      static fn (string $line): bool => $line !== '' && !str_starts_with($line, '#'),
+    ));
   }
 
   /**
