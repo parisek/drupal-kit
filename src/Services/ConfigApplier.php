@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\drupal_kit\Services;
 
+use Drupal\Component\Serialization\Exception\InvalidDataTypeException;
+use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\Config\Entity\ConfigEntityStorageInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -216,12 +218,15 @@ class ConfigApplier {
   /**
    * Plans a slice directory without changing anything.
    *
-   * A slice is a directory that holds the exported config files and:
-   * - `names.txt` (required): the config names, one per line;
-   * - `update.txt` (optional): names that may be updated when they exist;
-   * - `hashes.txt` (optional): `name=<sha256>` lines, the expected hash of
-   *   the active value of an update.txt name (see activeHash()).
-   * Blank lines and lines that start with `#` are skipped in all three.
+   * A slice is a directory that holds the exported config files and a
+   * `slice.yml` with these keys:
+   * - `names` (required): the config names to apply;
+   * - `update` (optional): names that may be updated when they exist;
+   * - `hashes` (optional): name => sha256, the expected hash of the active
+   *   value of an `update` name (see activeHash()).
+   * The manifest is YAML, not a list of .txt files, because Drupal's
+   * .htaccess denies .yml and serves .txt: a hashes file would publish the
+   * hashes of the site's active config.
    *
    * On top of plan(), each CREATE or UPDATE entry whose owner or
    * dependency extension is not enabled becomes ERROR (see
@@ -234,7 +239,7 @@ class ConfigApplier {
    *   The plan, as plan() returns it.
    *
    * @throws \Drupal\Core\Utility\UpdateException
-   *   When names.txt is missing or names nothing, or hashes.txt is malformed.
+   *   When slice.yml is missing or malformed (see readSlice()).
    */
   public function planSlice(string $sliceDir): array {
     [$names, $updateAllowed, $expectedHashes] = $this->readSlice($sliceDir);
@@ -348,66 +353,101 @@ class ConfigApplier {
   }
 
   /**
-   * Reads the list files of a slice.
+   * Reads and validates the slice.yml of a slice.
    *
    * @return array{0: string[], 1: string[], 2: array<string, string>}
    *   The names, the update list and the expected hashes.
    *
    * @throws \Drupal\Core\Utility\UpdateException
-   *   When names.txt is missing or names nothing, update.txt names a config
-   *   names.txt does not, or a hashes.txt line is malformed, repeated or
-   *   names a config update.txt does not.
+   *   When slice.yml is missing, not a YAML map, has an unknown key or names
+   *   nothing; when a list repeats a name, `update` holds a name `names`
+   *   does not, or a hash is not a sha256 of an `update` name; or when a
+   *   list file of the old .txt layout lies in the slice.
    */
   protected function readSlice(string $sliceDir): array {
-    if (!is_file("$sliceDir/names.txt")) {
-      throw new UpdateException("Slice $sliceDir has no names.txt. Nothing changed.");
-    }
-    $names = $this->readList("$sliceDir/names.txt");
-    if ($names === []) {
-      throw new UpdateException("Slice $sliceDir: names.txt names no config. Nothing changed.");
+    $refuse = static fn (string $problem): UpdateException => new UpdateException("Slice $sliceDir: $problem. Nothing changed.");
+
+    // The old layout kept the lists in .txt files, which the web server
+    // serves. Refuse them, so a slice cannot publish its hashes by accident.
+    foreach (['names.txt', 'update.txt', 'hashes.txt'] as $legacy) {
+      if (is_file("$sliceDir/$legacy")) {
+        throw $refuse("$legacy is web readable; move its content into slice.yml and delete it");
+      }
     }
 
-    $update = $this->readList("$sliceDir/update.txt");
+    if (!is_file("$sliceDir/slice.yml")) {
+      throw $refuse('has no slice.yml');
+    }
+    try {
+      $manifest = Yaml::decode((string) file_get_contents("$sliceDir/slice.yml"));
+    }
+    catch (InvalidDataTypeException $e) {
+      throw $refuse('slice.yml is not valid YAML (' . $e->getMessage() . ')');
+    }
+    if (!is_array($manifest) || ($manifest !== [] && array_is_list($manifest))) {
+      throw $refuse('slice.yml must be a map with the keys names, update and hashes');
+    }
+    foreach (array_diff(array_keys($manifest), ['names', 'update', 'hashes']) as $key) {
+      throw $refuse("slice.yml has an unknown key: $key");
+    }
+
+    $names = $this->readNames($manifest, 'names', $refuse);
+    if ($names === []) {
+      throw $refuse('slice.yml names lists no config');
+    }
+    $update = $this->readNames($manifest, 'update', $refuse);
     foreach (array_diff($update, $names) as $name) {
-      throw new UpdateException("Slice $sliceDir: update.txt names $name, which names.txt does not. Nothing changed.");
+      throw $refuse("slice.yml update names $name, which names does not");
     }
 
     // A typo in a hash name would turn the guard off without a word, so
-    // every line must match a name in update.txt, once, with a sha256.
-    $hashes = [];
-    foreach ($this->readList("$sliceDir/hashes.txt") as $line) {
-      [$name, $hash] = array_pad(array_map('trim', explode('=', $line, 2)), 2, '');
-      $problem = match (TRUE) {
-        $name === '' || $hash === '' => 'is not name=hash',
-        !preg_match('/^[0-9a-f]{64}$/', $hash) => 'does not hold a sha256 hash',
-        !in_array($name, $update, TRUE) => "names $name, which update.txt does not",
-        isset($hashes[$name]) => "repeats $name",
-        default => NULL,
-      };
-      if ($problem !== NULL) {
-        throw new UpdateException("Slice $sliceDir: hashes.txt line \"$line\" $problem. Nothing changed.");
+    // every hash must belong to an update name and be a sha256. An empty
+    // `[]` and `{}` decode to the same PHP array, so both are accepted.
+    $hashes = $manifest['hashes'] ?? [];
+    if (!is_array($hashes) || ($hashes !== [] && array_is_list($hashes))) {
+      throw $refuse('slice.yml hashes must map a config name to a sha256 hash');
+    }
+    foreach ($hashes as $name => $hash) {
+      if (!in_array($name, $update, TRUE)) {
+        throw $refuse("slice.yml hashes names $name, which update does not");
       }
-      $hashes[$name] = $hash;
+      if (!is_string($hash) || !preg_match('/^[0-9a-f]{64}$/', $hash)) {
+        throw $refuse("slice.yml hash of $name does not hold a sha256 hash");
+      }
     }
 
     return [$names, $update, $hashes];
   }
 
   /**
-   * Reads one list file: trimmed lines, no blanks, no `#` comments.
+   * Reads one list of config names from the manifest.
+   *
+   * @param array<string, mixed> $manifest
+   *   The decoded slice.yml.
+   * @param string $key
+   *   The key to read.
+   * @param \Closure(string): \Drupal\Core\Utility\UpdateException $refuse
+   *   Builds the exception for a problem.
    *
    * @return string[]
-   *   The lines, or [] when the file does not exist.
+   *   The names, or [] when the key is absent.
    */
-  protected function readList(string $path): array {
-    if (!is_file($path)) {
-      return [];
+  protected function readNames(array $manifest, string $key, \Closure $refuse): array {
+    $list = $manifest[$key] ?? [];
+    if (!is_array($list) || !array_is_list($list)) {
+      throw $refuse("slice.yml $key must be a list of config names");
     }
-    $lines = array_map('trim', file($path, FILE_IGNORE_NEW_LINES) ?: []);
-    return array_values(array_filter(
-      $lines,
-      static fn (string $line): bool => $line !== '' && !str_starts_with($line, '#'),
-    ));
+    $names = [];
+    foreach ($list as $name) {
+      if (!is_string($name) || trim($name) === '') {
+        throw $refuse("slice.yml $key must be a list of config names");
+      }
+      if (in_array(trim($name), $names, TRUE)) {
+        throw $refuse("slice.yml $key repeats " . trim($name));
+      }
+      $names[] = trim($name);
+    }
+    return $names;
   }
 
   /**

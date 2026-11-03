@@ -140,23 +140,35 @@ paragraph type (or any other config) ships through `drush updb` on deploy, the
 same way schema changes do.
 
 A slice is a directory shipped with the module. It holds the exported config
-files and these list files (blank lines and `#` comments are skipped):
+files and a `slice.yml` that names them:
 
-| File | Required | Content |
-| --- | --- | --- |
-| `names.txt` | yes | The config names to apply, one per line, in any order |
-| `update.txt` | no | Names that may be updated when they already exist |
-| `hashes.txt` | no | `name=<sha256>` lines: the expected active hash of an `update.txt` name (`ConfigApplier::activeHash()`) |
+```yaml
+# my_project/config/slices/0001_hero/slice.yml
+names:                  # required: the config to apply, in any order
+  - paragraphs.paragraphs_type.hero
+  - field.storage.paragraph.field_hero_image
+  - field.field.paragraph.hero.field_hero_image
+  - core.entity_view_display.paragraph.hero.default
+  - core.entity_form_display.paragraph.hero.default
+update: []              # optional: names that may be updated when they exist
+hashes: {}              # optional: name => expected sha256 of the active value
+                        # of an update name (ConfigApplier::activeHash())
+```
 
 ```
 my_project/config/slices/0001_hero/
-  names.txt
+  slice.yml
   paragraphs.paragraphs_type.hero.yml
   field.storage.paragraph.field_hero_image.yml
   field.field.paragraph.hero.field_hero_image.yml
   core.entity_view_display.paragraph.hero.default.yml
   core.entity_form_display.paragraph.hero.default.yml
 ```
+
+The manifest is YAML on purpose. Drupal's `.htaccess` denies `.yml` files but
+serves `.txt`, so a list in a `.txt` file under `modules/` is web readable.
+`applySlice()` refuses a slice that still holds a `names.txt`, `update.txt` or
+`hashes.txt` from the older, project-local layout.
 
 ```php
 /**
@@ -181,8 +193,12 @@ The slice plan checks more than `apply()` does:
 - An entry whose owner (the first segment of its name, `node` in
   `node.type.hero`) or a `dependencies.module`/`dependencies.theme` extension
   is not enabled is `ERROR`.
-- Every `update.txt` name must be in `names.txt`. Every `hashes.txt` line must
-  name an `update.txt` entry, once, with a 64-character sha256. A typo would
+- `slice.yml` must be a map with only the keys `names`, `update` and
+  `hashes`, and `names` must list at least one config. A list must not repeat
+  a name. An empty `update` or `hashes` may be written as `[]` or `{}`: YAML
+  decodes both to the same empty PHP array.
+- Every `update` name must be in `names`. Every `hashes` key must be an
+  `update` name, with a 64-character sha256 as its value. A typo would
   otherwise turn the update guard off without a word.
 
 The plan cannot foresee every failure. A database error while creating a

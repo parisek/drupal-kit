@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\drupal_kit\Kernel\Services;
 
+use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Config\FileStorage;
 use Drupal\Core\Utility\UpdateException;
 use Drupal\KernelTests\KernelTestBase;
@@ -15,9 +16,9 @@ use Drupal\node\Entity\NodeType;
 /**
  * Kernel tests for ConfigApplier::planSlice() and applySlice() (#163).
  *
- * A slice is a directory with the config files, a names.txt and, optionally,
- * an update.txt and a hashes.txt. applySlice() plans the whole slice first
- * and writes nothing when one entry is ERROR or REFUSE.
+ * A slice is a directory with the config files and a slice.yml that names
+ * them (`names`, optional `update` and `hashes`). applySlice() plans the
+ * whole slice first and writes nothing when one entry is ERROR or REFUSE.
  *
  * @group drupal_kit
  */
@@ -57,13 +58,14 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
    *
    * @param string[] $names
    *   Fixture config names to copy into the slice.
-   * @param array<string, string> $lists
-   *   File name => content, e.g. 'names.txt' => "a\nb\n".
+   * @param array<string, mixed>|string|null $manifest
+   *   The slice.yml content: an array to encode, a raw string, or NULL for
+   *   no slice.yml at all.
    *
    * @return string
    *   The slice directory.
    */
-  private function slice(array $names, array $lists): string {
+  private function slice(array $names, array|string|null $manifest): string {
     $dir = sys_get_temp_dir() . '/' . $this->getRandomGenerator()->name();
     mkdir($dir);
     $target = new FileStorage($dir);
@@ -72,8 +74,8 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
       $this->assertIsArray($record);
       $target->write($name, $record);
     }
-    foreach ($lists as $file => $content) {
-      file_put_contents("$dir/$file", $content);
+    if ($manifest !== NULL) {
+      file_put_contents("$dir/slice.yml", is_array($manifest) ? Yaml::encode($manifest) : $manifest);
     }
     return $dir;
   }
@@ -101,12 +103,30 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
   }
 
   /**
-   * Names.txt drives the slice; comments and blank lines are skipped.
+   * Asserts that applySlice() throws before any write.
+   *
+   * @param string $dir
+   *   The slice directory.
+   * @param string $message
+   *   A fragment of the expected message.
+   */
+  private function assertRefused(string $dir, string $message): void {
+    try {
+      $this->configApplier->applySlice($dir);
+      $this->fail('applySlice() did not throw.');
+    }
+    catch (UpdateException $e) {
+      $this->assertStringContainsString($message, $e->getMessage());
+      $this->assertStringContainsString('Nothing changed', $e->getMessage());
+    }
+    $this->assertNothingCreated();
+  }
+
+  /**
+   * The names in slice.yml drive the slice, in any order.
    */
   public function testApplySliceCreatesEveryName(): void {
-    $dir = $this->slice($this->names(), [
-      'names.txt' => "# Kit page\n\nfield.field.node.kit_page.field_kit_teaser\n  node.type.kit_page  \nfield.storage.node.field_kit_teaser\n",
-    ]);
+    $dir = $this->slice($this->names(), "# Kit page\nnames:\n  - field.field.node.kit_page.field_kit_teaser\n  - node.type.kit_page\n  - field.storage.node.field_kit_teaser\n");
 
     $plan = $this->configApplier->applySlice($dir);
 
@@ -122,7 +142,7 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
    * A second run reports SKIP-EXISTS and does not throw.
    */
   public function testApplySliceIsIdempotent(): void {
-    $dir = $this->slice($this->names(), ['names.txt' => implode("\n", $this->names())]);
+    $dir = $this->slice($this->names(), ['names' => $this->names()]);
 
     $this->configApplier->applySlice($dir);
     $plan = $this->configApplier->applySlice($dir);
@@ -141,22 +161,14 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
    */
   public function testErrorEntryStopsTheWholeSlice(): void {
     $dir = $this->slice($this->names(), [
-      'names.txt' => "node.type.kit_page\nfield.storage.node.field_kit_teaser\nnode.type.not_in_the_slice\n",
+      'names' => ['node.type.kit_page', 'field.storage.node.field_kit_teaser', 'node.type.not_in_the_slice'],
     ]);
 
-    try {
-      $this->configApplier->applySlice($dir);
-      $this->fail('applySlice() did not throw on an ERROR entry.');
-    }
-    catch (UpdateException $e) {
-      $this->assertStringContainsString('node.type.not_in_the_slice', $e->getMessage());
-      $this->assertStringContainsString('Nothing changed', $e->getMessage());
-    }
-    $this->assertNothingCreated();
+    $this->assertRefused($dir, 'node.type.not_in_the_slice');
   }
 
   /**
-   * A REFUSE entry from hashes.txt stops the slice before any write.
+   * A REFUSE entry from the hashes stops the slice before any write.
    */
   public function testRefuseEntryStopsTheWholeSlice(): void {
     $this->configApplier->apply(__DIR__ . '/../../../fixtures/config', ['node.type.kit_page']);
@@ -165,9 +177,9 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
     $type->set('name', 'Changed by a production editor')->save();
 
     $dir = $this->slice($this->names(), [
-      'names.txt' => implode("\n", $this->names()),
-      'update.txt' => "node.type.kit_page\n",
-      'hashes.txt' => "# captured before the editor's change\nnode.type.kit_page=" . str_repeat('0', 64) . "\n",
+      'names' => $this->names(),
+      'update' => ['node.type.kit_page'],
+      'hashes' => ['node.type.kit_page' => str_repeat('0', 64)],
     ]);
 
     try {
@@ -184,10 +196,10 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
   }
 
   /**
-   * Update.txt with a matching hash updates the existing object.
+   * An update entry with a matching hash updates the existing object.
    */
   public function testUpdateListWithMatchingHashUpdates(): void {
-    $dir = $this->slice($this->names(), ['names.txt' => "node.type.kit_page\n"]);
+    $dir = $this->slice($this->names(), ['names' => ['node.type.kit_page']]);
     $this->configApplier->applySlice($dir);
     $hash = $this->configApplier->activeHash('node.type.kit_page');
     $this->assertNotNull($hash);
@@ -197,8 +209,11 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
     $this->assertIsArray($data);
     $data['name'] = 'Renamed in the slice';
     $storage->write('node.type.kit_page', $data);
-    file_put_contents("$dir/update.txt", "node.type.kit_page\n");
-    file_put_contents("$dir/hashes.txt", "node.type.kit_page=$hash\n");
+    file_put_contents("$dir/slice.yml", Yaml::encode([
+      'names' => ['node.type.kit_page'],
+      'update' => ['node.type.kit_page'],
+      'hashes' => ['node.type.kit_page' => $hash],
+    ]));
 
     $plan = $this->configApplier->applySlice($dir);
 
@@ -215,7 +230,7 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
    * the entries before it written.
    */
   public function testModuleDependencyNotEnabledIsAnError(): void {
-    $dir = $this->slice($this->names(), ['names.txt' => implode("\n", $this->names())]);
+    $dir = $this->slice($this->names(), ['names' => $this->names()]);
     $storage = new FileStorage($dir);
     $data = $storage->read('field.field.node.kit_page.field_kit_teaser');
     $this->assertIsArray($data);
@@ -235,13 +250,7 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
       array_column($legacy, 'action'),
     );
 
-    $this->expectException(UpdateException::class);
-    try {
-      $this->configApplier->applySlice($dir);
-    }
-    finally {
-      $this->assertNothingCreated();
-    }
+    $this->assertRefused($dir, 'kit_module_that_is_off');
   }
 
   /**
@@ -252,93 +261,77 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
    * be saved as simple config.
    */
   public function testOwnerNotEnabledIsAnError(): void {
-    $dir = $this->slice($this->names(), [
-      'names.txt' => implode("\n", $this->names()) . "\nkit_off_module.thing.one\n",
-    ]);
+    $dir = $this->slice($this->names(), ['names' => [...$this->names(), 'kit_off_module.thing.one']]);
     (new FileStorage($dir))->write('kit_off_module.thing.one', ['id' => 'one']);
 
     $plan = array_column($this->configApplier->planSlice($dir), 'reason', 'name');
     $this->assertSame('owner not enabled: kit_off_module', $plan['kit_off_module.thing.one']);
 
-    $this->expectException(UpdateException::class);
-    try {
-      $this->configApplier->applySlice($dir);
-    }
-    finally {
-      $this->assertNothingCreated();
-      $this->assertTrue($this->container->get('config.factory')->get('kit_off_module.thing.one')->isNew());
-    }
+    $this->assertRefused($dir, 'kit_off_module');
+    $this->assertTrue($this->container->get('config.factory')->get('kit_off_module.thing.one')->isNew());
   }
 
   /**
-   * Broken list relations are refused before any write.
+   * A broken slice.yml is refused before any write.
    *
-   * @param array<string, string> $lists
-   *   The update.txt and hashes.txt content.
+   * @param array<string, mixed>|string|null $manifest
+   *   The slice.yml content, as slice() takes it.
    * @param string $message
    *   A fragment of the expected message.
    */
-  #[\PHPUnit\Framework\Attributes\DataProvider('brokenListsProvider')]
-  public function testBrokenListsAreRefused(array $lists, string $message): void {
-    $dir = $this->slice($this->names(), ['names.txt' => implode("\n", $this->names())] + $lists);
+  #[\PHPUnit\Framework\Attributes\DataProvider('brokenManifestProvider')]
+  public function testBrokenManifestIsRefused(array|string|null $manifest, string $message): void {
+    $dir = $this->slice($this->names(), $manifest);
 
-    try {
-      $this->configApplier->applySlice($dir);
-      $this->fail('applySlice() accepted broken lists.');
-    }
-    catch (UpdateException $e) {
-      $this->assertStringContainsString($message, $e->getMessage());
-      $this->assertStringContainsString('Nothing changed', $e->getMessage());
-    }
-    $this->assertNothingCreated();
+    $this->assertRefused($dir, $message);
   }
 
   /**
-   * Cases for testBrokenListsAreRefused().
+   * Cases for testBrokenManifestIsRefused().
    *
-   * @return array<string, array{0: array<string, string>, 1: string}>
-   *   Lists and the expected message fragment.
+   * @return array<string, array{0: array<string, mixed>|string|null, 1: string}>
+   *   The slice.yml content and the expected message fragment.
    */
-  public static function brokenListsProvider(): array {
+  public static function brokenManifestProvider(): array {
+    $names = [
+      'node.type.kit_page',
+      'field.storage.node.field_kit_teaser',
+      'field.field.node.kit_page.field_kit_teaser',
+    ];
     $hash = str_repeat('a', 64);
     return [
-      'hash without update entry' => [
-        ['update.txt' => "node.type.kit_page\n", 'hashes.txt' => "node.type.kit_pag=$hash\n"],
-        'which update.txt does not',
+      'no slice.yml' => [NULL, 'has no slice.yml'],
+      'not YAML' => ["names: [unclosed\n", 'slice.yml is not valid YAML'],
+      'not a map' => ["- node.type.kit_page\n", 'slice.yml must be a map'],
+      'no names' => [['update' => []], 'names lists no config'],
+      'empty names' => [['names' => []], 'names lists no config'],
+      'names not a list' => [['names' => 'node.type.kit_page'], 'names must be a list of config names'],
+      'unknown key' => [['names' => $names, 'updates' => ['node.type.kit_page']], 'unknown key: updates'],
+      'repeated name' => [['names' => [...$names, 'node.type.kit_page']], 'names repeats node.type.kit_page'],
+      'update entry not in names' => [
+        ['names' => $names, 'update' => ['node.type.other']],
+        'update names node.type.other',
       ],
-      'repeated hash' => [
-        ['update.txt' => "node.type.kit_page\n", 'hashes.txt' => "node.type.kit_page=$hash\nnode.type.kit_page=$hash\n"],
-        'repeats node.type.kit_page',
+      'hashes not a map' => [
+        ['names' => $names, 'update' => ['node.type.kit_page'], 'hashes' => [$hash]],
+        'hashes must map a config name to a sha256 hash',
+      ],
+      'hash without update entry' => [
+        ['names' => $names, 'update' => ['node.type.kit_page'], 'hashes' => ['node.type.kit_pag' => $hash]],
+        'which update does not',
       ],
       'short hash' => [
-        ['update.txt' => "node.type.kit_page\n", 'hashes.txt' => "node.type.kit_page=abc\n"],
+        ['names' => $names, 'update' => ['node.type.kit_page'], 'hashes' => ['node.type.kit_page' => 'abc']],
         'does not hold a sha256 hash',
       ],
-      'update entry not in names' => [
-        ['update.txt' => "node.type.other\n"],
-        'update.txt names node.type.other',
-      ],
     ];
-  }
-
-  /**
-   * CRLF line ends are read the same as LF.
-   */
-  public function testCrlfListsAreRead(): void {
-    $dir = $this->slice($this->names(), ['names.txt' => implode("\r\n", $this->names()) . "\r\n"]);
-
-    $plan = $this->configApplier->applySlice($dir);
-
-    $this->assertSame($this->names(), array_column($plan, 'name'));
   }
 
   /**
    * PlanSlice() returns the plan and writes nothing, even with errors.
    */
   public function testPlanSliceWritesNothing(): void {
-    $dir = $this->slice($this->names(), [
-      'names.txt' => "node.type.kit_page\nnode.type.not_in_the_slice\n",
-    ]);
+    $dir = $this->slice($this->names(), ['names' => ['node.type.kit_page', 'node.type.not_in_the_slice']]);
 
     $plan = $this->configApplier->planSlice($dir);
 
@@ -353,44 +346,16 @@ final class ConfigApplierSliceKernelTest extends KernelTestBase {
   }
 
   /**
-   * A slice without names.txt is refused.
+   * A list file from the old layout is refused: it is web readable.
+   *
+   * Core's .htaccess denies .yml but serves .txt, so a names.txt beside the
+   * slice would publish its config names and a hashes.txt the active hashes.
    */
-  public function testMissingNamesFileIsRefused(): void {
-    $dir = $this->slice([], []);
+  public function testLegacyListFileIsRefused(): void {
+    $dir = $this->slice($this->names(), ['names' => $this->names()]);
+    file_put_contents("$dir/hashes.txt", 'node.type.kit_page=' . str_repeat('a', 64) . "\n");
 
-    $this->expectException(UpdateException::class);
-    $this->expectExceptionMessage('names.txt');
-    $this->configApplier->applySlice($dir);
-  }
-
-  /**
-   * A names.txt with only comments is refused: a slice must name something.
-   */
-  public function testEmptyNamesFileIsRefused(): void {
-    $dir = $this->slice([], ['names.txt' => "# nothing yet\n"]);
-
-    $this->expectException(UpdateException::class);
-    $this->expectExceptionMessage('names no config');
-    $this->configApplier->applySlice($dir);
-  }
-
-  /**
-   * A malformed hashes.txt line is refused before any write.
-   */
-  public function testMalformedHashLineIsRefused(): void {
-    $dir = $this->slice($this->names(), [
-      'names.txt' => implode("\n", $this->names()),
-      'hashes.txt' => "node.type.kit_page\n",
-    ]);
-
-    try {
-      $this->configApplier->applySlice($dir);
-      $this->fail('applySlice() accepted a hashes.txt line without a hash.');
-    }
-    catch (UpdateException $e) {
-      $this->assertStringContainsString('hashes.txt', $e->getMessage());
-    }
-    $this->assertNothingCreated();
+    $this->assertRefused($dir, 'hashes.txt');
   }
 
 }
