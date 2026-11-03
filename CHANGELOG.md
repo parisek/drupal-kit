@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [3.6.0] — 2026-11-03
+
 ### Added
 
 - **`ConfigApplier::applySlice()` and `planSlice()`** (#163) — apply a slice directory (the exported config files and a `slice.yml` with `names`, optional `update` and `hashes`) all or nothing. The whole slice is planned first; an `ERROR` or `REFUSE` entry anywhere throws `UpdateException` before the first write, so `drush updb` stops with the site unchanged. A `hook_post_update_NAME()` becomes one call instead of the dry run, check and apply each project copied by hand. The slice plan also marks an entry `ERROR` when its owner (the first segment of the name) or a `dependencies.module`/`dependencies.theme` extension is not enabled, and `slice.yml` is validated: only the three keys, no repeated name, every `update` name in `names`, every `hashes` key an `update` name with a sha256. The manifest is YAML because Drupal's `.htaccess` serves `.txt` files; a slice that still holds a `names.txt`, `update.txt` or `hashes.txt` is refused. `plan()` and `apply()` keep their signature and behaviour. `ConfigApplier` takes `@module_handler` and `@theme_handler` as new constructor arguments (container-wired, not public API per RELEASING.md).
