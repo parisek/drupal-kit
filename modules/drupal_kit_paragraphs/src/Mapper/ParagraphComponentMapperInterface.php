@@ -15,9 +15,9 @@ interface ParagraphComponentMapperInterface {
   /**
    * Maps a paragraph.
    *
-   * The result is empty (see ParagraphMapping::isEmpty()) when the bundle has
-   * no usable component definition or when the mapping fails. The mapper logs
-   * the reason. It never returns partial output.
+   * A missing or malformed component definition gives the alert component
+   * ("implementation is missing") and a log entry. The result always carries
+   * the `theme` cache context. Other exceptions propagate.
    *
    * @param \Drupal\paragraphs\ParagraphInterface $paragraph
    *   The paragraph.

@@ -36,13 +36,18 @@ interface ComponentDefinitionRepositoryInterface {
    *   The component name.
    *
    * @return \Drupal\drupal_kit\Component\ComponentDefinition|null
-   *   The definition, or NULL when the name is invalid, no file exists, or the
-   *   file is malformed.
+   *   The definition, or NULL when the name is invalid or no file exists.
+   *
+   * @throws \Drupal\drupal_kit\Component\InvalidComponentDefinitionException
+   *   When the file exists but is malformed.
    */
   public function load(string $component): ?ComponentDefinition;
 
   /**
    * Loads the definition that belongs to a bundle.
+   *
+   * @throws \Drupal\drupal_kit\Component\InvalidComponentDefinitionException
+   *   When the file exists but is malformed.
    */
   public function loadForBundle(string $bundle): ?ComponentDefinition;
 

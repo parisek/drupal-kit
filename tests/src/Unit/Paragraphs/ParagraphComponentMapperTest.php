@@ -13,9 +13,11 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldStorageDefinitionInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\drupal_kit\Component\ComponentDefinition;
 use Drupal\drupal_kit\Component\ComponentDefinitionRepositoryInterface;
+use Drupal\drupal_kit\Component\InvalidComponentDefinitionException;
 use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\drupal_kit_paragraphs\Mapper\ParagraphComponentMapper;
 use Drupal\drupal_kit_paragraphs\Mapper\ParagraphMapperInterface;
@@ -77,6 +79,11 @@ class ParagraphComponentMapperTest extends TestCase {
     $contexts_manager->method('assertValidTokens')->willReturn(TRUE);
     $container = new ContainerBuilder();
     $container->set('cache_contexts_manager', $contexts_manager);
+    $translation = $this->createMock(TranslationInterface::class);
+    $translation->method('translateString')->willReturnCallback(
+      static fn ($markup) => strtr($markup->getUntranslatedString(), $markup->getArguments())
+    );
+    $container->set('string_translation', $translation);
     \Drupal::setContainer($container);
 
     $this->repository = $this->createMock(ComponentDefinitionRepositoryInterface::class);
@@ -164,7 +171,7 @@ class ParagraphComponentMapperTest extends TestCase {
    *   The component name.
    */
   private function definition(array $fields, string $name = 'contact'): void {
-    $this->repository->method('loadForBundle')->willReturn(new ComponentDefinition($name, "component/$name/$name.yaml", ['fields' => $fields]));
+    $this->repository->method('loadForBundle')->willReturn(new ComponentDefinition($name, "component/$name/$name.yaml", ['fields' => $fields], 'fixture_theme'));
   }
 
   /**
@@ -428,22 +435,84 @@ class ParagraphComponentMapperTest extends TestCase {
   }
 
   /**
-   * A missing definition gives an empty mapping and a logged warning.
+   * A missing definition renders the old "implementation is missing" alert.
    *
    * @covers ::map
+   * @covers ::mapAlert
    */
-  public function testMissingDefinitionGivesEmptyMapping(): void {
+  public function testMissingDefinitionRendersAlert(): void {
     $this->repository->method('loadForBundle')->willReturn(NULL);
     $this->logger->expects($this->once())->method('warning');
     $this->helper->expects($this->never())->method('mapFields');
     $this->moduleHandler->expects($this->never())->method('alter');
+    $this->manager = $this->createMock(ParagraphMapperManagerInterface::class);
+    $this->manager->expects($this->never())->method('getMappersForComponent');
+    $this->helper->method('getTextField')->willReturn('Title');
+    $this->helper->method('getTextareaField')->willReturn('');
+
+    $mapping = $this->mapper()->map($this->paragraph([], 'article_video'), 'default');
+
+    $this->assertAlert($mapping, 'article-video');
+    // The framework fields stay, like in the old display.
+    $this->assertSame(['title' => 'Title'], $mapping->get('heading'));
+  }
+
+  /**
+   * A malformed definition logs and renders the same alert.
+   *
+   * @covers ::map
+   * @covers ::mapAlert
+   */
+  public function testMalformedDefinitionRendersAlert(): void {
+    $this->repository->method('loadForBundle')->willThrowException(new InvalidComponentDefinitionException('bad yaml'));
+    $this->logger->expects($this->once())->method('error')->with($this->stringContains('malformed'), $this->arrayHasKey('@message'));
+    $this->moduleHandler->expects($this->never())->method('alter');
+
+    $mapping = $this->mapper()->map($this->paragraph([], 'contact'), 'default');
+
+    $this->assertAlert($mapping, 'contact');
+  }
+
+  /**
+   * A malformed node in the fields tree renders the alert too.
+   *
+   * @covers ::mapNodes
+   */
+  public function testMalformedNodeRendersAlert(): void {
+    $this->definition(['broken' => 'not a map']);
+    $this->logger->expects($this->once())->method('error');
 
     $mapping = $this->mapper()->map($this->paragraph([]), 'default');
 
-    $this->assertTrue($mapping->isEmpty());
-    $this->assertSame([], $mapping->getData());
-    $this->assertSame(['paragraph:1'], $mapping->getCacheableMetadata()->getCacheTags());
-    $this->assertArrayNotHasKey('#theme', $mapping->toRenderArray());
+    $this->assertAlert($mapping, 'contact');
+  }
+
+  /**
+   * Asserts the alert shape and the theme context.
+   */
+  private function assertAlert(ParagraphMapping $mapping, string $template_name): void {
+    $this->assertFalse($mapping->isEmpty());
+    $this->assertSame('alert', $mapping->getTemplate());
+    $this->assertSame('error', $mapping->get('type'));
+    $this->assertSame('container', $mapping->get('container'));
+    $this->assertStringContainsString($template_name, (string) $mapping->get('message'));
+    $this->assertStringContainsString('<strong>', (string) $mapping->get('message'));
+    $build = $mapping->toRenderArray();
+    $this->assertSame('custom_component', $build['#theme']);
+    $this->assertSame('alert', $build['#template']);
+    $this->assertContains('theme', $build['#cache']['contexts']);
+    $this->assertSame(['paragraph:1'], $build['#cache']['tags']);
+  }
+
+  /**
+   * The normal path carries the theme context too.
+   *
+   * @covers ::map
+   */
+  public function testNormalPathHasThemeContext(): void {
+    $this->definition([]);
+    $build = $this->mapper()->map($this->paragraph([]), 'default')->toRenderArray();
+    $this->assertContains('theme', $build['#cache']['contexts']);
   }
 
   /**
@@ -465,25 +534,21 @@ class ParagraphComponentMapperTest extends TestCase {
   }
 
   /**
-   * A failure drains the shared accumulator and returns an empty mapping.
+   * An unexpected exception propagates, and the accumulator is still drained.
    *
    * @covers ::map
    */
-  public function testFailureDrainsAccumulatorAndReturnsEmpty(): void {
+  public function testUnexpectedExceptionPropagatesAndDrains(): void {
     $this->helper = $this->createMock(EntityHelper::class);
     $this->helper->expects($this->once())->method('collectCacheMetadata')
-      ->willReturn((new CacheableMetadata())->setCacheTags(['media:7']));
+      ->willReturn(new CacheableMetadata());
     $this->helper->method('getTextField')->willThrowException(new \RuntimeException('boom'));
     $this->definition([]);
-    $this->logger->expects($this->once())->method('error')->with($this->stringContains('failed'), $this->anything());
+    $this->logger->expects($this->never())->method('error');
 
-    $mapping = $this->mapper()->map($this->paragraph([]), 'default');
-
-    $this->assertTrue($mapping->isEmpty());
-    $this->assertSame([], $mapping->getData());
-    // The tags of what the helper already loaded stay, so the (empty) output
-    // still invalidates correctly.
-    $this->assertEqualsCanonicalizing(['paragraph:1', 'media:7'], $mapping->getCacheableMetadata()->getCacheTags());
+    $this->expectException(\RuntimeException::class);
+    $this->expectExceptionMessage('boom');
+    $this->mapper()->map($this->paragraph([]), 'default');
   }
 
   /**
@@ -516,7 +581,7 @@ class ParagraphComponentMapperTest extends TestCase {
 
     };
     $manager = $this->createMock(ParagraphMapperManagerInterface::class);
-    $manager->expects($this->once())->method('getMappersForComponent')->with('article-video')->willReturn(['p' => $plugin]);
+    $manager->expects($this->once())->method('getMappersForComponent')->with('article-video', 'fixture_theme')->willReturn(['p' => $plugin]);
     $this->manager = $manager;
 
     $types = ['drupal_kit_paragraph_mapping', 'drupal_kit_paragraph_mapping_article_video'];
@@ -540,24 +605,23 @@ class ParagraphComponentMapperTest extends TestCase {
   }
 
   /**
-   * An exception in a plugin gives an empty mapping and no partial output.
+   * An exception in a plugin propagates and the accumulator is drained.
    *
    * @covers ::map
    */
-  public function testPluginExceptionGivesEmptyMapping(): void {
+  public function testPluginExceptionPropagates(): void {
+    $this->helper = $this->createMock(EntityHelper::class);
     $this->helper->method('mapFields')->willReturn([]);
+    $this->helper->expects($this->once())->method('collectCacheMetadata')->willReturn(new CacheableMetadata());
     $this->definition([]);
     $plugin = $this->createMock(ParagraphMapperInterface::class);
     $plugin->method('alter')->willThrowException(new \LogicException('bad plugin'));
     $manager = $this->createMock(ParagraphMapperManagerInterface::class);
     $manager->method('getMappersForComponent')->willReturn(['p' => $plugin]);
     $this->manager = $manager;
-    $this->logger->expects($this->once())->method('error');
 
-    $mapping = $this->mapper()->map($this->paragraph([]), 'default');
-
-    $this->assertTrue($mapping->isEmpty());
-    $this->assertSame([], $mapping->getData());
+    $this->expectException(\LogicException::class);
+    $this->mapper()->map($this->paragraph([]), 'default');
   }
 
 }

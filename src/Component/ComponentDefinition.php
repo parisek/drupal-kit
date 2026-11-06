@@ -22,12 +22,26 @@ final class ComponentDefinition {
    *   The path of the YAML file, relative to the application root.
    * @param array<string, mixed> $data
    *   The parsed YAML document.
+   * @param string|null $provider
+   *   The machine name of the module or theme that owns the files, or NULL
+   *   when it is unknown.
    */
   public function __construct(
     private readonly string $name,
     private readonly string $path,
     private readonly array $data,
+    private readonly ?string $provider = NULL,
   ) {}
+
+  /**
+   * Gets the module or theme that supplied the component files.
+   *
+   * The Components registry returns the winning template. This is the
+   * extension that owns it.
+   */
+  public function getProvider(): ?string {
+    return $this->provider;
+  }
 
   /**
    * Gets the component name.

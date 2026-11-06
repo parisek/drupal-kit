@@ -89,7 +89,7 @@ class ParagraphMapperManagerTest extends TestCase {
   /**
    * Builds the manager over the fixture namespaces.
    */
-  private function manager(string $active = 'fixture_theme'): ParagraphMapperManager {
+  private function manager(string $active = 'fixture_theme', string $default = 'other_theme'): ParagraphMapperManager {
     $namespaces = new \ArrayObject([
       'Drupal\\drupal_kit_paragraphs' => dirname(__DIR__, 4) . '/modules/drupal_kit_paragraphs/src',
       'Drupal\\fixture_theme' => $this->fixtures . '/fixture_theme/src',
@@ -100,7 +100,7 @@ class ParagraphMapperManagerTest extends TestCase {
     $installed = ['fixture_theme', 'fixture_base', 'other_theme'];
     $theme_handler = $this->createMock(ThemeHandlerInterface::class);
     $theme_handler->method('themeExists')->willReturnCallback(static fn ($name) => in_array($name, $installed, TRUE));
-    $theme_handler->method('getDefault')->willReturn('fixture_theme');
+    $theme_handler->method('getDefault')->willReturn($default);
     $theme_handler->method('getTheme')->willReturnCallback(function ($name) {
       $extension = $this->createMock(Extension::class);
       // Core sets base_themes as a dynamic property.
@@ -145,14 +145,17 @@ class ParagraphMapperManagerTest extends TestCase {
   }
 
   /**
-   * Plugins run by priority, then plugin ID, and skip inactive themes.
+   * Plugins run by priority, then plugin ID, and skip unrelated themes.
+   *
+   * The default theme here is unrelated to the active chain. The active chain
+   * supplied the component, so its plugin must not run.
    *
    * @covers ::getMappersForComponent
+   * @covers ::getEligibleThemes
    */
-  public function testRunOrderAndActiveChain(): void {
-    $mappers = $this->manager()->getMappersForComponent('contact');
+  public function testActiveThemeHitIgnoresUnrelatedDefaultTheme(): void {
+    $mappers = $this->manager('fixture_theme', 'other_theme')->getMappersForComponent('contact', 'fixture_theme');
     // Priority -5, then the two priority 0 plugins by ID, then priority 10.
-    // other_theme is installed but not in the chain, so it is absent.
     $this->assertSame([
       'fixture_theme_contact_early',
       'fixture_base_contact',
@@ -161,15 +164,38 @@ class ParagraphMapperManagerTest extends TestCase {
   }
 
   /**
-   * A theme outside the chain contributes nothing.
+   * A base theme that supplied the component counts as the active chain.
    *
-   * @covers ::getMappersForComponent
+   * @covers ::getEligibleThemes
    */
-  public function testInactiveThemeChain(): void {
-    $mappers = $this->manager('other_theme')->getMappersForComponent('contact');
-    // The default theme fixture_theme still counts, like the Twig fallback.
-    $this->assertContains('other_theme_contact', array_keys($mappers));
+  public function testBaseThemeSupplierUsesActiveChain(): void {
+    $mappers = $this->manager('fixture_theme', 'other_theme')->getMappersForComponent('contact', 'fixture_base');
     $this->assertContains('fixture_theme_contact_early', array_keys($mappers));
+    $this->assertNotContains('other_theme_contact', array_keys($mappers));
+  }
+
+  /**
+   * When the registry fell back to the default theme, its plugins run.
+   *
+   * @covers ::getEligibleThemes
+   */
+  public function testFallbackToDefaultThemeUsesDefaultChain(): void {
+    $mappers = $this->manager('fixture_theme', 'other_theme')->getMappersForComponent('contact', 'other_theme');
+    $this->assertSame(['other_theme_contact'], array_keys($mappers));
+  }
+
+  /**
+   * An unknown or module supplier counts as the active chain.
+   *
+   * @covers ::getEligibleThemes
+   */
+  public function testUnknownSupplierUsesActiveChain(): void {
+    $manager = $this->manager('fixture_theme', 'other_theme');
+    foreach ([NULL, 'some_module'] as $provider) {
+      $ids = array_keys($manager->getMappersForComponent('contact', $provider));
+      $this->assertContains('fixture_theme_contact_late', $ids);
+      $this->assertNotContains('other_theme_contact', $ids);
+    }
   }
 
   /**

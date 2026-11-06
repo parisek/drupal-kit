@@ -128,3 +128,6 @@ msgstr "Komponent akapitu"
 
 msgid "Renders the paragraph as the Twig component that its definition names."
 msgstr "Renderuje akapit jako komponent Twig, który wskazuje jego definicja."
+
+msgid "Drupal implementation for component <strong>@template</strong> is missing"
+msgstr "Brakuje implementacji Drupala dla komponentu <strong>@template</strong>"

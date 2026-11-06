@@ -7,7 +7,7 @@ namespace Drupal\drupal_kit\Component;
 use Drupal\Component\Serialization\Exception\InvalidDataTypeException;
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Cache\CacheBackendInterface;
-use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Extension\ExtensionList;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\components\Template\ComponentsRegistry;
 
@@ -49,8 +49,10 @@ class ComponentDefinitionRepository implements ComponentDefinitionRepositoryInte
    *   The theme manager. The active theme is part of the cache id.
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   The discovery cache bin.
-   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $loggerFactory
-   *   The logger factory.
+   * @param \Drupal\Core\Extension\ExtensionList $themeList
+   *   The theme list, to find the theme that owns a template.
+   * @param \Drupal\Core\Extension\ExtensionList $moduleList
+   *   The module list, for components a module supplies.
    * @param string $root
    *   The application root. Registry paths are relative to it.
    * @param array<string, string> $aliases
@@ -64,7 +66,8 @@ class ComponentDefinitionRepository implements ComponentDefinitionRepositoryInte
     private readonly ?ComponentsRegistry $registry,
     private readonly ThemeManagerInterface $themeManager,
     private readonly CacheBackendInterface $cache,
-    private readonly LoggerChannelFactoryInterface $loggerFactory,
+    private readonly ExtensionList $themeList,
+    private readonly ExtensionList $moduleList,
     private readonly string $root,
     private readonly array $aliases = [],
     private readonly array $exclusions = [],
@@ -108,38 +111,48 @@ class ComponentDefinitionRepository implements ComponentDefinitionRepositoryInte
 
     $cid = 'drupal_kit.component_definition:' . $this->themeManager->getActiveTheme()->getName() . ':' . $component;
     if (array_key_exists($cid, $this->loaded)) {
-      return $this->loaded[$cid] ?: NULL;
+      return $this->unpack($this->loaded[$cid]);
     }
 
     if ($cached = $this->cache->get($cid)) {
-      $definition = $this->fromCache($cached->data);
+      $entry = $cached->data;
     }
     else {
-      $definition = $this->read($component);
+      try {
+        $definition = $this->read($component);
+        $entry = $definition ? [
+          'name' => $definition->getName(),
+          'path' => $definition->getPath(),
+          'data' => $definition->getData(),
+          'provider' => $definition->getProvider(),
+        ] : ['missing' => TRUE];
+      }
+      catch (InvalidComponentDefinitionException $e) {
+        $entry = ['invalid' => $e->getMessage()];
+      }
       // A missing or malformed definition is cached too. The tag clears it on
       // the next cache rebuild, like the Twig registry.
-      $this->cache->set($cid, $definition ? [
-        'name' => $definition->getName(),
-        'path' => $definition->getPath(),
-        'data' => $definition->getData(),
-      ] : ['missing' => TRUE], CacheBackendInterface::CACHE_PERMANENT, [
+      $this->cache->set($cid, $entry, CacheBackendInterface::CACHE_PERMANENT, [
         self::REGISTRY_TAG,
         self::CACHE_TAG,
       ]);
     }
 
-    $this->loaded[$cid] = $definition ?? FALSE;
-    return $definition;
+    $this->loaded[$cid] = $entry;
+    return $this->unpack($entry);
   }
 
   /**
-   * Builds a definition from its cached form.
+   * Builds a definition from its cached form, or throws for a bad entry.
    */
-  private function fromCache(mixed $data): ?ComponentDefinition {
-    if (!is_array($data) || !isset($data['name'], $data['path'], $data['data']) || !is_array($data['data'])) {
+  private function unpack(mixed $entry): ?ComponentDefinition {
+    if (is_array($entry) && isset($entry['invalid'])) {
+      throw new InvalidComponentDefinitionException((string) $entry['invalid']);
+    }
+    if (!is_array($entry) || !isset($entry['name'], $entry['path'], $entry['data']) || !is_array($entry['data'])) {
       return NULL;
     }
-    return new ComponentDefinition($data['name'], $data['path'], $data['data']);
+    return new ComponentDefinition($entry['name'], $entry['path'], $entry['data'], $entry['provider'] ?? NULL);
   }
 
   /**
@@ -164,21 +177,35 @@ class ComponentDefinitionRepository implements ComponentDefinitionRepositoryInte
       $data = Yaml::decode((string) file_get_contents($file));
     }
     catch (InvalidDataTypeException $e) {
-      $this->loggerFactory->get('drupal_kit')->warning('The component definition @path is not valid YAML: @message', [
-        '@path' => $path,
-        '@message' => $e->getMessage(),
-      ]);
-      return NULL;
+      throw new InvalidComponentDefinitionException(sprintf('The component definition %s is not valid YAML: %s', $path, $e->getMessage()), 0, $e);
     }
 
     if (!is_array($data) || (isset($data['fields']) && !is_array($data['fields']))) {
-      $this->loggerFactory->get('drupal_kit')->warning('The component definition @path must be a map, and its "fields" key must be a map too.', [
-        '@path' => $path,
-      ]);
-      return NULL;
+      throw new InvalidComponentDefinitionException(sprintf('The component definition %s must be a map, and its "fields" key must be a map too.', $path));
     }
 
-    return new ComponentDefinition($component, $path, $data);
+    return new ComponentDefinition($component, $path, $data, $this->findOwner($path));
+  }
+
+  /**
+   * Finds the module or theme whose directory holds a path.
+   *
+   * The deepest directory wins, so a sub theme that lives below its base theme
+   * is not mistaken for the base theme.
+   */
+  private function findOwner(string $path): ?string {
+    $owner = NULL;
+    $length = -1;
+    foreach ([$this->themeList, $this->moduleList] as $list) {
+      foreach ($list->getList() as $name => $extension) {
+        $directory = rtrim($extension->getPath(), '/') . '/';
+        if (str_starts_with($path, $directory) && strlen($directory) > $length) {
+          $owner = (string) $name;
+          $length = strlen($directory);
+        }
+      }
+    }
+    return $owner;
   }
 
 }

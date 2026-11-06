@@ -7,12 +7,15 @@ namespace Drupal\Tests\drupal_kit\Unit\Component;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Cache\MemoryBackend;
-use Drupal\Core\Logger\LoggerChannelFactoryInterface;
-use Drupal\Core\Logger\LoggerChannelInterface;
+use Drupal\Core\Extension\Extension;
+use Drupal\Core\Extension\ExtensionList;
+use Drupal\Core\Extension\ModuleExtensionList;
+use Drupal\Core\Extension\ThemeExtensionList;
 use Drupal\Core\Theme\ActiveTheme;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\components\Template\ComponentsRegistry;
 use Drupal\drupal_kit\Component\ComponentDefinitionRepository;
+use Drupal\drupal_kit\Component\InvalidComponentDefinitionException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -31,17 +34,11 @@ class ComponentDefinitionRepositoryTest extends TestCase {
   private ComponentsRegistry&MockObject $registry;
 
   /**
-   * The logger channel stub.
-   */
-  private LoggerChannelInterface&MockObject $logger;
-
-  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
     parent::setUp();
     $this->registry = $this->createMock(ComponentsRegistry::class);
-    $this->logger = $this->createMock(LoggerChannelInterface::class);
   }
 
   /**
@@ -59,18 +56,41 @@ class ComponentDefinitionRepositoryTest extends TestCase {
     $theme->method('getName')->willReturn('fixture_theme');
     $theme_manager = $this->createMock(ThemeManagerInterface::class);
     $theme_manager->method('getActiveTheme')->willReturn($theme);
-    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
-    $factory->method('get')->willReturn($this->logger);
 
     return new ComponentDefinitionRepository(
       $this->registry,
       $theme_manager,
       $cache ?? new MemoryBackend($this->createMock(TimeInterface::class)),
-      $factory,
+      $this->extensionList(ThemeExtensionList::class, [
+        'fixture_theme' => 'themes/fixture_theme',
+        'fixture_theme_sub' => 'themes/fixture_theme/sub',
+      ]),
+      $this->extensionList(ModuleExtensionList::class, ['other_module' => 'modules/other_module']),
       dirname(__DIR__, 2) . '/../fixtures/paragraph_components',
       $aliases,
       $exclusions,
     );
+  }
+
+  /**
+   * Builds an extension list stub.
+   *
+   * @param class-string $class
+   *   The list class.
+   * @param array<string, string> $paths
+   *   Extension name to directory.
+   */
+  private function extensionList(string $class, array $paths): ExtensionList {
+    /** @var \Drupal\Core\Extension\ExtensionList&\PHPUnit\Framework\MockObject\MockObject $list */
+    $list = $this->createMock($class);
+    $extensions = [];
+    foreach ($paths as $name => $path) {
+      $extension = $this->createMock(Extension::class);
+      $extension->method('getPath')->willReturn($path);
+      $extensions[$name] = $extension;
+    }
+    $list->method('getList')->willReturn($extensions);
+    return $list;
   }
 
   /**
@@ -169,6 +189,7 @@ class ComponentDefinitionRepositoryTest extends TestCase {
     $this->assertNotNull($definition);
     $this->assertSame('ok', $definition->getName());
     $this->assertSame('component/ok/ok.yaml', $definition->getPath());
+    $this->assertNull($definition->getProvider());
     $this->assertSame(['title' => ['type' => 'text', 'role' => 'field']], $definition->getFields());
     $this->assertSame('Ok', $definition->get('name'));
   }
@@ -204,22 +225,79 @@ class ComponentDefinitionRepositoryTest extends TestCase {
     $theme->method('getName')->willReturn('fixture_theme');
     $theme_manager = $this->createMock(ThemeManagerInterface::class);
     $theme_manager->method('getActiveTheme')->willReturn($theme);
-    $factory = $this->createMock(LoggerChannelFactoryInterface::class);
-    $repository = new ComponentDefinitionRepository(NULL, $theme_manager, new MemoryBackend($this->createMock(TimeInterface::class)), $factory, '/nonexistent');
+    $repository = new ComponentDefinitionRepository(
+      NULL,
+      $theme_manager,
+      new MemoryBackend($this->createMock(TimeInterface::class)),
+      $this->createMock(ThemeExtensionList::class),
+      $this->createMock(ModuleExtensionList::class),
+      '/nonexistent',
+    );
 
     $this->assertNull($repository->load('ok'));
   }
 
   /**
-   * A malformed file gives no definition and a logged warning.
+   * A malformed file throws the recoverable exception.
    *
    * @covers ::load
    */
   #[DataProvider('malformedProvider')]
   public function testMalformedDefinition(string $component): void {
     $this->registryResolves();
-    $this->logger->expects($this->once())->method('warning');
-    $this->assertNull($this->repository()->load($component));
+    $this->expectException(InvalidComponentDefinitionException::class);
+    $this->expectExceptionMessage("component/$component/$component.yaml");
+    $this->repository()->load($component);
+  }
+
+  /**
+   * A malformed file is read once. The cached verdict throws again.
+   *
+   * @covers ::load
+   */
+  public function testMalformedDefinitionIsCached(): void {
+    $this->registry->expects($this->once())->method('getTemplate')->willReturn('component/bad-fields/bad-fields.twig');
+    $bin = new MemoryBackend($this->createMock(TimeInterface::class));
+    for ($i = 0; $i < 2; $i++) {
+      try {
+        // A fresh repository each time, so only the bin can answer.
+        $this->repository($bin)->load('bad-fields');
+        $this->fail('Expected an exception.');
+      }
+      catch (InvalidComponentDefinitionException) {
+        $this->addToAssertionCount(1);
+      }
+    }
+  }
+
+  /**
+   * The provider is the deepest extension directory that holds the template.
+   *
+   * @covers ::load
+   */
+  #[DataProvider('ownerProvider')]
+  public function testProvider(string $template, ?string $expected): void {
+    $this->registry->method('getTemplate')->willReturn($template);
+    // The YAML lives in the fixtures; only the owner lookup differs.
+    $repository = $this->repository();
+    $reflection = new \ReflectionMethod($repository, 'findOwner');
+    $this->assertSame($expected, $reflection->invoke($repository, $template));
+  }
+
+  /**
+   * Data provider for owners.
+   *
+   * @return array<string, array<int, mixed>>
+   *   The cases.
+   */
+  public static function ownerProvider(): array {
+    return [
+      'theme' => ['themes/fixture_theme/templates/component/ok/ok.twig', 'fixture_theme'],
+      'sub theme below its base wins' => ['themes/fixture_theme/sub/templates/ok/ok.twig', 'fixture_theme_sub'],
+      'module' => ['modules/other_module/components/ok/ok.twig', 'other_module'],
+      'prefix of another name is no match' => ['themes/fixture_theme_x/ok.twig', NULL],
+      'unknown' => ['somewhere/ok.twig', NULL],
+    ];
   }
 
   /**
@@ -248,7 +326,7 @@ class ComponentDefinitionRepositoryTest extends TestCase {
     $cache->expects($this->once())->method('set');
     $repository = $this->repository($cache);
     $first = $repository->load('ok');
-    $this->assertSame($first, $repository->load('ok'));
+    $this->assertEquals($first, $repository->load('ok'));
   }
 
   /**

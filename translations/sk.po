@@ -128,3 +128,6 @@ msgstr "Komponent odseku"
 
 msgid "Renders the paragraph as the Twig component that its definition names."
 msgstr "Vykreslí odsek ako Twig komponent, ktorý určuje jeho definícia."
+
+msgid "Drupal implementation for component <strong>@template</strong> is missing"
+msgstr "Implementácia Drupalu pre komponent <strong>@template</strong> chýba"

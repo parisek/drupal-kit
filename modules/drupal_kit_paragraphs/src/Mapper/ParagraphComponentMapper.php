@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace Drupal\drupal_kit_paragraphs\Mapper;
 
+use Drupal\Component\Utility\Html;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Config\Entity\ThirdPartySettingsInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\drupal_kit\Component\ComponentDefinitionRepositoryInterface;
+use Drupal\drupal_kit\Component\InvalidComponentDefinitionException;
 use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\drupal_kit_paragraphs\Mapping\MappingContext;
 use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
@@ -27,9 +30,13 @@ use Drupal\paragraphs\ParagraphInterface;
  * 2. The `fields` tree of the definition. Only `role: field` nodes map. A node
  *    without a role inherits the role of its parent. Roles `query`, `parent`
  *    and `global` do not map.
- * 3. The mapper plugins of the component, in run order.
+ * 3. The mapper plugins of the component, in run order. Theme plugins follow
+ *    the theme that supplied the component.
  * 4. The module alter hooks, then the theme alter hooks of the active theme
  *    chain.
+ *
+ * A missing or malformed definition renders the alert component, like the old
+ * hand-written display did, and logs the reason. Other exceptions propagate.
  *
  * The Drupal field of a node is `drupal.field`, or else `field_<key>`. The
  * EntityHelper picks the formatter from the real field definition. The
@@ -91,25 +98,17 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
   public function map(ParagraphInterface $paragraph, string $viewMode): ParagraphMapping {
     $mapping = new ParagraphMapping();
     $mapping->addCacheableDependency($paragraph);
+    // Every exit path depends on the active theme: the component, the plugins
+    // and the fallback alert all differ by theme. Set it before any lookup.
+    $mapping->addCacheableDependency((new CacheableMetadata())->setCacheContexts(['theme']));
 
     try {
       $this->build($mapping, $paragraph, $viewMode);
     }
-    catch (\Throwable $e) {
-      $this->loggerFactory->get('drupal_kit_paragraphs')->error('Mapping the @bundle paragraph @id failed: @message', [
-        '@bundle' => $paragraph->bundle(),
-        '@id' => $paragraph->id(),
-        '@message' => $e->getMessage(),
-      ]);
-      // Partial data is wrong data. Start over with an empty mapping.
-      $mapping = new ParagraphMapping();
-      $mapping->addCacheableDependency($paragraph);
-    }
     finally {
-      // The EntityHelper accumulator is shared by all callers. Draining it
-      // keeps the cacheability of this paragraph's media and references on
-      // this mapping, also after a failure, and stops it leaking into the
-      // next render.
+      // The EntityHelper accumulator is shared by all callers. Drain it also
+      // when an exception passes, so the cacheability of this paragraph's media
+      // and references does not leak into the next render.
       $collected = $this->entityHelper->collectCacheMetadata();
     }
 
@@ -119,28 +118,44 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
 
   /**
    * Builds the mapping.
+   *
+   * Two problems are recoverable and render the alert component, as the old
+   * hand-written display did: no definition, and a malformed definition. Any
+   * other exception is a programming error and propagates.
    */
   protected function build(ParagraphMapping $mapping, ParagraphInterface $paragraph, string $viewMode): void {
-    $definition = $this->repository->loadForBundle($paragraph->bundle());
-    if ($definition === NULL) {
-      $this->loggerFactory->get('drupal_kit_paragraphs')->warning('No usable component definition for the @bundle paragraph bundle. The paragraph renders nothing.', [
+    $logger = $this->loggerFactory->get('drupal_kit_paragraphs');
+
+    try {
+      $definition = $this->repository->loadForBundle($paragraph->bundle());
+      $generic = $definition === NULL ? NULL : $this->mapNodes($paragraph, $definition->getFields(), NULL, $mapping, '');
+    }
+    catch (InvalidComponentDefinitionException $e) {
+      $logger->error('The component definition of the @bundle paragraph bundle is malformed: @message', [
+        '@bundle' => $paragraph->bundle(),
+        '@message' => $e->getMessage(),
+      ]);
+      $this->mapAlert($mapping, $paragraph);
+      return;
+    }
+
+    if ($definition === NULL || $generic === NULL) {
+      $logger->warning('No component definition for the @bundle paragraph bundle.', [
         '@bundle' => $paragraph->bundle(),
       ]);
+      $this->mapAlert($mapping, $paragraph);
       return;
     }
 
     $component = $definition->getName();
     $mapping->setComponent($component)->setTemplate($component);
-    // The component and the plugins depend on the active theme.
-    $mapping->addCacheableDependency((new CacheableMetadata())->setCacheContexts(['theme']));
     $this->mapFrameworkFields($mapping, $paragraph);
-
-    foreach ($this->mapNodes($paragraph, $definition->getFields(), NULL, $mapping, '') as $key => $value) {
+    foreach ($generic as $key => $value) {
       $this->merge($mapping, $key, $value);
     }
 
     $context = new MappingContext($paragraph, $viewMode, $definition);
-    foreach ($this->mapperManager->getMappersForComponent($component) as $plugin) {
+    foreach ($this->mapperManager->getMappersForComponent($component, $definition->getProvider()) as $plugin) {
       $plugin->alter($mapping, $context);
     }
 
@@ -148,6 +163,23 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     $types = [self::ALTER_HOOK, self::ALTER_HOOK . '_' . str_replace('-', '_', $component)];
     $this->moduleHandler->alter($types, $mapping, $context);
     $this->themeManager->alter($types, $mapping, $context);
+  }
+
+  /**
+   * Turns the mapping into the "implementation is missing" alert.
+   *
+   * The data is what the old display built for a bundle it did not know: the
+   * framework fields, then an error alert in a container.
+   */
+  protected function mapAlert(ParagraphMapping $mapping, ParagraphInterface $paragraph): void {
+    $mapping->replaceData([]);
+    $this->mapFrameworkFields($mapping, $paragraph);
+    $mapping->set('type', 'error');
+    $mapping->set('container', 'container');
+    $mapping->set('message', new TranslatableMarkup('Drupal implementation for component <strong>@template</strong> is missing', [
+      '@template' => Html::cleanCssIdentifier($paragraph->bundle()),
+    ]));
+    $mapping->setComponent('alert')->setTemplate('alert');
   }
 
   /**
@@ -209,8 +241,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     foreach ($nodes as $key => $node) {
       $here = ltrim($path . '.' . $key, '.');
       if (!is_string($key) || !is_array($node)) {
-        $mapping->addDiagnostic("$here: node is not a map.");
-        continue;
+        throw new InvalidComponentDefinitionException("The field node $here must be a map with a text key.");
       }
 
       $role = $node['role'] ?? $inheritedRole;

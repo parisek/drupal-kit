@@ -22,8 +22,8 @@ use Drupal\drupal_kit_paragraphs\Attribute\ParagraphMapper;
  * - Core checks the provider of a definition with moduleExists(). A theme is
  *   not a module, so the check would drop every theme plugin. providerExists()
  *   accepts an installed theme too.
- * - Discovery sees all installed themes. A plugin of a theme that is not in
- *   the active chain must not run, so getMappersForComponent() filters at
+ * - Discovery sees all installed themes. A plugin of a theme that did not
+ *   supply the component must not run, so getMappersForComponent() filters at
  *   run time. The definition cache stays theme-independent.
  */
 class ParagraphMapperManager extends DefaultPluginManager implements ParagraphMapperManagerInterface {
@@ -70,11 +70,11 @@ class ParagraphMapperManager extends DefaultPluginManager implements ParagraphMa
   /**
    * {@inheritdoc}
    */
-  public function getMappersForComponent(string $component): array {
+  public function getMappersForComponent(string $component, ?string $provider = NULL): array {
     $definitions = static::selectDefinitions(
       $this->getDefinitions(),
       $component,
-      $this->getActiveThemeNames(),
+      $this->getEligibleThemes($provider),
       fn (string $provider): bool => $this->themeHandler->themeExists($provider),
     );
 
@@ -121,27 +121,43 @@ class ParagraphMapperManager extends DefaultPluginManager implements ParagraphMa
   }
 
   /**
-   * Gets the themes whose plugins may run.
+   * Gets the themes whose plugins may run for a component.
    *
-   * The active theme and its base themes come first. The default theme and its
-   * base themes follow, because the Components registry falls back to the
-   * default theme for a template the active theme lacks, for example when an
-   * administration theme is active.
+   * The plugins follow the theme that supplied the component. If the active
+   * theme chain holds the supplier, only that chain qualifies. If the supplier
+   * is in the default theme chain only (the Components registry fell back to
+   * the default theme, for example under an administration theme), the default
+   * chain qualifies. A module supplier or an unknown one counts as the active
+   * chain.
+   *
+   * @param string|null $provider
+   *   The module or theme that supplied the component definition.
    *
    * @return string[]
    *   The theme machine names.
    */
-  protected function getActiveThemeNames(): array {
-    $names = [];
-    $roots = [$this->themeManager->getActiveTheme()->getName()];
-    if ($default = $this->themeHandler->getDefault()) {
-      $roots[] = $default;
-    }
-    foreach ($roots as $root) {
-      $names[] = $root;
-      if ($this->themeHandler->themeExists($root)) {
-        $names = array_merge($names, array_keys($this->themeHandler->getTheme($root)->base_themes ?? []));
+  protected function getEligibleThemes(?string $provider): array {
+    $active = $this->themeChain($this->themeManager->getActiveTheme()->getName());
+    $default_name = $this->themeHandler->getDefault();
+    if ($provider !== NULL && $default_name && !in_array($provider, $active, TRUE)) {
+      $default = $this->themeChain($default_name);
+      if (in_array($provider, $default, TRUE)) {
+        return $default;
       }
+    }
+    return $active;
+  }
+
+  /**
+   * Gets a theme and its base themes.
+   *
+   * @return string[]
+   *   The theme machine names, the theme first.
+   */
+  protected function themeChain(string $theme): array {
+    $names = [$theme];
+    if ($this->themeHandler->themeExists($theme)) {
+      $names = array_merge($names, array_keys($this->themeHandler->getTheme($theme)->base_themes ?? []));
     }
     return array_values(array_unique($names));
   }
