@@ -11,7 +11,7 @@ use Drupal\Core\Cache\CacheableMetadata;
  * Mutable result of mapping one paragraph.
  *
  * The mapping holds the `content` array of the component, the component and
- * template name, and the cacheability. Mapper plugins and alter hooks change
+ * template name, and the cacheability. Component files and alter hooks change
  * it in place.
  *
  * A mapping with no component is empty: the mapper found no usable definition
@@ -87,7 +87,8 @@ final class ParagraphMapping {
   /**
    * Sets the template name.
    *
-   * A mapper plugin calls this to render another template than the component.
+   * A component file or an alter hook calls this to render another template
+   * than the component.
    */
   public function setTemplate(string $template): static {
     $this->template = $template;

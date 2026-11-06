@@ -7,7 +7,6 @@ namespace Drupal\drupal_kit\Component;
 use Drupal\Component\Serialization\Exception\InvalidDataTypeException;
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Cache\CacheBackendInterface;
-use Drupal\Core\Extension\ExtensionList;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\components\Template\ComponentsRegistry;
 
@@ -49,10 +48,6 @@ class ComponentDefinitionRepository implements ComponentDefinitionRepositoryInte
    *   The theme manager. The active theme is part of the cache id.
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   The discovery cache bin.
-   * @param \Drupal\Core\Extension\ExtensionList $themeList
-   *   The theme list, to find the theme that owns a template.
-   * @param \Drupal\Core\Extension\ExtensionList $moduleList
-   *   The module list, for components a module supplies.
    * @param string $root
    *   The application root. Registry paths are relative to it.
    * @param array<string, string> $aliases
@@ -66,8 +61,6 @@ class ComponentDefinitionRepository implements ComponentDefinitionRepositoryInte
     private readonly ?ComponentsRegistry $registry,
     private readonly ThemeManagerInterface $themeManager,
     private readonly CacheBackendInterface $cache,
-    private readonly ExtensionList $themeList,
-    private readonly ExtensionList $moduleList,
     private readonly string $root,
     private readonly array $aliases = [],
     private readonly array $exclusions = [],
@@ -124,7 +117,6 @@ class ComponentDefinitionRepository implements ComponentDefinitionRepositoryInte
           'name' => $definition->getName(),
           'path' => $definition->getPath(),
           'data' => $definition->getData(),
-          'provider' => $definition->getProvider(),
         ] : ['missing' => TRUE];
       }
       catch (InvalidComponentDefinitionException $e) {
@@ -152,7 +144,7 @@ class ComponentDefinitionRepository implements ComponentDefinitionRepositoryInte
     if (!is_array($entry) || !isset($entry['name'], $entry['path'], $entry['data']) || !is_array($entry['data'])) {
       return NULL;
     }
-    return new ComponentDefinition($entry['name'], $entry['path'], $entry['data'], $entry['provider'] ?? NULL);
+    return new ComponentDefinition($entry['name'], $entry['path'], $entry['data']);
   }
 
   /**
@@ -184,28 +176,7 @@ class ComponentDefinitionRepository implements ComponentDefinitionRepositoryInte
       throw new InvalidComponentDefinitionException(sprintf('The component definition %s must be a map, and its "fields" key must be a map too.', $path));
     }
 
-    return new ComponentDefinition($component, $path, $data, $this->findOwner($path));
-  }
-
-  /**
-   * Finds the module or theme whose directory holds a path.
-   *
-   * The deepest directory wins, so a sub theme that lives below its base theme
-   * is not mistaken for the base theme.
-   */
-  private function findOwner(string $path): ?string {
-    $owner = NULL;
-    $length = -1;
-    foreach ([$this->themeList, $this->moduleList] as $list) {
-      foreach ($list->getList() as $name => $extension) {
-        $directory = rtrim($extension->getPath(), '/') . '/';
-        if (str_starts_with($path, $directory) && strlen($directory) > $length) {
-          $owner = (string) $name;
-          $length = strlen($directory);
-        }
-      }
-    }
-    return $owner;
+    return new ComponentDefinition($component, $path, $data);
   }
 
 }

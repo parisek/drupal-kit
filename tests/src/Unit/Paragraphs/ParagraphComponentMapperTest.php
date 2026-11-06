@@ -23,8 +23,9 @@ use Drupal\drupal_kit\Component\InvalidComponentDefinitionException;
 use Drupal\drupal_kit\Services\CacheScope;
 use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\drupal_kit_paragraphs\Mapper\ParagraphComponentMapper;
-use Drupal\drupal_kit_paragraphs\Mapper\ParagraphMapperInterface;
-use Drupal\drupal_kit_paragraphs\Mapper\ParagraphMapperManagerInterface;
+use Drupal\drupal_kit_paragraphs\Mapper\ComponentMapperFile;
+use Drupal\drupal_kit_paragraphs\Mapper\ComponentMapperFileLoader;
+use Drupal\drupal_kit_paragraphs\Mapper\ComponentMapperFileLoaderInterface;
 use Drupal\drupal_kit_paragraphs\Mapping\MappingContext;
 use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
 use Drupal\media\MediaInterface;
@@ -50,6 +51,7 @@ use Drupal\drupal_kit\Services\TaxonomyTreeBuilder;
 use Symfony\Component\HttpFoundation\RequestStack;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\ContainerInterface as SymfonyContainer;
 
 require_once dirname(__DIR__, 3) . '/fixtures/stubs/ParagraphInterface.php';
 require_once dirname(__DIR__, 3) . '/fixtures/stubs/PublishedParagraphInterface.php';
@@ -73,9 +75,9 @@ class ParagraphComponentMapperTest extends TestCase {
   private EntityHelper&MockObject $helper;
 
   /**
-   * The mapper plugin manager stub.
+   * The component file loader stub.
    */
-  private ParagraphMapperManagerInterface&MockObject $manager;
+  private ComponentMapperFileLoaderInterface&MockObject $loader;
 
   /**
    * The module handler stub.
@@ -114,8 +116,8 @@ class ParagraphComponentMapperTest extends TestCase {
     $this->helper->method('beginCacheScope')->willReturn(new CacheScope(1, NULL));
     $this->helper->method('beginCacheScope')->willReturn(new CacheScope(1, NULL));
     $this->helper->method('endCacheScope')->willReturn(new CacheableMetadata());
-    $this->manager = $this->createMock(ParagraphMapperManagerInterface::class);
-    $this->manager->method('getMappersForComponent')->willReturn([]);
+    $this->loader = $this->createMock(ComponentMapperFileLoaderInterface::class);
+    $this->loader->method('load')->willReturn(NULL);
     $this->moduleHandler = $this->createMock(ModuleHandlerInterface::class);
     $this->themeManager = $this->createMock(ThemeManagerInterface::class);
     $this->logger = $this->createMock(LoggerChannelInterface::class);
@@ -132,16 +134,17 @@ class ParagraphComponentMapperTest extends TestCase {
   /**
    * Builds the mapper under test.
    */
-  private function mapper(?EntityHelper $helper = NULL): ParagraphComponentMapper {
+  private function mapper(?EntityHelper $helper = NULL, ?ComponentMapperFileLoaderInterface $loader = NULL): ParagraphComponentMapper {
     $factory = $this->createMock(LoggerChannelFactoryInterface::class);
     $factory->method('get')->willReturn($this->logger);
     return new ParagraphComponentMapper(
       $this->repository,
       $helper ?? $this->helper,
-      $this->manager,
+      $loader ?? $this->loader,
       $this->moduleHandler,
       $this->themeManager,
       $factory,
+      $this->createMock(SymfonyContainer::class),
       ['page'],
     );
   }
@@ -196,7 +199,15 @@ class ParagraphComponentMapperTest extends TestCase {
    *   The component name.
    */
   private function definition(array $fields, string $name = 'contact'): void {
-    $this->repository->method('loadForBundle')->willReturn(new ComponentDefinition($name, "component/$name/$name.yaml", ['fields' => $fields], 'fixture_theme'));
+    $this->repository->method('loadForBundle')->willReturn(new ComponentDefinition($name, "component/$name/$name.yaml", ['fields' => $fields]));
+  }
+
+  /**
+   * Lets the loader return a component file with the given steps.
+   */
+  private function useFile(?\Closure $alter, ?\Closure $replace = NULL): void {
+    $this->loader = $this->createMock(ComponentMapperFileLoaderInterface::class);
+    $this->loader->method('load')->willReturn(new ComponentMapperFile('/component/x.drupal.php', $alter, $replace));
   }
 
   /**
@@ -252,9 +263,9 @@ class ParagraphComponentMapperTest extends TestCase {
    */
   public function testRolesAreFilteredAndInherited(): void {
     $this->mapFieldsEchoesFieldName();
-    // A query field needs a mapper plugin, or the mapper renders the alert.
-    $this->manager = $this->createMock(ParagraphMapperManagerInterface::class);
-    $this->manager->method('getMappersForComponent')->willReturn(['noop' => $this->createMock(ParagraphMapperInterface::class)]);
+    // A query field needs a PHP file, or the mapper renders the alert.
+    $this->useFile(static function (): void {
+    });
     $this->definition([
       'q' => ['type' => 'text', 'role' => 'query'],
       'p' => ['type' => 'text', 'role' => 'parent'],
@@ -473,8 +484,8 @@ class ParagraphComponentMapperTest extends TestCase {
     $this->logger->expects($this->once())->method('warning');
     $this->helper->expects($this->never())->method('mapFields');
     $this->moduleHandler->expects($this->never())->method('alter');
-    $this->manager = $this->createMock(ParagraphMapperManagerInterface::class);
-    $this->manager->expects($this->never())->method('getMappersForComponent');
+    $this->loader = $this->createMock(ComponentMapperFileLoaderInterface::class);
+    $this->loader->expects($this->never())->method('load');
     $this->helper->method('getTextField')->willReturn('Title');
     $this->helper->method('getTextareaField')->willReturn('');
 
@@ -582,43 +593,25 @@ class ParagraphComponentMapperTest extends TestCase {
   }
 
   /**
-   * Plugins run in the order the manager gives, then module, then theme hooks.
+   * The file's alter runs after the generic rules and before the hooks.
    *
    * @covers ::build
    */
-  public function testPluginsAndHooksRunInOrder(): void {
-    $this->helper->method('mapFields')->willReturn([]);
-    $this->definition([], 'article-video');
-
+  public function testGenericThenFileAlterThenHooks(): void {
+    $this->helper->method('mapFields')->willReturn(['phone' => '123']);
+    $this->definition(['phone' => ['type' => 'text', 'role' => 'field']], 'article-video');
     $calls = new \ArrayObject();
-    $plugin = new class($calls) implements ParagraphMapperInterface {
-
-      /**
-       * Constructs the stub.
-       *
-       * @param \ArrayObject<int, string> $calls
-       *   The shared call log.
-       */
-      public function __construct(private \ArrayObject $calls) {}
-
-      /**
-       * {@inheritdoc}
-       */
-      public function alter(ParagraphMapping $mapping, MappingContext $context): void {
-        $this->calls->append('plugin:' . $context->getComponent() . ':' . $context->getViewMode());
-        $mapping->set('from_plugin', TRUE)->setTemplate('custom');
-      }
-
-    };
-    $manager = $this->createMock(ParagraphMapperManagerInterface::class);
-    $manager->expects($this->once())->method('getMappersForComponent')->with('article-video', 'fixture_theme')->willReturn(['p' => $plugin]);
-    $this->manager = $manager;
+    $this->useFile(static function (ParagraphMapping $mapping, MappingContext $context, EntityHelper $fields) use ($calls): void {
+      // The generic rule already set phone.
+      $calls->append('alter:' . $context->getComponent() . ':' . $context->getViewMode() . ':phone=' . $mapping->get('phone'));
+      $mapping->set('from_file', TRUE)->setTemplate('custom');
+    });
 
     $types = ['drupal_kit_paragraph_mapping', 'drupal_kit_paragraph_mapping_article_video'];
     $this->moduleHandler->expects($this->once())->method('alter')
       ->with($types, $this->isInstanceOf(ParagraphMapping::class), $this->isInstanceOf(MappingContext::class))
-      ->willReturnCallback(function () use ($calls) {
-        $calls->append('module');
+      ->willReturnCallback(function ($types, ParagraphMapping $mapping) use ($calls) {
+        $calls->append('module:template=' . $mapping->getTemplate());
       });
     $this->themeManager->expects($this->once())->method('alter')
       ->with($types, $this->isInstanceOf(ParagraphMapping::class), $this->isInstanceOf(MappingContext::class))
@@ -626,33 +619,93 @@ class ParagraphComponentMapperTest extends TestCase {
         $calls->append('theme');
       });
 
-    $mapping = $this->mapper()->map($this->paragraph([], 'article_video'), 'full');
+    $mapping = $this->mapper()->map($this->paragraph(['field_phone' => ['telephone']], 'article_video'), 'full');
 
-    $this->assertSame(['plugin:article-video:full', 'module', 'theme'], $calls->getArrayCopy());
-    $this->assertTrue($mapping->get('from_plugin'));
-    $this->assertSame('custom', $mapping->getTemplate());
+    $this->assertSame(['alter:article-video:full:phone=123', 'module:template=custom', 'theme'], $calls->getArrayCopy());
+    $this->assertTrue($mapping->get('from_file'));
     $this->assertSame('article-video', $mapping->getComponent());
   }
 
   /**
-   * An exception in a plugin propagates and the accumulator is drained.
+   * A replace step builds the mapping; the generic rules do not run.
+   *
+   * @covers ::build
+   * @covers ::adopt
+   */
+  public function testReplaceStepReplacesGenericMapping(): void {
+    $this->helper->expects($this->never())->method('mapFields');
+    $this->helper->expects($this->never())->method('getTextField');
+    $this->definition(['phone' => ['type' => 'text', 'role' => 'field']], 'replacing');
+    $calls = new \ArrayObject();
+    $this->useFile(
+      static function (ParagraphMapping $mapping) use ($calls): void {
+        $calls->append('alter:' . $mapping->get('built'));
+        $mapping->set('altered', TRUE);
+      },
+      static function (ParagraphInterface $paragraph, string $view_mode) use ($calls): ParagraphMapping {
+        $calls->append('replace:' . $view_mode);
+        return (new ParagraphMapping())->set('built', 'by-replace')->setTemplate('other')
+          ->addDiagnostic('note')
+          ->addCacheableDependency((new CacheableMetadata())->setCacheTags(['replace:tag']));
+      },
+    );
+
+    $mapping = $this->mapper()->map($this->paragraph([], 'replacing'), 'full');
+
+    $this->assertSame(['replace:full', 'alter:by-replace'], $calls->getArrayCopy());
+    $this->assertSame(['built' => 'by-replace', 'altered' => TRUE], $mapping->getData());
+    $this->assertSame('replacing', $mapping->getComponent());
+    $this->assertSame('other', $mapping->getTemplate());
+    $this->assertSame(['note'], $mapping->getDiagnostics());
+    $this->assertContains('replace:tag', $mapping->getCacheableMetadata()->getCacheTags());
+  }
+
+  /**
+   * A replace step that returns something else is a programming error.
+   *
+   * @covers ::build
+   */
+  public function testReplaceStepWithWrongReturnPropagates(): void {
+    $this->definition([], 'replacing');
+    $this->useFile(NULL, static fn () => 'nope');
+
+    $this->expectException(\UnexpectedValueException::class);
+    $this->mapper()->map($this->paragraph([], 'replacing'), 'full');
+  }
+
+  /**
+   * An exception in the file's code propagates and the accumulator is drained.
    *
    * @covers ::map
    */
-  public function testPluginExceptionPropagates(): void {
+  public function testFileExceptionPropagates(): void {
     $this->helper = $this->createMock(EntityHelper::class);
     $this->helper->method('beginCacheScope')->willReturn(new CacheScope(1, NULL));
     $this->helper->method('mapFields')->willReturn([]);
     $this->helper->expects($this->once())->method('endCacheScope')->with($this->isInstanceOf(CacheScope::class))->willReturn(new CacheableMetadata());
     $this->definition([]);
-    $plugin = $this->createMock(ParagraphMapperInterface::class);
-    $plugin->method('alter')->willThrowException(new \LogicException('bad plugin'));
-    $manager = $this->createMock(ParagraphMapperManagerInterface::class);
-    $manager->method('getMappersForComponent')->willReturn(['p' => $plugin]);
-    $this->manager = $manager;
+    $this->useFile(static function (): void {
+      throw new \LogicException('bad file');
+    });
 
     $this->expectException(\LogicException::class);
     $this->mapper()->map($this->paragraph([]), 'default');
+  }
+
+  /**
+   * A malformed component file renders the alert and logs an error.
+   *
+   * @covers ::map
+   */
+  public function testMalformedFileRendersAlert(): void {
+    $this->definition([]);
+    $this->loader = $this->createMock(ComponentMapperFileLoaderInterface::class);
+    $this->loader->method('load')->willThrowException(new InvalidComponentDefinitionException('syntax error'));
+    $this->logger->expects($this->once())->method('error')->with($this->stringContains('malformed'), $this->arrayHasKey('@message'));
+
+    $mapping = $this->mapper()->map($this->paragraph([], 'contact'), 'default');
+
+    $this->assertAlert($mapping, 'contact');
   }
 
   /**
@@ -682,50 +735,29 @@ class ParagraphComponentMapperTest extends TestCase {
   }
 
   /**
-   * A plugin that adds tags to the helper's accumulator, like a media load.
+   * Builds an alter step that adds tags to the accumulator, like a media load.
    *
    * @param \Drupal\drupal_kit\Services\EntityHelper $helper
    *   The helper.
    * @param string[] $tags
-   *   Tags to add when the plugin runs.
+   *   Tags to add when the step runs.
    * @param callable|null $after
    *   Called after the tags were added; may throw or map a child.
    */
-  private function tagPlugin(EntityHelper $helper, array $tags, ?callable $after = NULL): ParagraphMapperInterface {
-    return new class($helper, $tags, $after) implements ParagraphMapperInterface {
-
-      /**
-       * Constructs the stub.
-       *
-       * @param \Drupal\drupal_kit\Services\EntityHelper $helper
-       *   The helper.
-       * @param string[] $tags
-       *   Tags to add.
-       * @param callable|null $after
-       *   Callback after adding.
-       */
-      public function __construct(private EntityHelper $helper, private array $tags, private $after) {}
-
-      /**
-       * {@inheritdoc}
-       */
-      public function alter(ParagraphMapping $mapping, MappingContext $context): void {
-        $this->helper->addCacheTags($this->tags);
-        if ($this->after) {
-          ($this->after)();
-        }
+  private function tagStep(EntityHelper $helper, array $tags, ?callable $after = NULL): \Closure {
+    return static function (ParagraphMapping $mapping, MappingContext $context, EntityHelper $fields) use ($helper, $tags, $after): void {
+      $helper->addCacheTags($tags);
+      if ($after) {
+        $after();
       }
-
     };
   }
 
   /**
-   * Builds a mapper over a real helper with the given plugin.
+   * Builds a mapper over a real helper with the given alter step.
    */
-  private function mapperWith(EntityHelper $helper, ParagraphMapperInterface $plugin): ParagraphComponentMapper {
-    $manager = $this->createMock(ParagraphMapperManagerInterface::class);
-    $manager->method('getMappersForComponent')->willReturn(['p' => $plugin]);
-    $this->manager = $manager;
+  private function mapperWith(EntityHelper $helper, \Closure $alter): ParagraphComponentMapper {
+    $this->useFile($alter);
     $this->definition([]);
     return $this->mapper($helper);
   }
@@ -739,7 +771,7 @@ class ParagraphComponentMapperTest extends TestCase {
     $helper = $this->realHelper();
     $helper->addCacheTags(['outer:1']);
 
-    $mapping = $this->mapperWith($helper, $this->tagPlugin($helper, ['media:7']))->map($this->paragraph([]), 'default');
+    $mapping = $this->mapperWith($helper, $this->tagStep($helper, ['media:7']))->map($this->paragraph([]), 'default');
 
     $this->assertEqualsCanonicalizing(['paragraph:1', 'media:7'], $mapping->getCacheableMetadata()->getCacheTags());
     $this->assertNotContains('outer:1', $mapping->getCacheableMetadata()->getCacheTags());
@@ -755,10 +787,10 @@ class ParagraphComponentMapperTest extends TestCase {
   public function testScopeKeepsOuterMetadataOnException(): void {
     $helper = $this->realHelper();
     $helper->addCacheTags(['outer:1']);
-    $plugin = $this->tagPlugin($helper, ['media:7'], static function () {
+    $step = $this->tagStep($helper, ['media:7'], static function () {
       throw new \LogicException('boom');
     });
-    $mapper = $this->mapperWith($helper, $plugin);
+    $mapper = $this->mapperWith($helper, $step);
 
     try {
       $mapper->map($this->paragraph([]), 'default');
@@ -784,13 +816,13 @@ class ParagraphComponentMapperTest extends TestCase {
     $child = $this->paragraph([], 'contact', NULL, ['paragraph:2']);
     // Only the first call re-enters, or the child would map itself forever.
     $calls = 0;
-    $plugin_reentrant = $this->tagPlugin($helper, ['media:parent'], function () use ($holder, &$inner_mapping, $child, $helper, &$calls) {
+    $step_reentrant = $this->tagStep($helper, ['media:parent'], function () use ($holder, &$inner_mapping, $child, $helper, &$calls) {
       if ($calls++ === 0) {
         $inner_mapping = $holder->mapper->map($child, 'default');
         $helper->addCacheTags(['after:child']);
       }
     });
-    $mapper = $holder->mapper = $this->mapperWith($helper, $plugin_reentrant);
+    $mapper = $holder->mapper = $this->mapperWith($helper, $step_reentrant);
 
     $outer_mapping = $mapper->map($this->paragraph([]), 'default');
     $this->assertInstanceOf(ParagraphMapping::class, $inner_mapping);
@@ -809,16 +841,16 @@ class ParagraphComponentMapperTest extends TestCase {
   public function testLeakedScopeOnSuccessIsKept(): void {
     $helper = $this->realHelper();
     $helper->addCacheTags(['outer:1']);
-    $plugin = $this->tagPlugin($helper, ['ours:before'], static function () use ($helper) {
+    $step = $this->tagStep($helper, ['ours:before'], static function () use ($helper) {
       $helper->beginCacheScope();
       $helper->addCacheTags(['inner:kept']);
     });
     $this->logger->expects($this->once())->method('warning')
       ->with($this->stringContains('left @count cache scope'), $this->callback(
-        static fn (array $args) => $args['@count'] === 1 && str_contains($args['@source'], 'plugin '),
+        static fn (array $args) => $args['@count'] === 1 && str_contains($args['@source'], 'alter step'),
       ));
 
-    $mapping = $this->mapperWith($helper, $plugin)->map($this->paragraph([]), 'default');
+    $mapping = $this->mapperWith($helper, $step)->map($this->paragraph([]), 'default');
 
     $tags = $mapping->getCacheableMetadata()->getCacheTags();
     $this->assertContains('ours:before', $tags);
@@ -835,7 +867,7 @@ class ParagraphComponentMapperTest extends TestCase {
   public function testNestedLeakedScopesOnSuccessAreKept(): void {
     $helper = $this->realHelper();
     $helper->addCacheTags(['outer:1']);
-    $plugin = $this->tagPlugin($helper, ['ours:before'], static function () use ($helper) {
+    $step = $this->tagStep($helper, ['ours:before'], static function () use ($helper) {
       $helper->beginCacheScope();
       $helper->addCacheTags(['inner:one']);
       $helper->beginCacheScope();
@@ -844,7 +876,7 @@ class ParagraphComponentMapperTest extends TestCase {
     $this->logger->expects($this->once())->method('warning')
       ->with($this->anything(), $this->callback(static fn (array $args) => $args['@count'] === 2));
 
-    $mapping = $this->mapperWith($helper, $plugin)->map($this->paragraph([]), 'default');
+    $mapping = $this->mapperWith($helper, $step)->map($this->paragraph([]), 'default');
 
     $this->assertEqualsCanonicalizing(
       ['paragraph:1', 'ours:before', 'inner:one', 'inner:two'],
@@ -861,14 +893,14 @@ class ParagraphComponentMapperTest extends TestCase {
   public function testExceptionWithScopeLeftOpenRestoresOuter(): void {
     $helper = $this->realHelper();
     $helper->addCacheTags(['outer:1']);
-    $plugin = $this->tagPlugin($helper, ['ours:before'], static function () use ($helper) {
+    $step = $this->tagStep($helper, ['ours:before'], static function () use ($helper) {
       $helper->beginCacheScope();
       $helper->addCacheTags(['inner:lost']);
       $helper->beginCacheScope();
       $helper->addCacheTags(['inner:lost:two']);
       throw new \LogicException('boom');
     });
-    $mapper = $this->mapperWith($helper, $plugin);
+    $mapper = $this->mapperWith($helper, $step);
     $this->logger->expects($this->never())->method('warning');
 
     try {
@@ -885,12 +917,12 @@ class ParagraphComponentMapperTest extends TestCase {
   }
 
   /**
-   * A query field without a mapper plugin renders the alert and logs.
+   * A query field without a PHP file renders the alert and logs.
    *
    * @covers ::map
    * @covers ::findQueryFields
    */
-  public function testQueryFieldWithoutPluginRendersAlert(): void {
+  public function testQueryFieldWithoutFileRendersAlert(): void {
     $this->helper->expects($this->never())->method('mapFields');
     $this->definition([
       'title' => ['type' => 'text', 'role' => 'field'],
@@ -898,7 +930,7 @@ class ParagraphComponentMapperTest extends TestCase {
       'group' => ['type' => 'object', 'role' => 'field', 'fields' => ['deep' => ['type' => 'text', 'role' => 'query']]],
     ], 'article-featured');
     $this->logger->expects($this->once())->method('warning')
-      ->with($this->stringContains('needs a PHP mapper plugin'), $this->callback(
+      ->with($this->stringContains('needs a PHP file'), $this->callback(
         static fn (array $args) => $args['@component'] === 'article-featured' && $args['@fields'] === 'items, group.deep',
       ));
     $this->moduleHandler->expects($this->never())->method('alter');
@@ -907,33 +939,34 @@ class ParagraphComponentMapperTest extends TestCase {
 
     $this->assertSame('alert', $mapping->getTemplate());
     $this->assertSame('error', $mapping->get('type'));
-    $this->assertStringContainsString('PHP mapper plugin', (string) $mapping->get('message'));
+    $this->assertStringContainsString('PHP mapper file', (string) $mapping->get('message'));
     $this->assertContains(
-      'The article-featured component has query fields (items, group.deep) and no mapper plugin.',
+      'The article-featured component has query fields (items, group.deep) and no article-featured.drupal.php file.',
       $mapping->getDiagnostics(),
     );
     $this->assertContains('theme', $mapping->toRenderArray()['#cache']['contexts']);
   }
 
   /**
-   * A registered plugin suppresses the alert.
+   * A colocated PHP file suppresses the alert.
    *
    * @covers ::map
    */
-  public function testQueryFieldWithPluginRendersComponent(): void {
+  public function testQueryFieldWithFileRendersComponent(): void {
     $this->helper->method('mapFields')->willReturn([]);
     $this->definition(['items' => ['type' => 'list', 'role' => 'query']], 'article-featured');
-    $plugin = $this->createMock(ParagraphMapperInterface::class);
-    $plugin->expects($this->once())->method('alter');
-    $this->manager = $this->createMock(ParagraphMapperManagerInterface::class);
-    $this->manager->method('getMappersForComponent')->willReturn(['p' => $plugin]);
+    $ran = new \ArrayObject();
+    $this->useFile(static function () use ($ran): void {
+      $ran->append(1);
+    });
     $this->logger->expects($this->never())->method('warning');
 
     $mapping = $this->mapper()->map($this->paragraph([], 'article_featured'), 'default');
 
     $this->assertSame('article-featured', $mapping->getTemplate());
+    $this->assertCount(1, $ran);
     $this->assertNotContains(
-      'The article-featured component has query fields (items) and no mapper plugin.',
+      'The article-featured component has query fields (items) and no article-featured.drupal.php file.',
       $mapping->getDiagnostics(),
     );
   }
@@ -942,11 +975,11 @@ class ParagraphComponentMapperTest extends TestCase {
    * Framework keys and parent fields never trigger the alert.
    *
    * The `content` component marks `container` as a query field and has
-   * caller-supplied parent fields, and it needs no plugin.
+   * caller-supplied parent fields, and it needs no PHP file.
    *
    * @covers ::findQueryFields
    */
-  public function testFrameworkQueryAndParentFieldsNeedNoPlugin(): void {
+  public function testFrameworkQueryAndParentFieldsNeedNoFile(): void {
     $this->helper->method('mapFields')->willReturn([]);
     $this->definition([
       'container' => ['type' => 'text', 'role' => 'query'],
@@ -1022,11 +1055,11 @@ class ParagraphComponentMapperTest extends TestCase {
   /**
    * Makes a media entity stub.
    */
-  private function media(): MediaInterface&MockObject {
+  private function media(string $bundle = 'image', string $tag = 'media:1'): MediaInterface&MockObject {
     $media = $this->createMock(MediaInterface::class);
-    $media->method('bundle')->willReturn('image');
+    $media->method('bundle')->willReturn($bundle);
     $media->method('isPublished')->willReturn(TRUE);
-    $media->method('getCacheTags')->willReturn(['media:1']);
+    $media->method('getCacheTags')->willReturn([$tag]);
     $media->method('getCacheContexts')->willReturn([]);
     $media->method('getCacheMaxAge')->willReturn(-1);
     return $media;
@@ -1169,6 +1202,75 @@ class ParagraphComponentMapperTest extends TestCase {
     $items = $this->mapper($helper)->map($paragraph, 'default')->get('items');
 
     $this->assertSame([['label' => 'A'], ['label' => 'B']], $items);
+  }
+
+  /**
+   * Runs the committed article-video file end to end.
+   *
+   * @param array<int, mixed> $image_media
+   *   The values of the image field.
+   *
+   * @return array{0: \Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping, 1: \Drupal\drupal_kit\Services\EntityHelper}
+   *   The mapping and the helper, to check what is left in the accumulator.
+   */
+  private function runArticleVideo(array $image_media): array {
+    $repository = $this->createMock(ComponentDefinitionRepositoryInterface::class);
+    $repository->method('isValidComponentName')->willReturn(TRUE);
+    $repository->method('loadForBundle')->willReturn(new ComponentDefinition(
+      'article-video',
+      'theme_active/component/article-video/article-video.yaml',
+      ['fields' => []],
+    ));
+    $this->repository = $repository;
+    $loader = new ComponentMapperFileLoader($repository, dirname(__DIR__, 3) . '/fixtures/component_files');
+
+    $entity_repository = $this->createMock(EntityRepositoryInterface::class);
+    $entity_repository->method('getTranslationFromContext')->willReturnArgument(0);
+    $builder = $this->createMock(MediaArrayBuilder::class);
+    $embed = ['iframe' => 'https://video.example/embed/1', 'image' => [['src' => 'thumb.jpg']]];
+    $builder->method('buildRemoteVideo')->willReturn($embed);
+    $builder->method('buildImage')->willReturn([['src' => 'poster.avif']]);
+    $helper = $this->realHelper($entity_repository, $builder);
+    $helper->addCacheTags(['outer:1']);
+
+    $single = ['type' => 'entity_reference', 'cardinality' => 1, 'handler' => 'default:media'];
+    $paragraph = $this->stateful([
+      'field_media' => $single + ['values' => [$this->media('remote_video', 'media:video')]],
+      'field_image' => $single + ['values' => $image_media],
+    ]);
+
+    return [$this->mapper($helper, $loader)->map($paragraph, 'default'), $helper];
+  }
+
+  /**
+   * The article-video file maps video and poster, and leaks no metadata.
+   *
+   * @covers ::map
+   */
+  public function testArticleVideoFileEndToEnd(): void {
+    [$mapping, $helper] = $this->runArticleVideo([$this->media('image', 'media:poster')]);
+
+    $this->assertSame('https://video.example/embed/1', $mapping->get('video'));
+    $this->assertSame([['src' => 'poster.avif']], $mapping->get('image'));
+    $tags = $mapping->getCacheableMetadata()->getCacheTags();
+    $this->assertContains('media:video', $tags);
+    $this->assertContains('media:poster', $tags);
+    $this->assertNotContains('outer:1', $tags);
+    // The file leaked nothing: the outer accumulator is what it was.
+    $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
+  }
+
+  /**
+   * Without a poster field value, the thumbnail of the media is the image.
+   *
+   * @covers ::map
+   */
+  public function testArticleVideoFileFallsBackToTheThumbnail(): void {
+    [$mapping, $helper] = $this->runArticleVideo([]);
+
+    $this->assertSame('https://video.example/embed/1', $mapping->get('video'));
+    $this->assertSame([['src' => 'thumb.jpg']], $mapping->get('image'));
+    $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
   }
 
 }

@@ -6,23 +6,19 @@ parameters:
     - page
 
 services:
-  plugin.manager.drupal_kit.paragraph_mapper:
-    class: Drupal\drupal_kit_paragraphs\Mapper\ParagraphMapperManager
+  drupal_kit.component_mapper_file_loader:
+    class: Drupal\drupal_kit_paragraphs\Mapper\ComponentMapperFileLoader
     arguments:
-      - "@container.namespaces"
-      - "@cache.discovery"
-      - "@module_handler"
-      - "@theme_handler"
-      - "@theme.manager"
-    tags:
-      - { name: plugin_manager_cache_clear }
+      - "@drupal_kit.component_definition_repository"
+      - "%app.root%"
   drupal_kit.paragraph_component_mapper:
     class: Drupal\drupal_kit_paragraphs\Mapper\ParagraphComponentMapper
     arguments:
       - "@drupal_kit.component_definition_repository"
       - "@drupal_kit.entity_helper"
-      - "@plugin.manager.drupal_kit.paragraph_mapper"
+      - "@drupal_kit.component_mapper_file_loader"
       - "@module_handler"
       - "@theme.manager"
       - "@logger.factory"
+      - "@service_container"
       - "%drupal_kit_paragraphs.container_node_bundles%"

@@ -22,25 +22,22 @@ final class ComponentDefinition {
    *   The path of the YAML file, relative to the application root.
    * @param array<string, mixed> $data
    *   The parsed YAML document.
-   * @param string|null $provider
-   *   The machine name of the module or theme that owns the files, or NULL
-   *   when it is unknown.
    */
   public function __construct(
     private readonly string $name,
     private readonly string $path,
     private readonly array $data,
-    private readonly ?string $provider = NULL,
   ) {}
 
   /**
-   * Gets the module or theme that supplied the component files.
+   * Gets the directory of the component, relative to the application root.
    *
-   * The Components registry returns the winning template. This is the
-   * extension that owns it.
+   * It is the folder of the YAML file the Components registry resolved, so it
+   * also holds the Twig template and any colocated PHP file. The registry
+   * picks the winner: active theme, then base themes, then modules.
    */
-  public function getProvider(): ?string {
-    return $this->provider;
+  public function getDirectory(): string {
+    return dirname($this->path);
   }
 
   /**

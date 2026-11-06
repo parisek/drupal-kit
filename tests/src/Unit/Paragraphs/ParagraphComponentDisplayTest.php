@@ -13,73 +13,22 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Path\PathMatcherInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\drupal_kit\Component\ComponentDefinition;
 use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\drupal_kit_paragraphs\Mapper\ParagraphComponentMapperInterface;
-use Drupal\drupal_kit_paragraphs\Mapping\MappingContext;
 use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
 use Drupal\drupal_kit_paragraphs\Plugin\ExtraField\Display\ParagraphComponentDisplay;
-use Drupal\fixture_theme\Plugin\ParagraphMapper\ArticleVideo;
 use Drupal\paragraphs\ParagraphInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 require_once dirname(__DIR__, 3) . '/fixtures/stubs/ParagraphInterface.php';
-require_once dirname(__DIR__, 3) . '/fixtures/paragraph_mappers/fixture_theme/src/Plugin/ParagraphMapper/ArticleVideo.php';
 
 /**
- * Tests for the sample article-video mapper and the ExtraField display.
+ * Tests for the paragraph_component ExtraField display.
  *
  * @group drupal_kit
  */
-class ParagraphMapperPluginTest extends TestCase {
-
-  /**
-   * Runs the sample plugin against a helper that returns the given media.
-   */
-  private function runArticleVideo(mixed $media, mixed $image): ParagraphMapping {
-    $helper = $this->createMock(EntityHelper::class);
-    $helper->method('getMediaField')->willReturnCallback(
-      static fn ($entity, $name) => $name === 'media' ? $media : $image
-    );
-    $plugin = new ArticleVideo([], 'fixture_theme_article_video', [], $helper);
-
-    $mapping = new ParagraphMapping('article-video');
-    // The generic rules would have set media-shaped values under these keys.
-    $mapping->set('video', ['iframe' => 'ignored'])->set('image', 'ignored');
-    $paragraph = $this->createMock(ParagraphInterface::class);
-    $plugin->alter($mapping, new MappingContext($paragraph, 'default', new ComponentDefinition('article-video', 'x.yaml', [])));
-    return $mapping;
-  }
-
-  /**
-   * The embed becomes `video`; the image field becomes `image`.
-   */
-  public function testVideoAndImageField(): void {
-    $mapping = $this->runArticleVideo(
-      ['iframe' => '<iframe/>', 'image' => 'thumb'],
-      ['src' => 'poster.avif'],
-    );
-    $this->assertSame('<iframe/>', $mapping->get('video'));
-    $this->assertSame(['src' => 'poster.avif'], $mapping->get('image'));
-  }
-
-  /**
-   * Without an image field, the media thumbnail is the poster.
-   */
-  public function testImageFallsBackToMediaImage(): void {
-    $mapping = $this->runArticleVideo(['iframe' => '<iframe/>', 'image' => 'thumb'], FALSE);
-    $this->assertSame('thumb', $mapping->get('image'));
-  }
-
-  /**
-   * An empty media field gives NULL for both keys.
-   */
-  public function testNoMedia(): void {
-    $mapping = $this->runArticleVideo([], []);
-    $this->assertNull($mapping->get('video'));
-    $this->assertNull($mapping->get('image'));
-  }
+class ParagraphComponentDisplayTest extends TestCase {
 
   /**
    * Builds the display plugin with a mapper stub.

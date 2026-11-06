@@ -590,6 +590,68 @@ On the redirect path the page that carries the lead is cached. The layer already
 
 Drupal cannot uninstall a module whose code is gone. Uninstall it in a deploy that still has the code, or in the same deploy before the code is removed.
 
+## Paragraph components (`drupal_kit_paragraphs`)
+
+The `drupal_kit_paragraphs` submodule maps a Paragraph to its Twig component from the component definition (`<component>.yaml`). It needs Paragraphs. Enable it, then turn on the `paragraph_component` extra field on the view display of each paragraph bundle. Never enable it on a display that also shows another component display.
+
+The generic rules read the `fields` tree of the definition. A field with `role: field` maps. `drupal.field` names the Drupal field; without it the name is `field_<key>`. `EntityHelper` picks the formatter from the real field definition. A definition that says `multiple: false` on a many-value field gets the bare value instead of a list.
+
+### PHP for one component: `<component>.drupal.php`
+
+When the definition is not enough, put a file next to the template and the definition:
+
+```text
+article-video/
+  article-video.twig
+  article-video.yaml
+  article-video.drupal.php
+```
+
+The Components registry picks the folder, so the active theme wins over a base theme, and a base theme wins over a module. The file is not a class. It has no namespace. It starts with `return`, prints nothing, and returns a Closure or an array:
+
+```php
+<?php
+
+use Drupal\drupal_kit\Services\EntityHelper;
+use Drupal\drupal_kit_paragraphs\Mapping\MappingContext;
+use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
+
+return static function (ParagraphMapping $mapping, MappingContext $context, EntityHelper $fields): void {
+  $paragraph = $context->getParagraph();
+  $image = $fields->getMediaField($paragraph, 'image');
+  $media = $fields->getMediaField($paragraph, 'media');
+  $mapping->set('video', $media['iframe'] ?? NULL);
+  $mapping->set('image', !empty($image) ? $image : ($media['image'] ?? NULL));
+};
+```
+
+- A Closure is the `alter` step. It runs after the generic mapping.
+- An array may hold `alter` and `replace`. `replace` is `Closure(ParagraphInterface, string $viewMode, EntityHelper): ParagraphMapping`. It builds the whole mapping and skips the generic rules.
+- `$context->service('id')` gives any other service.
+- After the file, `hook_drupal_kit_paragraph_mapping_alter()` and `hook_drupal_kit_paragraph_mapping_COMPONENT_alter()` run: modules first, then the theme chain.
+- A component with `role: query` fields and no such file renders the `alert` component and writes a log warning, because nothing would fill those fields.
+- A missing definition, a malformed definition and a broken file (syntax error, wrong return value, output) also render the alert and write a log entry. Any other exception from your code passes through.
+
+### Deny direct requests
+
+A web server can run a `.php` file under a theme when someone requests its URL. The file prints nothing, but deny the request anyway.
+
+Apache:
+
+```apache
+<FilesMatch "\.drupal\.php$">
+  Require all denied
+</FilesMatch>
+```
+
+nginx, before the generic PHP location:
+
+```nginx
+location ~ \.drupal\.php$ {
+  deny all;
+}
+```
+
 ## Optional integrations
 
 The following modules are optional. When present, `EntityHelper` automatically exposes additional fields and renderers; when absent, those code paths gracefully no-op.

@@ -132,5 +132,5 @@ msgstr "Renderuje akapit jako komponent Twig, który wskazuje jego definicja."
 msgid "Drupal implementation for component <strong>@template</strong> is missing"
 msgstr "Brakuje implementacji Drupala dla komponentu <strong>@template</strong>"
 
-msgid "Drupal implementation for component <strong>@template</strong> needs a PHP mapper plugin"
-msgstr "Implementacja Drupala dla komponentu <strong>@template</strong> wymaga wtyczki PHP mapper"
+msgid "Drupal implementation for component <strong>@template</strong> needs a PHP mapper file"
+msgstr "Implementacja Drupala dla komponentu <strong>@template</strong> wymaga pliku PHP mappera"

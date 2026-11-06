@@ -20,6 +20,7 @@ use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\drupal_kit_paragraphs\Mapping\MappingContext;
 use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
 use Drupal\node\NodeInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\paragraphs\ParagraphInterface;
 
 /**
@@ -31,8 +32,10 @@ use Drupal\paragraphs\ParagraphInterface;
  * 2. The `fields` tree of the definition. Only `role: field` nodes map. A node
  *    without a role inherits the role of its parent. Roles `query`, `parent`
  *    and `global` do not map.
- * 3. The mapper plugins of the component, in run order. Theme plugins follow
- *    the theme that supplied the component.
+ *    A colocated `<component>.drupal.php` file may return a `replace` step that
+ *    builds the whole mapping instead of rules 1 and 2.
+ * 3. The `alter` step of that file, if it has one. The Components registry
+ *    already picked the winning folder, so Twig precedence decides the file.
  * 4. The module alter hooks, then the theme alter hooks of the active theme
  *    chain.
  *
@@ -77,24 +80,27 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
    *   The component definition repository.
    * @param \Drupal\drupal_kit\Services\EntityHelper $entityHelper
    *   The entity helper.
-   * @param \Drupal\drupal_kit_paragraphs\Mapper\ParagraphMapperManagerInterface $mapperManager
-   *   The mapper plugin manager.
+   * @param \Drupal\drupal_kit_paragraphs\Mapper\ComponentMapperFileLoaderInterface $fileLoader
+   *   The loader of colocated component files.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
    *   The module handler.
    * @param \Drupal\Core\Theme\ThemeManagerInterface $themeManager
    *   The theme manager.
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $loggerFactory
    *   The logger factory.
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+   *   The service container, for MappingContext::service().
    * @param string[] $containerNodeBundles
    *   Parent node bundles whose paragraphs get `container: container`.
    */
   public function __construct(
     protected ComponentDefinitionRepositoryInterface $repository,
     protected EntityHelper $entityHelper,
-    protected ParagraphMapperManagerInterface $mapperManager,
+    protected ComponentMapperFileLoaderInterface $fileLoader,
     protected ModuleHandlerInterface $moduleHandler,
     protected ThemeManagerInterface $themeManager,
     protected LoggerChannelFactoryInterface $loggerFactory,
+    protected ContainerInterface $container,
     protected array $containerNodeBundles = ['page'],
   ) {}
 
@@ -104,8 +110,9 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
   public function map(ParagraphInterface $paragraph, string $viewMode): ParagraphMapping {
     $mapping = new ParagraphMapping();
     $mapping->addCacheableDependency($paragraph);
-    // Every exit path depends on the active theme: the component, the plugins
-    // and the fallback alert all differ by theme. Set it before any lookup.
+    // Every exit path depends on the active theme: the component, its PHP
+    // file and the fallback alert all differ by theme. Set it before any
+    // lookup.
     $mapping->addCacheableDependency((new CacheableMetadata())->setCacheContexts(['theme']));
 
     // The EntityHelper accumulator is shared by all callers. A scope takes
@@ -119,9 +126,10 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
       $completed = TRUE;
     }
     finally {
-      // A broken plugin may leave a scope of its own open. Close those first,
-      // so that ours ends and the outer accumulator comes back. When the build
-      // completed, its output is used: keep what the leaked scopes collected.
+      // Broken component code may leave a scope of its own open. Close those
+      // first, so that ours ends and the outer accumulator comes back. When
+      // the build completed, its output is used: keep what the leaked scopes
+      // collected.
       // When an exception passes, the output is gone: drop it.
       $leaked = $this->entityHelper->abandonCacheScopesAbove($scope, $completed);
       if ($leaked > 0 && $completed) {
@@ -149,10 +157,15 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
 
     try {
       $definition = $this->repository->loadForBundle($paragraph->bundle());
-      $generic = $definition === NULL ? NULL : $this->mapNodes($paragraph, $definition->getFields(), NULL, $mapping, '');
+      $file = $definition === NULL ? NULL : $this->fileLoader->load($definition);
+      // A replace step builds everything, so the generic rules would only
+      // read fields for nothing.
+      $generic = $definition === NULL || $file?->getReplace() !== NULL
+        ? NULL
+        : $this->mapNodes($paragraph, $definition->getFields(), NULL, $mapping, '');
     }
     catch (InvalidComponentDefinitionException $e) {
-      $logger->error('The component definition of the @bundle paragraph bundle is malformed: @message', [
+      $logger->error('The component definition or file of the @bundle paragraph bundle is malformed: @message', [
         '@bundle' => $paragraph->bundle(),
         '@message' => $e->getMessage(),
       ]);
@@ -160,7 +173,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
       return;
     }
 
-    if ($definition === NULL || $generic === NULL) {
+    if ($definition === NULL) {
       $logger->warning('No component definition for the @bundle paragraph bundle.', [
         '@bundle' => $paragraph->bundle(),
       ]);
@@ -169,34 +182,46 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     }
 
     $component = $definition->getName();
-    $mappers = $this->mapperManager->getMappersForComponent($component, $definition->getProvider());
     $query_fields = $this->findQueryFields($definition->getFields());
-    if ($query_fields !== [] && $mappers === []) {
+    if ($query_fields !== [] && $file === NULL) {
       // The data of these fields comes from PHP (queries, views). Without a
-      // mapper the component would render with the data missing and nobody
-      // would see it.
-      $note = sprintf('The %s component has query fields (%s) and no mapper plugin.', $component, implode(', ', $query_fields));
+      // colocated PHP step the component would render with the data missing
+      // and nobody would see it.
+      $note = sprintf('The %s component has query fields (%s) and no %s%s file.', $component, implode(', ', $query_fields), $component, ComponentMapperFileLoader::SUFFIX);
       $mapping->addDiagnostic($note);
-      $logger->warning('The @component component needs a PHP mapper plugin for its query fields (@fields), and none is registered.', [
+      $logger->warning('The @component component needs a PHP file for its query fields (@fields), and @file is missing.', [
         '@component' => $component,
         '@fields' => implode(', ', $query_fields),
+        '@file' => $component . ComponentMapperFileLoader::SUFFIX,
       ]);
-      $this->mapAlert($mapping, $paragraph, new TranslatableMarkup('Drupal implementation for component <strong>@template</strong> needs a PHP mapper plugin', [
+      $this->mapAlert($mapping, $paragraph, new TranslatableMarkup('Drupal implementation for component <strong>@template</strong> needs a PHP mapper file', [
         '@template' => Html::cleanCssIdentifier($paragraph->bundle()),
       ]));
       return;
     }
 
     $mapping->setComponent($component)->setTemplate($component);
-    $this->mapFrameworkFields($mapping, $paragraph);
-    foreach ($generic as $key => $value) {
-      $this->merge($mapping, $key, $value);
+    $replace = $file?->getReplace();
+    if ($replace !== NULL) {
+      $replaced = $replace($paragraph, $viewMode, $this->entityHelper);
+      if (!$replaced instanceof ParagraphMapping) {
+        throw new \UnexpectedValueException(sprintf('The "replace" step in %s must return a ParagraphMapping.', $file->getPath()));
+      }
+      $this->closeLeakedScopes($scope, 'the replace step in ' . $file->getPath());
+      $this->adopt($mapping, $replaced);
+    }
+    else {
+      $this->mapFrameworkFields($mapping, $paragraph);
+      foreach ($generic ?? [] as $key => $value) {
+        $this->merge($mapping, $key, $value);
+      }
     }
 
-    $context = new MappingContext($paragraph, $viewMode, $definition);
-    foreach ($mappers as $plugin) {
-      $plugin->alter($mapping, $context);
-      $this->closeLeakedScopes($scope, 'plugin ' . $plugin::class);
+    $context = new MappingContext($paragraph, $viewMode, $definition, $this->container);
+    $alter = $file?->getAlter();
+    if ($alter !== NULL) {
+      $alter($mapping, $context, $this->entityHelper);
+      $this->closeLeakedScopes($scope, 'the alter step in ' . $file->getPath());
     }
 
     // Modules first, then the active theme and its base themes.
@@ -205,6 +230,27 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     $this->closeLeakedScopes($scope, 'a module alter hook');
     $this->themeManager->alter($types, $mapping, $context);
     $this->closeLeakedScopes($scope, 'a theme alter hook');
+  }
+
+  /**
+   * Takes the result of a `replace` step into our mapping.
+   *
+   * Data, template, component, cacheability and notes move over. The mapping
+   * the caller gets stays our object, so the cache scope bookkeeping holds.
+   */
+  private function adopt(ParagraphMapping $mapping, ParagraphMapping $replaced): void {
+    $mapping->replaceData($replaced->getData());
+    if ($replaced->getComponent() !== NULL) {
+      $mapping->setComponent($replaced->getComponent());
+    }
+    $template = $replaced->getTemplate();
+    if ($template !== NULL) {
+      $mapping->setTemplate($template);
+    }
+    $mapping->addCacheableDependency($replaced->getCacheableMetadata());
+    foreach ($replaced->getDiagnostics() as $note) {
+      $mapping->addDiagnostic($note);
+    }
   }
 
   /**
@@ -244,7 +290,9 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
   }
 
   /**
-   * Closes a scope that a plugin or hook left open, and keeps its metadata.
+   * Closes a scope that a component file or hook left open.
+   *
+   * Its metadata is kept.
    *
    * The output is used, so the leaked scope's tags, contexts and max-age merge
    * into ours. The warning names the source.
@@ -252,7 +300,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
    * @param \Drupal\drupal_kit\Services\CacheScope $scope
    *   Our scope.
    * @param string $source
-   *   Who ran: a plugin class or a hook kind.
+   *   Who ran: a component file step or a hook kind.
    */
   private function closeLeakedScopes(CacheScope $scope, string $source): void {
     $leaked = $this->entityHelper->abandonCacheScopesAbove($scope, TRUE);
