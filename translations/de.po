@@ -131,3 +131,6 @@ msgstr "Gibt den Absatz als die Twig-Komponente aus, die seine Definition nennt.
 
 msgid "Drupal implementation for component <strong>@template</strong> is missing"
 msgstr "Die Drupal-Implementierung für die Komponente <strong>@template</strong> fehlt"
+
+msgid "Drupal implementation for component <strong>@template</strong> needs a PHP mapper plugin"
+msgstr "Die Drupal-Implementierung für die Komponente <strong>@template</strong> braucht ein PHP-Mapper-Plugin"

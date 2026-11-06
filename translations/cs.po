@@ -131,3 +131,6 @@ msgstr "Vykreslí odstavec jako Twig komponentu, kterou určuje jeho definice."
 
 msgid "Drupal implementation for component <strong>@template</strong> is missing"
 msgstr "Implementace Drupalu pro komponentu <strong>@template</strong> chybí"
+
+msgid "Drupal implementation for component <strong>@template</strong> needs a PHP mapper plugin"
+msgstr "Implementace Drupalu pro komponentu <strong>@template</strong> potřebuje PHP mapper plugin"

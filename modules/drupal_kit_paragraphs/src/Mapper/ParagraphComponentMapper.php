@@ -51,6 +51,11 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
   public const ALTER_HOOK = 'drupal_kit_paragraph_mapping';
 
   /**
+   * Top-level keys that mapFrameworkFields() sets for every component.
+   */
+  private const FRAMEWORK_KEYS = ['container', 'heading', 'wrapper_id', 'wrapper_classes', 'spacing', 'border'];
+
+  /**
    * YAML node types and the Drupal field types that fit them.
    *
    * A type that is not listed here is not checked.
@@ -164,6 +169,24 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     }
 
     $component = $definition->getName();
+    $mappers = $this->mapperManager->getMappersForComponent($component, $definition->getProvider());
+    $query_fields = $this->findQueryFields($definition->getFields());
+    if ($query_fields !== [] && $mappers === []) {
+      // The data of these fields comes from PHP (queries, views). Without a
+      // mapper the component would render with the data missing and nobody
+      // would see it.
+      $note = sprintf('The %s component has query fields (%s) and no mapper plugin.', $component, implode(', ', $query_fields));
+      $mapping->addDiagnostic($note);
+      $logger->warning('The @component component needs a PHP mapper plugin for its query fields (@fields), and none is registered.', [
+        '@component' => $component,
+        '@fields' => implode(', ', $query_fields),
+      ]);
+      $this->mapAlert($mapping, $paragraph, new TranslatableMarkup('Drupal implementation for component <strong>@template</strong> needs a PHP mapper plugin', [
+        '@template' => Html::cleanCssIdentifier($paragraph->bundle()),
+      ]));
+      return;
+    }
+
     $mapping->setComponent($component)->setTemplate($component);
     $this->mapFrameworkFields($mapping, $paragraph);
     foreach ($generic as $key => $value) {
@@ -171,7 +194,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     }
 
     $context = new MappingContext($paragraph, $viewMode, $definition);
-    foreach ($this->mapperManager->getMappersForComponent($component, $definition->getProvider()) as $plugin) {
+    foreach ($mappers as $plugin) {
       $plugin->alter($mapping, $context);
       $this->closeLeakedScopes($scope, 'plugin ' . $plugin::class);
     }
@@ -182,6 +205,42 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     $this->closeLeakedScopes($scope, 'a module alter hook');
     $this->themeManager->alter($types, $mapping, $context);
     $this->closeLeakedScopes($scope, 'a theme alter hook');
+  }
+
+  /**
+   * Finds the fields whose data PHP supplies: `role: query` outside framework.
+   *
+   * The framework fields (container, heading, wrapper_id, wrapper_classes,
+   * spacing, border) are set by this mapper whatever the role says, so they do
+   * not count. Role `parent` does not count either: a caller supplies those
+   * values, and a component such as `content` is complete without them.
+   *
+   * @param array<string, mixed> $nodes
+   *   The definition nodes.
+   * @param string $path
+   *   The dotted path of the parent, for the result.
+   *
+   * @return string[]
+   *   The dotted paths of the query fields.
+   */
+  private function findQueryFields(array $nodes, string $path = ''): array {
+    $found = [];
+    foreach ($nodes as $key => $node) {
+      if (!is_string($key) || !is_array($node)) {
+        continue;
+      }
+      if ($path === '' && in_array($key, self::FRAMEWORK_KEYS, TRUE)) {
+        continue;
+      }
+      $here = ltrim($path . '.' . $key, '.');
+      if (($node['role'] ?? NULL) === 'query') {
+        $found[] = $here;
+      }
+      elseif (is_array($node['fields'] ?? NULL)) {
+        $found = array_merge($found, $this->findQueryFields($node['fields'], $here));
+      }
+    }
+    return $found;
   }
 
   /**
@@ -210,13 +269,20 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
    *
    * The data is what the old display built for a bundle it did not know: the
    * framework fields, then an error alert in a container.
+   *
+   * @param \Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping $mapping
+   *   The mapping to turn into the alert.
+   * @param \Drupal\paragraphs\ParagraphInterface $paragraph
+   *   The paragraph.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|null $message
+   *   The message. It defaults to "implementation is missing".
    */
-  protected function mapAlert(ParagraphMapping $mapping, ParagraphInterface $paragraph): void {
+  protected function mapAlert(ParagraphMapping $mapping, ParagraphInterface $paragraph, ?TranslatableMarkup $message = NULL): void {
     $mapping->replaceData([]);
     $this->mapFrameworkFields($mapping, $paragraph);
     $mapping->set('type', 'error');
     $mapping->set('container', 'container');
-    $mapping->set('message', new TranslatableMarkup('Drupal implementation for component <strong>@template</strong> is missing', [
+    $mapping->set('message', $message ?? new TranslatableMarkup('Drupal implementation for component <strong>@template</strong> is missing', [
       '@template' => Html::cleanCssIdentifier($paragraph->bundle()),
     ]));
     $mapping->setComponent('alert')->setTemplate('alert');
@@ -318,6 +384,15 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
         continue;
       }
 
+      // mapFields() returns a list for a field that holds many values and the
+      // bare value for one. A definition that says `multiple: false` on a field
+      // that allows many values wants the bare value, so it goes through
+      // formatField() with no list option. The definition never forces a list
+      // on a one-value field: the formatter already returns one.
+      if (($node['multiple'] ?? NULL) === FALSE && $this->effectiveCardinality($field_definition) !== 1) {
+        $result[$key] = $this->entityHelper->formatField($entity, $field_name, []);
+        continue;
+      }
       $mapped = $this->entityHelper->mapFields($entity, [$key => ['field' => $field_name]]);
       $result[$key] = $mapped[$key] ?? NULL;
     }
@@ -374,6 +449,18 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
   }
 
   /**
+   * Gets the cardinality EntityHelper uses to choose between value and list.
+   *
+   * The per-instance override wins over the storage.
+   */
+  protected function effectiveCardinality(FieldDefinitionInterface $field_definition): int {
+    $override = $field_definition instanceof ThirdPartySettingsInterface
+      ? $field_definition->getThirdPartySetting('field_config_cardinality', 'cardinality_config')
+      : NULL;
+    return $override !== NULL ? (int) $override : $field_definition->getFieldStorageDefinition()->getCardinality();
+  }
+
+  /**
    * Compares the YAML shape with the real field, for diagnostics only.
    *
    * @param \Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping $mapping
@@ -392,15 +479,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
       $mapping->addDiagnostic("$path: YAML type '$type' does not fit the $drupal_type field.");
     }
 
-    // The per-instance cardinality override wins over the storage, the same
-    // order EntityHelper uses to decide between one value and a list.
-    $cardinality = $field_definition->getFieldStorageDefinition()->getCardinality();
-    $override = $field_definition instanceof ThirdPartySettingsInterface
-      ? $field_definition->getThirdPartySetting('field_config_cardinality', 'cardinality_config')
-      : NULL;
-    if ($override !== NULL) {
-      $cardinality = (int) $override;
-    }
+    $cardinality = $this->effectiveCardinality($field_definition);
     $multiple = !empty($node['multiple']) || ($node['type'] ?? NULL) === 'list';
     if ($multiple && $cardinality === 1) {
       $mapping->addDiagnostic("$path: YAML says multiple, the field holds one value.");

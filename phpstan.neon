@@ -27,6 +27,7 @@ parameters:
     # for it, and the theme plugin fixtures stand in for a theme's src/.
     scanFiles:
         - tests/fixtures/stubs/ParagraphInterface.php
+        - tests/fixtures/stubs/PublishedParagraphInterface.php
         - tests/fixtures/paragraph_mappers/fixture_theme/src/Plugin/ParagraphMapper/ArticleVideo.php
 
     ignoreErrors:

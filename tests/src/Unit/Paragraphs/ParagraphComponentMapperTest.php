@@ -9,7 +9,9 @@ use Drupal\Core\Cache\Context\CacheContextsManager;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Config\Entity\ThirdPartySettingsInterface;
+use Drupal\Core\Field\EntityReferenceFieldItemListInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldStorageDefinitionInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
@@ -25,6 +27,8 @@ use Drupal\drupal_kit_paragraphs\Mapper\ParagraphMapperInterface;
 use Drupal\drupal_kit_paragraphs\Mapper\ParagraphMapperManagerInterface;
 use Drupal\drupal_kit_paragraphs\Mapping\MappingContext;
 use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
+use Drupal\media\MediaInterface;
+use Drupal\Tests\drupal_kit\Stubs\PublishedParagraphInterface;
 use Drupal\node\NodeInterface;
 use Drupal\paragraphs\ParagraphInterface;
 use Drupal\Core\Cache\CacheBackendInterface;
@@ -48,6 +52,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 require_once dirname(__DIR__, 3) . '/fixtures/stubs/ParagraphInterface.php';
+require_once dirname(__DIR__, 3) . '/fixtures/stubs/PublishedParagraphInterface.php';
 
 /**
  * Tests for the generic paragraph mapper, with a stubbed EntityHelper.
@@ -247,6 +252,9 @@ class ParagraphComponentMapperTest extends TestCase {
    */
   public function testRolesAreFilteredAndInherited(): void {
     $this->mapFieldsEchoesFieldName();
+    // A query field needs a mapper plugin, or the mapper renders the alert.
+    $this->manager = $this->createMock(ParagraphMapperManagerInterface::class);
+    $this->manager->method('getMappersForComponent')->willReturn(['noop' => $this->createMock(ParagraphMapperInterface::class)]);
     $this->definition([
       'q' => ['type' => 'text', 'role' => 'query'],
       'p' => ['type' => 'text', 'role' => 'parent'],
@@ -650,12 +658,12 @@ class ParagraphComponentMapperTest extends TestCase {
   /**
    * Builds a real EntityHelper. Its accumulator is real state.
    */
-  private function realHelper(): EntityHelper {
+  private function realHelper(?EntityRepositoryInterface $repository = NULL, ?MediaArrayBuilder $media = NULL): EntityHelper {
     return new EntityHelper(
       $this->createMock(EntityTypeManagerInterface::class),
       $this->createMock(RouteMatchInterface::class),
       $this->createMock(LanguageManagerInterface::class),
-      $this->createMock(EntityRepositoryInterface::class),
+      $repository ?? $this->createMock(EntityRepositoryInterface::class),
       $this->createMock(ConfigFactoryInterface::class),
       $this->createMock(Connection::class),
       $this->createMock(CacheBackendInterface::class),
@@ -669,7 +677,7 @@ class ParagraphComponentMapperTest extends TestCase {
       $this->createMock(MenuActiveTrailResolver::class),
       $this->createMock(TaxonomyTreeBuilder::class),
       $this->createMock(MenuTreeBuilder::class),
-      $this->createMock(MediaArrayBuilder::class),
+      $media ?? $this->createMock(MediaArrayBuilder::class),
     );
   }
 
@@ -874,6 +882,293 @@ class ParagraphComponentMapperTest extends TestCase {
     // The leaked scopes' metadata is dropped, and no warning is logged: the
     // exception is the news.
     $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
+  }
+
+  /**
+   * A query field without a mapper plugin renders the alert and logs.
+   *
+   * @covers ::map
+   * @covers ::findQueryFields
+   */
+  public function testQueryFieldWithoutPluginRendersAlert(): void {
+    $this->helper->expects($this->never())->method('mapFields');
+    $this->definition([
+      'title' => ['type' => 'text', 'role' => 'field'],
+      'items' => ['type' => 'list', 'role' => 'query'],
+      'group' => ['type' => 'object', 'role' => 'field', 'fields' => ['deep' => ['type' => 'text', 'role' => 'query']]],
+    ], 'article-featured');
+    $this->logger->expects($this->once())->method('warning')
+      ->with($this->stringContains('needs a PHP mapper plugin'), $this->callback(
+        static fn (array $args) => $args['@component'] === 'article-featured' && $args['@fields'] === 'items, group.deep',
+      ));
+    $this->moduleHandler->expects($this->never())->method('alter');
+
+    $mapping = $this->mapper()->map($this->paragraph([], 'article_featured'), 'default');
+
+    $this->assertSame('alert', $mapping->getTemplate());
+    $this->assertSame('error', $mapping->get('type'));
+    $this->assertStringContainsString('PHP mapper plugin', (string) $mapping->get('message'));
+    $this->assertContains(
+      'The article-featured component has query fields (items, group.deep) and no mapper plugin.',
+      $mapping->getDiagnostics(),
+    );
+    $this->assertContains('theme', $mapping->toRenderArray()['#cache']['contexts']);
+  }
+
+  /**
+   * A registered plugin suppresses the alert.
+   *
+   * @covers ::map
+   */
+  public function testQueryFieldWithPluginRendersComponent(): void {
+    $this->helper->method('mapFields')->willReturn([]);
+    $this->definition(['items' => ['type' => 'list', 'role' => 'query']], 'article-featured');
+    $plugin = $this->createMock(ParagraphMapperInterface::class);
+    $plugin->expects($this->once())->method('alter');
+    $this->manager = $this->createMock(ParagraphMapperManagerInterface::class);
+    $this->manager->method('getMappersForComponent')->willReturn(['p' => $plugin]);
+    $this->logger->expects($this->never())->method('warning');
+
+    $mapping = $this->mapper()->map($this->paragraph([], 'article_featured'), 'default');
+
+    $this->assertSame('article-featured', $mapping->getTemplate());
+    $this->assertNotContains(
+      'The article-featured component has query fields (items) and no mapper plugin.',
+      $mapping->getDiagnostics(),
+    );
+  }
+
+  /**
+   * Framework keys and parent fields never trigger the alert.
+   *
+   * The `content` component marks `container` as a query field and has
+   * caller-supplied parent fields, and it needs no plugin.
+   *
+   * @covers ::findQueryFields
+   */
+  public function testFrameworkQueryAndParentFieldsNeedNoPlugin(): void {
+    $this->helper->method('mapFields')->willReturn([]);
+    $this->definition([
+      'container' => ['type' => 'text', 'role' => 'query'],
+      'name' => ['type' => 'text', 'role' => 'parent'],
+    ], 'content');
+
+    $mapping = $this->mapper()->map($this->paragraph([], 'content'), 'default');
+
+    $this->assertSame('content', $mapping->getTemplate());
+  }
+
+  /**
+   * Builds a paragraph over real field lists, for the shape tests.
+   *
+   * @param array<string, array<string, mixed>> $fields
+   *   Field name to: type, cardinality, handler, values.
+   */
+  private function stateful(array $fields): ParagraphInterface&MockObject {
+    $paragraph = $this->createMock(ParagraphInterface::class);
+    $paragraph->method('bundle')->willReturn('quote_image');
+    $paragraph->method('id')->willReturn('1');
+    $paragraph->method('getCacheTags')->willReturn(['paragraph:1']);
+    $paragraph->method('getCacheContexts')->willReturn([]);
+    $paragraph->method('getCacheMaxAge')->willReturn(-1);
+    $paragraph->method('hasField')->willReturnCallback(static fn ($name) => isset($fields[$name]));
+    $paragraph->method('getFieldDefinition')->willReturnCallback(function ($name) use ($fields) {
+      $storage = $this->createMock(FieldStorageDefinitionInterface::class);
+      $storage->method('getCardinality')->willReturn($fields[$name]['cardinality']);
+      $definition = $this->createMock(FieldDefinitionInterface::class);
+      $definition->method('getType')->willReturn($fields[$name]['type']);
+      $definition->method('getSettings')->willReturn(['handler' => $fields[$name]['handler'] ?? '']);
+      $definition->method('getFieldStorageDefinition')->willReturn($storage);
+      return $definition;
+    });
+    $paragraph->method('get')->willReturnCallback(function ($name) use ($fields) {
+      $values = $fields[$name]['values'];
+      $items = [];
+      foreach ($values as $value) {
+        $items[] = new class($value) {
+
+          /**
+           * The text value.
+           */
+          public mixed $value;
+
+          /**
+           * The referenced entity.
+           */
+          public mixed $entity;
+
+          /**
+           * Constructs the item.
+           */
+          public function __construct(mixed $value) {
+            $this->value = $value;
+            $this->entity = $value;
+          }
+
+        };
+      }
+      if (($fields[$name]['type'] ?? '') === 'entity_reference_revisions') {
+        $list = $this->createMock(EntityReferenceFieldItemListInterface::class);
+        $list->method('referencedEntities')->willReturn($values);
+        return $list;
+      }
+      $list = $this->createMockForIntersectionOfInterfaces([FieldItemListInterface::class, \IteratorAggregate::class]);
+      $list->method('getIterator')->willReturn(new \ArrayIterator($items));
+      return $list;
+    });
+    return $paragraph;
+  }
+
+  /**
+   * Makes a media entity stub.
+   */
+  private function media(): MediaInterface&MockObject {
+    $media = $this->createMock(MediaInterface::class);
+    $media->method('bundle')->willReturn('image');
+    $media->method('isPublished')->willReturn(TRUE);
+    $media->method('getCacheTags')->willReturn(['media:1']);
+    $media->method('getCacheContexts')->willReturn([]);
+    $media->method('getCacheMaxAge')->willReturn(-1);
+    return $media;
+  }
+
+  /**
+   * Maps one leaf of a real helper over the given field.
+   *
+   * @param array<string, mixed> $node
+   *   The definition node.
+   * @param array<string, mixed> $field
+   *   The field spec for stateful().
+   */
+  private function mapLeaf(array $node, array $field): mixed {
+    $repository = $this->createMock(EntityRepositoryInterface::class);
+    $repository->method('getTranslationFromContext')->willReturnArgument(0);
+    $builder = $this->createMock(MediaArrayBuilder::class);
+    $counter = 0;
+    $builder->method('buildImage')->willReturnCallback(static function () use (&$counter) {
+      $counter++;
+      return [['src' => "img$counter.avif"]];
+    });
+    $helper = $this->realHelper($repository, $builder);
+    // A stub cannot be re-configured, and the helper maps several shapes.
+    $this->repository = $this->createMock(ComponentDefinitionRepositoryInterface::class);
+    $this->definition(['image' => $node + ['role' => 'field']]);
+    $paragraph = $this->stateful(['field_image' => $field]);
+
+    return $this->mapper($helper)->map($paragraph, 'default')->get('image');
+  }
+
+  /**
+   * Media on a many-value field, YAML multiple: a list of media, each a list.
+   *
+   * @covers ::mapNodes
+   */
+  public function testMediaManyValuesMultipleTrueIsMediaList(): void {
+    $field = ['type' => 'entity_reference', 'cardinality' => -1, 'handler' => 'default:media'];
+    $node = ['type' => 'media', 'multiple' => TRUE];
+    $one = $this->mapLeaf($node, $field + ['values' => [$this->media()]]);
+    $two = $this->mapLeaf($node, $field + ['values' => [$this->media(), $this->media()]]);
+
+    // The gallery shape: one entry per media, each entry the image variants.
+    $this->assertSame([[['src' => 'img1.avif']]], $one);
+    $this->assertSame([[['src' => 'img1.avif']], [['src' => 'img2.avif']]], $two);
+  }
+
+  /**
+   * An explicit `multiple: false` gives the bare media, as the old display did.
+   *
+   * @covers ::mapNodes
+   */
+  public function testMediaManyValuesMultipleFalseIsTheBareMedia(): void {
+    $field = ['type' => 'entity_reference', 'cardinality' => -1, 'handler' => 'default:media'];
+
+    $one = $this->mapLeaf(['type' => 'media', 'multiple' => FALSE], $field + ['values' => [$this->media()]]);
+    $both = ['values' => [$this->media(), $this->media()]];
+    $two = $this->mapLeaf(['type' => 'media', 'multiple' => FALSE], $field + $both);
+
+    $this->assertSame([['src' => 'img1.avif']], $one);
+    // More than one value stays a list, as the formatter returns it.
+    $this->assertSame([[['src' => 'img1.avif']], [['src' => 'img2.avif']]], $two);
+  }
+
+  /**
+   * A one-value media field is the bare media, with or without `multiple`.
+   *
+   * @covers ::mapNodes
+   */
+  public function testMediaSingleValueIsTheBareMedia(): void {
+    $field = ['type' => 'entity_reference', 'cardinality' => 1, 'handler' => 'default:media'];
+
+    foreach ([FALSE, TRUE, NULL] as $multiple) {
+      $node = ['type' => 'media'] + ($multiple === NULL ? [] : ['multiple' => $multiple]);
+      $this->assertSame([['src' => 'img1.avif']], $this->mapLeaf($node, $field + ['values' => [$this->media()]]));
+    }
+  }
+
+  /**
+   * A many-value text field is a list, a one-value field the bare string.
+   *
+   * @covers ::mapNodes
+   */
+  public function testTextShapes(): void {
+    $many = ['type' => 'string', 'cardinality' => -1];
+    $this->assertSame(['x', 'y'], $this->mapLeaf(['type' => 'text'], $many + ['values' => ['x', 'y']]));
+    $this->assertSame(['x'], $this->mapLeaf(['type' => 'text'], $many + ['values' => ['x']]));
+    $this->assertSame('x', $this->mapLeaf(['type' => 'text', 'multiple' => FALSE], $many + ['values' => ['x']]));
+    $single = ['type' => 'string', 'cardinality' => 1, 'values' => ['x']];
+    $this->assertSame('x', $this->mapLeaf(['type' => 'text'], $single));
+  }
+
+  /**
+   * A many-value reference with child fields is a list of mapped children.
+   *
+   * @covers ::mapChildren
+   */
+  public function testReferenceChildrenShapes(): void {
+    $repository = $this->createMock(EntityRepositoryInterface::class);
+    $repository->method('getTranslationFromContext')->willReturnArgument(0);
+    $helper = $this->realHelper($repository);
+    $makeChild = function (string $label) {
+      $child = $this->createMock(PublishedParagraphInterface::class);
+      $child->method('isPublished')->willReturn(TRUE);
+      $child->method('getCacheTags')->willReturn(['child']);
+      $child->method('getCacheContexts')->willReturn([]);
+      $child->method('getCacheMaxAge')->willReturn(-1);
+      $child->method('hasField')->willReturnCallback(static fn ($name) => $name === 'field_label');
+      $child->method('getFieldDefinition')->willReturnCallback(function () {
+        $storage = $this->createMock(FieldStorageDefinitionInterface::class);
+        $storage->method('getCardinality')->willReturn(1);
+        $definition = $this->createMock(FieldDefinitionInterface::class);
+        $definition->method('getType')->willReturn('string');
+        $definition->method('getFieldStorageDefinition')->willReturn($storage);
+        return $definition;
+      });
+      $item = new \stdClass();
+      $item->value = $label;
+      $list = $this->createMockForIntersectionOfInterfaces([FieldItemListInterface::class, \IteratorAggregate::class]);
+      $list->method('getIterator')->willReturn(new \ArrayIterator([$item]));
+      $child->method('get')->willReturn($list);
+      return $child;
+    };
+    $this->definition([
+      'items' => [
+        'type' => 'list',
+        'role' => 'field',
+        'drupal' => ['field' => 'field_paragraphs'],
+        'fields' => ['label' => ['type' => 'text']],
+      ],
+    ], 'numbers');
+    $paragraph = $this->stateful([
+      'field_paragraphs' => [
+        'type' => 'entity_reference_revisions',
+        'cardinality' => -1,
+        'values' => [$makeChild('A'), $makeChild('B')],
+      ],
+    ]);
+
+    $items = $this->mapper($helper)->map($paragraph, 'default')->get('items');
+
+    $this->assertSame([['label' => 'A'], ['label' => 'B']], $items);
   }
 
 }
