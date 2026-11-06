@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\drupal_kit\Unit\Services;
 
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\Context\CacheContextsManager;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Database\Connection;
@@ -262,6 +263,42 @@ class EntityHelperCacheScopeTest extends TestCase {
 
     $this->assertAccumulator(['b']);
     $this->assertSame(['b'], $this->helper->endCacheScope($outer)->getCacheTags());
+    $this->assertAccumulator(['a']);
+  }
+
+  /**
+   * Merges metadata into the helper's current accumulator.
+   *
+   * EntityHelper has no public way to add contexts or max-age; real callers
+   * add them through the entities they load.
+   */
+  private function addMetadata(CacheableMetadata $metadata): void {
+    $property = new \ReflectionProperty($this->helper, 'cacheMetadata');
+    $property->setValue($this->helper, $property->getValue($this->helper)->merge($metadata));
+  }
+
+  /**
+   * With $keep, closed inner scopes merge downward, depth two, all fields.
+   *
+   * @covers ::abandonCacheScopesAbove
+   */
+  public function testAbandonWithKeepMergesDownward(): void {
+    $this->helper->addCacheTags(['a']);
+    $outer = $this->helper->beginCacheScope();
+    $this->helper->addCacheTags(['b']);
+    $this->helper->beginCacheScope();
+    $this->helper->addCacheTags(['c']);
+    $this->addMetadata((new CacheableMetadata())->setCacheContexts(['user']));
+    $this->helper->beginCacheScope();
+    $this->helper->addCacheTags(['d']);
+    $this->addMetadata((new CacheableMetadata())->setCacheMaxAge(60));
+
+    $this->assertSame(2, $this->helper->abandonCacheScopesAbove($outer, TRUE));
+
+    $collected = $this->helper->endCacheScope($outer);
+    $this->assertEqualsCanonicalizing(['b', 'c', 'd'], $collected->getCacheTags());
+    $this->assertSame(['user'], $collected->getCacheContexts());
+    $this->assertSame(60, $collected->getCacheMaxAge());
     $this->assertAccumulator(['a']);
   }
 

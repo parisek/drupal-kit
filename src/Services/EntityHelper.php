@@ -307,22 +307,33 @@ class EntityHelper {
   }
 
   /**
-   * Drop the open scopes above a scope, innermost first.
+   * Close the open scopes above a scope, innermost first.
    *
    * This is the deliberate cleanup for a caller whose own scope must end even
-   * though code inside it left a scope open, for example after an exception.
-   * The metadata of the dropped scopes is discarded. The accumulator becomes
-   * what it was when the oldest dropped scope began, which is the content of
-   * the given scope. Call endCacheScope() on the given scope next.
+   * though code inside it left a scope open. The accumulator becomes the
+   * content of the given scope. Call endCacheScope() on it next.
+   *
+   * What happens to the metadata of the closed scopes depends on the output:
+   * - $keep = TRUE: no exception is in flight and the output is used. The
+   *   metadata of each closed scope merges into the scope below it, so its
+   *   tags, contexts and max-age still describe that output. Dropping them
+   *   would let a cache serve stale or shared content.
+   * - $keep = FALSE: an exception propagates and the output is thrown away.
+   *   The metadata is dropped.
    *
    * @param \Drupal\drupal_kit\Services\CacheScope $scope
    *   An open scope. Nothing changes when none is above it.
+   * @param bool $keep
+   *   TRUE to merge the metadata of the closed scopes downward.
+   *
+   * @return int
+   *   The number of scopes that were closed.
    *
    * @throws \LogicException
    *   When the scope is not open or was opened in another Fiber. The helper
    *   keeps its state.
    */
-  public function abandonCacheScopesAbove(CacheScope $scope): void {
+  public function abandonCacheScopesAbove(CacheScope $scope, bool $keep = FALSE): int {
     $position = NULL;
     foreach ($this->cacheScopes as $index => $entry) {
       if ($entry['handle'] === $scope) {
@@ -335,12 +346,17 @@ class EntityHelper {
     }
     $this->assertSameFiber($scope);
 
+    $closed = 0;
     while (count($this->cacheScopes) - 1 > $position) {
       $dropped = array_pop($this->cacheScopes);
-      if ($dropped !== NULL) {
-        $this->cacheMetadata = $dropped['outer'];
+      if ($dropped === NULL) {
+        break;
       }
+      $inner = $this->cacheMetadata;
+      $this->cacheMetadata = $keep ? $dropped['outer']->merge($inner) : $dropped['outer'];
+      $closed++;
     }
+    return $closed;
   }
 
   /**

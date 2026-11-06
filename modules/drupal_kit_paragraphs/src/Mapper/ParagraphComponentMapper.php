@@ -15,6 +15,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\drupal_kit\Component\ComponentDefinitionRepositoryInterface;
 use Drupal\drupal_kit\Component\InvalidComponentDefinitionException;
+use Drupal\drupal_kit\Services\CacheScope;
 use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\drupal_kit_paragraphs\Mapping\MappingContext;
 use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
@@ -107,13 +108,23 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     // untouched, also when an exception passes. On an exception the scope's
     // own metadata is dropped: no mapping is returned, so nothing uses it.
     $scope = $this->entityHelper->beginCacheScope();
+    $completed = FALSE;
     try {
-      $this->build($mapping, $paragraph, $viewMode);
+      $this->build($mapping, $paragraph, $viewMode, $scope);
+      $completed = TRUE;
     }
     finally {
-      // A broken plugin may leave a scope of its own open. Drop those first,
-      // so that ours ends and the outer accumulator comes back.
-      $this->entityHelper->abandonCacheScopesAbove($scope);
+      // A broken plugin may leave a scope of its own open. Close those first,
+      // so that ours ends and the outer accumulator comes back. When the build
+      // completed, its output is used: keep what the leaked scopes collected.
+      // When an exception passes, the output is gone: drop it.
+      $leaked = $this->entityHelper->abandonCacheScopesAbove($scope, $completed);
+      if ($leaked > 0 && $completed) {
+        $this->loggerFactory->get('drupal_kit_paragraphs')->warning('The @bundle paragraph mapping left @count cache scope(s) open.', [
+          '@bundle' => $paragraph->bundle(),
+          '@count' => $leaked,
+        ]);
+      }
       $collected = $this->entityHelper->endCacheScope($scope);
     }
 
@@ -128,7 +139,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
    * hand-written display did: no definition, and a malformed definition. Any
    * other exception is a programming error and propagates.
    */
-  protected function build(ParagraphMapping $mapping, ParagraphInterface $paragraph, string $viewMode): void {
+  protected function build(ParagraphMapping $mapping, ParagraphInterface $paragraph, string $viewMode, CacheScope $scope): void {
     $logger = $this->loggerFactory->get('drupal_kit_paragraphs');
 
     try {
@@ -162,12 +173,36 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     $context = new MappingContext($paragraph, $viewMode, $definition);
     foreach ($this->mapperManager->getMappersForComponent($component, $definition->getProvider()) as $plugin) {
       $plugin->alter($mapping, $context);
+      $this->closeLeakedScopes($scope, 'plugin ' . $plugin::class);
     }
 
     // Modules first, then the active theme and its base themes.
     $types = [self::ALTER_HOOK, self::ALTER_HOOK . '_' . str_replace('-', '_', $component)];
     $this->moduleHandler->alter($types, $mapping, $context);
+    $this->closeLeakedScopes($scope, 'a module alter hook');
     $this->themeManager->alter($types, $mapping, $context);
+    $this->closeLeakedScopes($scope, 'a theme alter hook');
+  }
+
+  /**
+   * Closes a scope that a plugin or hook left open, and keeps its metadata.
+   *
+   * The output is used, so the leaked scope's tags, contexts and max-age merge
+   * into ours. The warning names the source.
+   *
+   * @param \Drupal\drupal_kit\Services\CacheScope $scope
+   *   Our scope.
+   * @param string $source
+   *   Who ran: a plugin class or a hook kind.
+   */
+  private function closeLeakedScopes(CacheScope $scope, string $source): void {
+    $leaked = $this->entityHelper->abandonCacheScopesAbove($scope, TRUE);
+    if ($leaked > 0) {
+      $this->loggerFactory->get('drupal_kit_paragraphs')->warning('@source left @count cache scope(s) open. Its cache metadata was kept.', [
+        '@source' => $source,
+        '@count' => $leaked,
+      ]);
+    }
   }
 
   /**

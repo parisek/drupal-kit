@@ -793,24 +793,55 @@ class ParagraphComponentMapperTest extends TestCase {
   }
 
   /**
-   * An inner scope that a plugin leaves open is dropped, ours still ends.
+   * On success, a scope a plugin leaves open keeps its metadata in the mapping.
    *
    * @covers ::map
+   * @covers ::closeLeakedScopes
    */
-  public function testScopeLeftOpenByPluginIsAbandoned(): void {
+  public function testLeakedScopeOnSuccessIsKept(): void {
     $helper = $this->realHelper();
     $helper->addCacheTags(['outer:1']);
     $plugin = $this->tagPlugin($helper, ['ours:before'], static function () use ($helper) {
       $helper->beginCacheScope();
-      $helper->addCacheTags(['inner:lost']);
+      $helper->addCacheTags(['inner:kept']);
     });
+    $this->logger->expects($this->once())->method('warning')
+      ->with($this->stringContains('left @count cache scope'), $this->callback(
+        static fn (array $args) => $args['@count'] === 1 && str_contains($args['@source'], 'plugin '),
+      ));
 
     $mapping = $this->mapperWith($helper, $plugin)->map($this->paragraph([]), 'default');
 
     $tags = $mapping->getCacheableMetadata()->getCacheTags();
     $this->assertContains('ours:before', $tags);
-    $this->assertNotContains('inner:lost', $tags);
+    $this->assertContains('inner:kept', $tags);
     $this->assertNotContains('outer:1', $tags);
+    $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
+  }
+
+  /**
+   * Two nested leaked scopes keep their metadata on success.
+   *
+   * @covers ::map
+   */
+  public function testNestedLeakedScopesOnSuccessAreKept(): void {
+    $helper = $this->realHelper();
+    $helper->addCacheTags(['outer:1']);
+    $plugin = $this->tagPlugin($helper, ['ours:before'], static function () use ($helper) {
+      $helper->beginCacheScope();
+      $helper->addCacheTags(['inner:one']);
+      $helper->beginCacheScope();
+      $helper->addCacheTags(['inner:two']);
+    });
+    $this->logger->expects($this->once())->method('warning')
+      ->with($this->anything(), $this->callback(static fn (array $args) => $args['@count'] === 2));
+
+    $mapping = $this->mapperWith($helper, $plugin)->map($this->paragraph([]), 'default');
+
+    $this->assertEqualsCanonicalizing(
+      ['paragraph:1', 'ours:before', 'inner:one', 'inner:two'],
+      $mapping->getCacheableMetadata()->getCacheTags(),
+    );
     $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
   }
 
@@ -825,9 +856,12 @@ class ParagraphComponentMapperTest extends TestCase {
     $plugin = $this->tagPlugin($helper, ['ours:before'], static function () use ($helper) {
       $helper->beginCacheScope();
       $helper->addCacheTags(['inner:lost']);
+      $helper->beginCacheScope();
+      $helper->addCacheTags(['inner:lost:two']);
       throw new \LogicException('boom');
     });
     $mapper = $this->mapperWith($helper, $plugin);
+    $this->logger->expects($this->never())->method('warning');
 
     try {
       $mapper->map($this->paragraph([]), 'default');
@@ -837,6 +871,8 @@ class ParagraphComponentMapperTest extends TestCase {
       $this->assertSame('boom', $e->getMessage());
     }
 
+    // The leaked scopes' metadata is dropped, and no warning is logged: the
+    // exception is the news.
     $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
   }
 
