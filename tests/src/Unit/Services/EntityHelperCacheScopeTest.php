@@ -19,6 +19,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\drupal_kit\Services\CacheScope;
 use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\drupal_kit\Services\MediaArrayBuilder;
 use Drupal\drupal_kit\Services\MenuActiveTrailResolver;
@@ -51,7 +52,14 @@ class EntityHelperCacheScopeTest extends TestCase {
     $container->set('cache_contexts_manager', $contexts);
     \Drupal::setContainer($container);
 
-    $this->helper = new EntityHelper(
+    $this->helper = $this->newHelper();
+  }
+
+  /**
+   * Builds a real helper with mocked dependencies.
+   */
+  private function newHelper(): EntityHelper {
+    return new EntityHelper(
       $this->createMock(EntityTypeManagerInterface::class),
       $this->createMock(RouteMatchInterface::class),
       $this->createMock(LanguageManagerInterface::class),
@@ -71,6 +79,7 @@ class EntityHelperCacheScopeTest extends TestCase {
       $this->createMock(MenuTreeBuilder::class),
       $this->createMock(MediaArrayBuilder::class),
     );
+
   }
 
   /**
@@ -127,31 +136,232 @@ class EntityHelperCacheScopeTest extends TestCase {
   }
 
   /**
-   * An inner scope left open is closed with its outer one.
+   * Asserts that the helper state is the expected one.
+   *
+   * @param string[] $tags
+   *   The tags the accumulator must hold now.
+   */
+  private function assertAccumulator(array $tags): void {
+    // Draining is the only reader. Put the tags back afterwards.
+    $this->assertEqualsCanonicalizing($tags, $this->helper->collectCacheMetadata()->getCacheTags());
+    $this->helper->addCacheTags($tags);
+  }
+
+  /**
+   * A closed handle cannot close again, even if a new scope took its place.
    *
    * @covers ::endCacheScope
    */
-  public function testUnclosedInnerScopeJoinsOuterScope(): void {
+  public function testStaleHandleIsRejected(): void {
+    $stale = $this->helper->beginCacheScope();
+    $this->helper->endCacheScope($stale);
+    $fresh = $this->helper->beginCacheScope();
+    $this->helper->addCacheTags(['fresh']);
+
+    try {
+      $this->helper->endCacheScope($stale);
+      $this->fail('Expected an exception.');
+    }
+    catch (\LogicException) {
+      $this->addToAssertionCount(1);
+    }
+
+    $this->assertAccumulator(['fresh']);
+    $this->assertSame(['fresh'], $this->helper->endCacheScope($fresh)->getCacheTags());
+  }
+
+  /**
+   * A double close throws.
+   *
+   * @covers ::endCacheScope
+   */
+  public function testDoubleCloseThrows(): void {
+    $scope = $this->helper->beginCacheScope();
+    $this->helper->endCacheScope($scope);
+    $this->expectException(\LogicException::class);
+    $this->helper->endCacheScope($scope);
+  }
+
+  /**
+   * An ancestor handle does not absorb the inner scopes. Nothing changes.
+   *
+   * @covers ::endCacheScope
+   */
+  public function testAncestorHandleIsRejectedWithoutChange(): void {
+    $this->helper->addCacheTags(['a']);
+    $outer = $this->helper->beginCacheScope();
+    $this->helper->addCacheTags(['b']);
+    $inner = $this->helper->beginCacheScope();
+    $this->helper->addCacheTags(['c']);
+
+    try {
+      $this->helper->endCacheScope($outer);
+      $this->fail('Expected an exception.');
+    }
+    catch (\LogicException) {
+      $this->addToAssertionCount(1);
+    }
+
+    $this->assertAccumulator(['c']);
+    $this->assertSame(['c'], $this->helper->endCacheScope($inner)->getCacheTags());
+    $this->assertSame(['b'], $this->helper->endCacheScope($outer)->getCacheTags());
+    $this->assertAccumulator(['a']);
+  }
+
+  /**
+   * A forged handle and a handle of another helper are rejected.
+   *
+   * @covers ::endCacheScope
+   */
+  public function testForgedAndForeignHandlesAreRejected(): void {
+    $own = $this->helper->beginCacheScope();
+    $this->helper->addCacheTags(['own']);
+    $other = $this->newHelper();
+    $foreign = $other->beginCacheScope();
+
+    foreach ([new CacheScope(1, NULL), $foreign] as $handle) {
+      try {
+        $this->helper->endCacheScope($handle);
+        $this->fail('Expected an exception.');
+      }
+      catch (\LogicException) {
+        $this->addToAssertionCount(1);
+      }
+    }
+
+    $this->assertAccumulator(['own']);
+    $this->assertSame(['own'], $this->helper->endCacheScope($own)->getCacheTags());
+    $this->assertSame([], $other->endCacheScope($foreign)->getCacheTags());
+  }
+
+  /**
+   * Closing with no scope open throws.
+   *
+   * @covers ::endCacheScope
+   */
+  public function testCloseWithNothingOpenThrows(): void {
+    $this->expectException(\LogicException::class);
+    $this->helper->endCacheScope(new CacheScope(1, NULL));
+  }
+
+  /**
+   * AbandonCacheScopesAbove drops inner scopes and keeps ours.
+   *
+   * @covers ::abandonCacheScopesAbove
+   */
+  public function testAbandonDropsInnerScopes(): void {
     $this->helper->addCacheTags(['a']);
     $outer = $this->helper->beginCacheScope();
     $this->helper->addCacheTags(['b']);
     $this->helper->beginCacheScope();
     $this->helper->addCacheTags(['c']);
+    $this->helper->beginCacheScope();
+    $this->helper->addCacheTags(['d']);
 
-    $this->assertEqualsCanonicalizing(['b', 'c'], $this->helper->endCacheScope($outer)->getCacheTags());
-    $this->assertSame(['a'], $this->helper->collectCacheMetadata()->getCacheTags());
+    $this->helper->abandonCacheScopesAbove($outer);
+
+    $this->assertAccumulator(['b']);
+    $this->assertSame(['b'], $this->helper->endCacheScope($outer)->getCacheTags());
+    $this->assertAccumulator(['a']);
   }
 
   /**
-   * Ending a scope twice, or a bad token, is a programming error.
+   * Abandon with nothing above changes nothing, and rejects a closed scope.
+   *
+   * @covers ::abandonCacheScopesAbove
+   */
+  public function testAbandonEdgeCases(): void {
+    $scope = $this->helper->beginCacheScope();
+    $this->helper->addCacheTags(['x']);
+    $this->helper->abandonCacheScopesAbove($scope);
+    $this->assertAccumulator(['x']);
+    $this->helper->endCacheScope($scope);
+
+    $this->expectException(\LogicException::class);
+    $this->helper->abandonCacheScopesAbove($scope);
+  }
+
+  /**
+   * Two interleaved Fibers: the one that is not innermost cannot close.
+   *
+   * Fiber A opens a scope and suspends. Fiber B opens a scope above it. A
+   * resumes and tries to close: it is not the innermost scope, so it gets an
+   * error. B cannot close A's scope either. No tag leaks or vanishes.
    *
    * @covers ::endCacheScope
    */
-  public function testClosedScopeThrows(): void {
+  public function testInterleavedFibersGetErrors(): void {
+    $helper = $this->helper;
+    /** @var \ArrayObject<int, string> $errors */
+    $errors = new \ArrayObject();
+    /** @var \ArrayObject<string, string[]> $result */
+    $result = new \ArrayObject();
+
+    $a = new \Fiber(function () use ($helper, $errors, $result): void {
+      $scope = $helper->beginCacheScope();
+      $helper->addCacheTags(['a']);
+      \Fiber::suspend($scope);
+      try {
+        $helper->endCacheScope($scope);
+      }
+      catch (\LogicException $e) {
+        $errors[] = 'a-early';
+      }
+      \Fiber::suspend();
+      $result['a'] = $helper->endCacheScope($scope)->getCacheTags();
+    });
+    $scope_a = $a->start();
+
+    $b = new \Fiber(function () use ($helper, $scope_a, $errors, $result): void {
+      $scope = $helper->beginCacheScope();
+      $helper->addCacheTags(['b']);
+      \Fiber::suspend();
+      try {
+        $helper->endCacheScope($scope_a);
+      }
+      catch (\LogicException $e) {
+        $errors[] = 'b-foreign';
+      }
+      $result['b'] = $helper->endCacheScope($scope)->getCacheTags();
+    });
+    $b->start();
+
+    // A resumes while B's scope is above its own: it must fail.
+    $a->resume();
+    $this->assertSame(['a-early'], $errors->getArrayCopy());
+    // B tries A's scope from the wrong Fiber and then ends its own.
+    $b->resume();
+    $this->assertSame(['a-early', 'b-foreign'], $errors->getArrayCopy());
+    $this->assertSame(['b'], $result['b']);
+    // A can close now that B is gone.
+    $a->resume();
+    $this->assertSame(['a'], $result['a']);
+    $this->assertAccumulator([]);
+  }
+
+  /**
+   * A scope cannot close from another Fiber, also when it is the innermost.
+   *
+   * @covers ::endCacheScope
+   */
+  public function testScopeCannotCloseFromAnotherFiber(): void {
     $scope = $this->helper->beginCacheScope();
-    $this->helper->endCacheScope($scope);
-    $this->expectException(\LogicException::class);
-    $this->helper->endCacheScope($scope);
+    $this->helper->addCacheTags(['x']);
+    $helper = $this->helper;
+    $fiber = new \Fiber(function () use ($helper, $scope): string {
+      try {
+        $helper->endCacheScope($scope);
+      }
+      catch (\LogicException $e) {
+        return $e->getMessage();
+      }
+      return 'closed';
+    });
+    $fiber->start();
+
+    $this->assertStringContainsString('another Fiber', (string) $fiber->getReturn());
+    $this->assertAccumulator(['x']);
+    $this->assertSame(['x'], $this->helper->endCacheScope($scope)->getCacheTags());
   }
 
   /**

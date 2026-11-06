@@ -111,6 +111,9 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
       $this->build($mapping, $paragraph, $viewMode);
     }
     finally {
+      // A broken plugin may leave a scope of its own open. Drop those first,
+      // so that ours ends and the outer accumulator comes back.
+      $this->entityHelper->abandonCacheScopesAbove($scope);
       $collected = $this->entityHelper->endCacheScope($scope);
     }
 

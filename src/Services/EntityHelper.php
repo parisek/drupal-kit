@@ -171,11 +171,19 @@ class EntityHelper {
   protected CacheableMetadata $cacheMetadata;
 
   /**
-   * Outer accumulators of the open cache scopes, innermost last.
+   * The open cache scopes, innermost last.
    *
-   * @var \Drupal\Core\Cache\CacheableMetadata[]
+   * Each entry holds the scope handle and the accumulator that was current
+   * when the scope began.
+   *
+   * @var array<int, array{handle: \Drupal\drupal_kit\Services\CacheScope, outer: \Drupal\Core\Cache\CacheableMetadata}>
    */
   protected array $cacheScopes = [];
+
+  /**
+   * The number of the last scope handle made by this helper.
+   */
+  protected int $cacheScopeSequence = 0;
 
   /**
    * Constructs a new EntityHelper object.
@@ -239,19 +247,25 @@ class EntityHelper {
    * The accumulator is one mutable object shared by every caller in the
    * request. A caller that must take only the metadata its own work creates
    * opens a scope first. The metadata collected so far moves aside and the
-   * accumulator starts empty. Scopes nest: each scope keeps its own outer
-   * content on a stack.
+   * accumulator starts empty.
    *
-   * Always close the scope with endCacheScope() in a finally block.
+   * Supported model: the scopes of one helper instance form a stack, and use
+   * is synchronous and strictly last in, first out. Close a scope in a finally
+   * block. A Fiber that suspends while its scope is open is not supported,
+   * because other code then adds to the accumulator inside that scope. The
+   * guard in endCacheScope() rejects a close from another Fiber than the one
+   * that opened the scope, but it cannot see such foreign additions.
+   *
    * collectCacheMetadata() keeps its behavior and drains the current scope.
    *
-   * @return int
-   *   The scope token to pass to endCacheScope().
+   * @return \Drupal\drupal_kit\Services\CacheScope
+   *   The handle to pass to endCacheScope().
    */
-  public function beginCacheScope(): int {
-    $this->cacheScopes[] = $this->cacheMetadata;
+  public function beginCacheScope(): CacheScope {
+    $handle = new CacheScope(++$this->cacheScopeSequence, \Fiber::getCurrent());
+    $this->cacheScopes[] = ['handle' => $handle, 'outer' => $this->cacheMetadata];
     $this->cacheMetadata = new CacheableMetadata();
-    return count($this->cacheScopes);
+    return $handle;
   }
 
   /**
@@ -259,28 +273,83 @@ class EntityHelper {
    *
    * The outer content comes back exactly as it was at beginCacheScope().
    * Nothing from the scope stays in it: the caller decides where the returned
-   * metadata goes, and may drop it. A scope that an inner caller left open is
-   * closed first, and its metadata joins this scope's.
+   * metadata goes, and may drop it.
    *
-   * @param int $scope
-   *   The token from beginCacheScope().
+   * Only the innermost open scope can end. A stale or forged handle, a handle
+   * of another helper, a scope that is not the innermost, a double close and a
+   * close from another Fiber all throw, and the helper keeps its state exactly
+   * as it was before the call. An inner scope that was left open is never
+   * closed silently: see abandonCacheScopesAbove().
+   *
+   * @param \Drupal\drupal_kit\Services\CacheScope $scope
+   *   The handle from beginCacheScope().
    *
    * @return \Drupal\Core\Cache\CacheableMetadata
    *   What was added to the accumulator since the scope began.
    *
    * @throws \LogicException
-   *   When the scope is not open.
+   *   When the scope cannot end.
    */
-  public function endCacheScope(int $scope): CacheableMetadata {
-    if ($scope < 1 || $scope > count($this->cacheScopes)) {
-      throw new \LogicException('The cache scope is not open.');
+  public function endCacheScope(CacheScope $scope): CacheableMetadata {
+    $top = end($this->cacheScopes);
+    if ($top === FALSE) {
+      throw new \LogicException(sprintf('Cache scope %d is not open.', $scope->getId()));
     }
+    if ($top['handle'] !== $scope) {
+      throw new \LogicException(sprintf('Cache scope %d is not the innermost open scope.', $scope->getId()));
+    }
+    $this->assertSameFiber($scope);
+
+    array_pop($this->cacheScopes);
     $collected = $this->cacheMetadata;
-    while (count($this->cacheScopes) > $scope) {
-      $collected = (array_pop($this->cacheScopes) ?? new CacheableMetadata())->merge($collected);
-    }
-    $this->cacheMetadata = array_pop($this->cacheScopes) ?? new CacheableMetadata();
+    $this->cacheMetadata = $top['outer'];
     return $collected;
+  }
+
+  /**
+   * Drop the open scopes above a scope, innermost first.
+   *
+   * This is the deliberate cleanup for a caller whose own scope must end even
+   * though code inside it left a scope open, for example after an exception.
+   * The metadata of the dropped scopes is discarded. The accumulator becomes
+   * what it was when the oldest dropped scope began, which is the content of
+   * the given scope. Call endCacheScope() on the given scope next.
+   *
+   * @param \Drupal\drupal_kit\Services\CacheScope $scope
+   *   An open scope. Nothing changes when none is above it.
+   *
+   * @throws \LogicException
+   *   When the scope is not open or was opened in another Fiber. The helper
+   *   keeps its state.
+   */
+  public function abandonCacheScopesAbove(CacheScope $scope): void {
+    $position = NULL;
+    foreach ($this->cacheScopes as $index => $entry) {
+      if ($entry['handle'] === $scope) {
+        $position = $index;
+        break;
+      }
+    }
+    if ($position === NULL) {
+      throw new \LogicException(sprintf('Cache scope %d is not open.', $scope->getId()));
+    }
+    $this->assertSameFiber($scope);
+
+    while (count($this->cacheScopes) - 1 > $position) {
+      $dropped = array_pop($this->cacheScopes);
+      if ($dropped !== NULL) {
+        $this->cacheMetadata = $dropped['outer'];
+      }
+    }
+  }
+
+  /**
+   * Throws when a scope is used from another Fiber than the one that opened it.
+   */
+  private function assertSameFiber(CacheScope $scope): void {
+    if ($scope->getFiber() !== \Fiber::getCurrent()) {
+      throw new \LogicException(sprintf('Cache scope %d was opened in another Fiber.', $scope->getId()));
+    }
   }
 
   /**

@@ -18,6 +18,7 @@ use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\drupal_kit\Component\ComponentDefinition;
 use Drupal\drupal_kit\Component\ComponentDefinitionRepositoryInterface;
 use Drupal\drupal_kit\Component\InvalidComponentDefinitionException;
+use Drupal\drupal_kit\Services\CacheScope;
 use Drupal\drupal_kit\Services\EntityHelper;
 use Drupal\drupal_kit_paragraphs\Mapper\ParagraphComponentMapper;
 use Drupal\drupal_kit_paragraphs\Mapper\ParagraphMapperInterface;
@@ -105,8 +106,8 @@ class ParagraphComponentMapperTest extends TestCase {
 
     $this->repository = $this->createMock(ComponentDefinitionRepositoryInterface::class);
     $this->helper = $this->createMock(EntityHelper::class);
-    $this->helper->method('beginCacheScope')->willReturn(1);
-    $this->helper->method('beginCacheScope')->willReturn(1);
+    $this->helper->method('beginCacheScope')->willReturn(new CacheScope(1, NULL));
+    $this->helper->method('beginCacheScope')->willReturn(new CacheScope(1, NULL));
     $this->helper->method('endCacheScope')->willReturn(new CacheableMetadata());
     $this->manager = $this->createMock(ParagraphMapperManagerInterface::class);
     $this->manager->method('getMappersForComponent')->willReturn([]);
@@ -541,8 +542,8 @@ class ParagraphComponentMapperTest extends TestCase {
    */
   public function testCacheabilityMerges(): void {
     $this->helper = $this->createMock(EntityHelper::class);
-    $this->helper->method('beginCacheScope')->willReturn(1);
-    $this->helper->expects($this->once())->method('endCacheScope')->with(1)
+    $this->helper->method('beginCacheScope')->willReturn(new CacheScope(1, NULL));
+    $this->helper->expects($this->once())->method('endCacheScope')->with($this->isInstanceOf(CacheScope::class))
       ->willReturn((new CacheableMetadata())->setCacheTags(['media:7'])->setCacheContexts(['languages:language_content'])->setCacheMaxAge(120));
     $this->definition([]);
 
@@ -560,8 +561,8 @@ class ParagraphComponentMapperTest extends TestCase {
    */
   public function testUnexpectedExceptionPropagatesAndDrains(): void {
     $this->helper = $this->createMock(EntityHelper::class);
-    $this->helper->method('beginCacheScope')->willReturn(1);
-    $this->helper->expects($this->once())->method('endCacheScope')->with(1)
+    $this->helper->method('beginCacheScope')->willReturn(new CacheScope(1, NULL));
+    $this->helper->expects($this->once())->method('endCacheScope')->with($this->isInstanceOf(CacheScope::class))
       ->willReturn(new CacheableMetadata());
     $this->helper->method('getTextField')->willThrowException(new \RuntimeException('boom'));
     $this->definition([]);
@@ -632,9 +633,9 @@ class ParagraphComponentMapperTest extends TestCase {
    */
   public function testPluginExceptionPropagates(): void {
     $this->helper = $this->createMock(EntityHelper::class);
-    $this->helper->method('beginCacheScope')->willReturn(1);
+    $this->helper->method('beginCacheScope')->willReturn(new CacheScope(1, NULL));
     $this->helper->method('mapFields')->willReturn([]);
-    $this->helper->expects($this->once())->method('endCacheScope')->with(1)->willReturn(new CacheableMetadata());
+    $this->helper->expects($this->once())->method('endCacheScope')->with($this->isInstanceOf(CacheScope::class))->willReturn(new CacheableMetadata());
     $this->definition([]);
     $plugin = $this->createMock(ParagraphMapperInterface::class);
     $plugin->method('alter')->willThrowException(new \LogicException('bad plugin'));
@@ -788,6 +789,54 @@ class ParagraphComponentMapperTest extends TestCase {
 
     $this->assertEqualsCanonicalizing(['paragraph:2', 'media:parent'], $inner_mapping->getCacheableMetadata()->getCacheTags());
     $this->assertEqualsCanonicalizing(['paragraph:1', 'media:parent', 'after:child'], $outer_mapping->getCacheableMetadata()->getCacheTags());
+    $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
+  }
+
+  /**
+   * An inner scope that a plugin leaves open is dropped, ours still ends.
+   *
+   * @covers ::map
+   */
+  public function testScopeLeftOpenByPluginIsAbandoned(): void {
+    $helper = $this->realHelper();
+    $helper->addCacheTags(['outer:1']);
+    $plugin = $this->tagPlugin($helper, ['ours:before'], static function () use ($helper) {
+      $helper->beginCacheScope();
+      $helper->addCacheTags(['inner:lost']);
+    });
+
+    $mapping = $this->mapperWith($helper, $plugin)->map($this->paragraph([]), 'default');
+
+    $tags = $mapping->getCacheableMetadata()->getCacheTags();
+    $this->assertContains('ours:before', $tags);
+    $this->assertNotContains('inner:lost', $tags);
+    $this->assertNotContains('outer:1', $tags);
+    $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
+  }
+
+  /**
+   * An exception with a scope left open still restores the outer content.
+   *
+   * @covers ::map
+   */
+  public function testExceptionWithScopeLeftOpenRestoresOuter(): void {
+    $helper = $this->realHelper();
+    $helper->addCacheTags(['outer:1']);
+    $plugin = $this->tagPlugin($helper, ['ours:before'], static function () use ($helper) {
+      $helper->beginCacheScope();
+      $helper->addCacheTags(['inner:lost']);
+      throw new \LogicException('boom');
+    });
+    $mapper = $this->mapperWith($helper, $plugin);
+
+    try {
+      $mapper->map($this->paragraph([]), 'default');
+      $this->fail('Expected an exception.');
+    }
+    catch (\LogicException $e) {
+      $this->assertSame('boom', $e->getMessage());
+    }
+
     $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
   }
 
