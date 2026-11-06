@@ -122,3 +122,9 @@ msgstr "Výchozí motiv (%theme) nedeklaruje žádná umístění menu. Přidejt
 
 msgid "Language"
 msgstr "Jazyk"
+
+msgid "Paragraph component"
+msgstr "Komponenta odstavce"
+
+msgid "Renders the paragraph as the Twig component that its definition names."
+msgstr "Vykreslí odstavec jako Twig komponentu, kterou určuje jeho definice."

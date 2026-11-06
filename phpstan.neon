@@ -23,6 +23,11 @@ parameters:
     # for a static tick. Left off deliberately; the note is no longer "for
     # now".
     treatPhpDocTypesAsCertain: false
+    # Paragraphs is not a dependency of the kit. The stub interface stands in
+    # for it, and the theme plugin fixtures stand in for a theme's src/.
+    scanFiles:
+        - tests/fixtures/stubs/ParagraphInterface.php
+        - tests/fixtures/paragraph_mappers/fixture_theme/src/Plugin/ParagraphMapper/ArticleVideo.php
 
     ignoreErrors:
         # Two core-version-dependent suppressions, kept HERE rather than in

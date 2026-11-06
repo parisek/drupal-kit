@@ -122,3 +122,9 @@ msgstr "Das Standardtheme (%theme) deklariert keine Menüpositionen. Fügen Sie 
 
 msgid "Language"
 msgstr "Sprache"
+
+msgid "Paragraph component"
+msgstr "Absatz-Komponente"
+
+msgid "Renders the paragraph as the Twig component that its definition names."
+msgstr "Gibt den Absatz als die Twig-Komponente aus, die seine Definition nennt."

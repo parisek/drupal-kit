@@ -122,3 +122,9 @@ msgstr "Domyślny motyw (%theme) nie deklaruje żadnych lokalizacji menu. Dodaj 
 
 msgid "Language"
 msgstr "Język"
+
+msgid "Paragraph component"
+msgstr "Komponent akapitu"
+
+msgid "Renders the paragraph as the Twig component that its definition names."
+msgstr "Renderuje akapit jako komponent Twig, który wskazuje jego definicja."

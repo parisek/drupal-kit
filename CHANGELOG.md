@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- **`ComponentDefinitionRepository`** (service `drupal_kit.component_definition_repository`) — finds the `<component>/<component>.yaml` that sits beside the Twig template of a component in the Components registry, so theme and base theme precedence is the Twig precedence. It parses the file, caches it in `cache.discovery` under the `components_registry` tag (a cache rebuild invalidates it), resolves a bundle to a kebab-case component name (alias map `drupal_kit.component_bundle_aliases`, default `html` to `content`; exclusion list `drupal_kit.component_bundle_exclusions`), and checks that a name is a machine name before it builds a path. A missing or malformed file returns NULL; a malformed file also logs a warning. New behavior, nothing calls it unless a module does.
+- **`drupal_kit_paragraphs` submodule** — a generic replacement for a hand-written per-bundle paragraph display. The `paragraph_component` ExtraField display maps a paragraph from its component definition (`drupal.field` wins, otherwise `field_<key>`; the `EntityHelper` picks the formatter from the real field definition) and renders `custom_component`. Extension points: `#[ParagraphMapper(id, component, priority)]` plugins (`plugin.manager.drupal_kit.paragraph_mapper`) from modules, the active theme and its base themes, and `hook_drupal_kit_paragraph_mapping_alter()` plus `hook_drupal_kit_paragraph_mapping_COMPONENT_alter()`. It is a submodule because the kit does not require Paragraphs. It is off until a site enables it and turns the extra field on per bundle. Prototype: the API may change before it is documented in the README.
+
 ## [3.6.0] — 2026-11-03
 
 ### Added
