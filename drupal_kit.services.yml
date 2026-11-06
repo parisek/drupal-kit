@@ -6,6 +6,13 @@ parameters:
   # (HookCollectorPass), so hook_requirements would have stopped
   # registering without a word. 74 core modules set it.
   drupal_kit.skip_procedural_hook_scan: true
+  # Bundle to component name overrides for the component definition
+  # repository. The default bundle name `html` renders the `content` component.
+  # A site overrides these in its own services.yml.
+  drupal_kit.component_bundle_aliases:
+    html: content
+  # Bundles that have no component definition at all.
+  drupal_kit.component_bundle_exclusions: []
 
 services:
   # Registered by hand, unlike the other #[Hook] classes, which autowire.
@@ -155,3 +162,16 @@ services:
       - "@drupal_kit.datalayer"
     tags:
       - { name: event_subscriber }
+  drupal_kit.component_definition_repository:
+    class: Drupal\drupal_kit\Component\ComponentDefinitionRepository
+    arguments:
+      # Optional - NULL without the components module. drupal_kit depends on
+      # it, so a real site always has it; the kernel tests do not enable it,
+      # and an unresolvable reference would stop their container build.
+      - "@?components.registry"
+      - "@theme.manager"
+      - "@cache.discovery"
+      - "@logger.factory"
+      - "%app.root%"
+      - "%drupal_kit.component_bundle_aliases%"
+      - "%drupal_kit.component_bundle_exclusions%"
