@@ -26,6 +26,23 @@ use Drupal\drupal_kit_paragraphs\Mapping\MappingContext;
 use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
 use Drupal\node\NodeInterface;
 use Drupal\paragraphs\ParagraphInterface;
+use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Database\Connection;
+use Drupal\Core\Datetime\DateFormatterInterface;
+use Drupal\Core\Entity\EntityRepositoryInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\File\FileUrlGeneratorInterface;
+use Drupal\Core\Image\ImageFactory;
+use Drupal\Core\Language\LanguageManagerInterface;
+use Drupal\Core\Menu\MenuLinkTreeInterface;
+use Drupal\Core\Render\RendererInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\drupal_kit\Services\MediaArrayBuilder;
+use Drupal\drupal_kit\Services\MenuActiveTrailResolver;
+use Drupal\drupal_kit\Services\MenuTreeBuilder;
+use Drupal\drupal_kit\Services\TaxonomyTreeBuilder;
+use Symfony\Component\HttpFoundation\RequestStack;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -88,7 +105,9 @@ class ParagraphComponentMapperTest extends TestCase {
 
     $this->repository = $this->createMock(ComponentDefinitionRepositoryInterface::class);
     $this->helper = $this->createMock(EntityHelper::class);
-    $this->helper->method('collectCacheMetadata')->willReturn(new CacheableMetadata());
+    $this->helper->method('beginCacheScope')->willReturn(1);
+    $this->helper->method('beginCacheScope')->willReturn(1);
+    $this->helper->method('endCacheScope')->willReturn(new CacheableMetadata());
     $this->manager = $this->createMock(ParagraphMapperManagerInterface::class);
     $this->manager->method('getMappersForComponent')->willReturn([]);
     $this->moduleHandler = $this->createMock(ModuleHandlerInterface::class);
@@ -107,12 +126,12 @@ class ParagraphComponentMapperTest extends TestCase {
   /**
    * Builds the mapper under test.
    */
-  private function mapper(): ParagraphComponentMapper {
+  private function mapper(?EntityHelper $helper = NULL): ParagraphComponentMapper {
     $factory = $this->createMock(LoggerChannelFactoryInterface::class);
     $factory->method('get')->willReturn($this->logger);
     return new ParagraphComponentMapper(
       $this->repository,
-      $this->helper,
+      $helper ?? $this->helper,
       $this->manager,
       $this->moduleHandler,
       $this->themeManager,
@@ -522,7 +541,8 @@ class ParagraphComponentMapperTest extends TestCase {
    */
   public function testCacheabilityMerges(): void {
     $this->helper = $this->createMock(EntityHelper::class);
-    $this->helper->expects($this->once())->method('collectCacheMetadata')
+    $this->helper->method('beginCacheScope')->willReturn(1);
+    $this->helper->expects($this->once())->method('endCacheScope')->with(1)
       ->willReturn((new CacheableMetadata())->setCacheTags(['media:7'])->setCacheContexts(['languages:language_content'])->setCacheMaxAge(120));
     $this->definition([]);
 
@@ -540,7 +560,8 @@ class ParagraphComponentMapperTest extends TestCase {
    */
   public function testUnexpectedExceptionPropagatesAndDrains(): void {
     $this->helper = $this->createMock(EntityHelper::class);
-    $this->helper->expects($this->once())->method('collectCacheMetadata')
+    $this->helper->method('beginCacheScope')->willReturn(1);
+    $this->helper->expects($this->once())->method('endCacheScope')->with(1)
       ->willReturn(new CacheableMetadata());
     $this->helper->method('getTextField')->willThrowException(new \RuntimeException('boom'));
     $this->definition([]);
@@ -611,8 +632,9 @@ class ParagraphComponentMapperTest extends TestCase {
    */
   public function testPluginExceptionPropagates(): void {
     $this->helper = $this->createMock(EntityHelper::class);
+    $this->helper->method('beginCacheScope')->willReturn(1);
     $this->helper->method('mapFields')->willReturn([]);
-    $this->helper->expects($this->once())->method('collectCacheMetadata')->willReturn(new CacheableMetadata());
+    $this->helper->expects($this->once())->method('endCacheScope')->with(1)->willReturn(new CacheableMetadata());
     $this->definition([]);
     $plugin = $this->createMock(ParagraphMapperInterface::class);
     $plugin->method('alter')->willThrowException(new \LogicException('bad plugin'));
@@ -622,6 +644,151 @@ class ParagraphComponentMapperTest extends TestCase {
 
     $this->expectException(\LogicException::class);
     $this->mapper()->map($this->paragraph([]), 'default');
+  }
+
+  /**
+   * Builds a real EntityHelper. Its accumulator is real state.
+   */
+  private function realHelper(): EntityHelper {
+    return new EntityHelper(
+      $this->createMock(EntityTypeManagerInterface::class),
+      $this->createMock(RouteMatchInterface::class),
+      $this->createMock(LanguageManagerInterface::class),
+      $this->createMock(EntityRepositoryInterface::class),
+      $this->createMock(ConfigFactoryInterface::class),
+      $this->createMock(Connection::class),
+      $this->createMock(CacheBackendInterface::class),
+      $this->createMock(MenuLinkTreeInterface::class),
+      $this->createMock(FileUrlGeneratorInterface::class),
+      $this->createMock(LoggerChannelFactoryInterface::class),
+      $this->createMock(RendererInterface::class),
+      $this->createMock(DateFormatterInterface::class),
+      $this->createMock(ImageFactory::class),
+      $this->createMock(RequestStack::class),
+      $this->createMock(MenuActiveTrailResolver::class),
+      $this->createMock(TaxonomyTreeBuilder::class),
+      $this->createMock(MenuTreeBuilder::class),
+      $this->createMock(MediaArrayBuilder::class),
+    );
+  }
+
+  /**
+   * A plugin that adds tags to the helper's accumulator, like a media load.
+   *
+   * @param \Drupal\drupal_kit\Services\EntityHelper $helper
+   *   The helper.
+   * @param string[] $tags
+   *   Tags to add when the plugin runs.
+   * @param callable|null $after
+   *   Called after the tags were added; may throw or map a child.
+   */
+  private function tagPlugin(EntityHelper $helper, array $tags, ?callable $after = NULL): ParagraphMapperInterface {
+    return new class($helper, $tags, $after) implements ParagraphMapperInterface {
+
+      /**
+       * Constructs the stub.
+       *
+       * @param \Drupal\drupal_kit\Services\EntityHelper $helper
+       *   The helper.
+       * @param string[] $tags
+       *   Tags to add.
+       * @param callable|null $after
+       *   Callback after adding.
+       */
+      public function __construct(private EntityHelper $helper, private array $tags, private $after) {}
+
+      /**
+       * {@inheritdoc}
+       */
+      public function alter(ParagraphMapping $mapping, MappingContext $context): void {
+        $this->helper->addCacheTags($this->tags);
+        if ($this->after) {
+          ($this->after)();
+        }
+      }
+
+    };
+  }
+
+  /**
+   * Builds a mapper over a real helper with the given plugin.
+   */
+  private function mapperWith(EntityHelper $helper, ParagraphMapperInterface $plugin): ParagraphComponentMapper {
+    $manager = $this->createMock(ParagraphMapperManagerInterface::class);
+    $manager->method('getMappersForComponent')->willReturn(['p' => $plugin]);
+    $this->manager = $manager;
+    $this->definition([]);
+    return $this->mapper($helper);
+  }
+
+  /**
+   * Outer metadata survives a successful mapping and ours does not leak out.
+   *
+   * @covers ::map
+   */
+  public function testScopeKeepsOuterMetadataOnSuccess(): void {
+    $helper = $this->realHelper();
+    $helper->addCacheTags(['outer:1']);
+
+    $mapping = $this->mapperWith($helper, $this->tagPlugin($helper, ['media:7']))->map($this->paragraph([]), 'default');
+
+    $this->assertEqualsCanonicalizing(['paragraph:1', 'media:7'], $mapping->getCacheableMetadata()->getCacheTags());
+    $this->assertNotContains('outer:1', $mapping->getCacheableMetadata()->getCacheTags());
+    $left = $helper->collectCacheMetadata()->getCacheTags();
+    $this->assertSame(['outer:1'], $left);
+  }
+
+  /**
+   * Outer metadata survives a propagated exception, and ours is dropped.
+   *
+   * @covers ::map
+   */
+  public function testScopeKeepsOuterMetadataOnException(): void {
+    $helper = $this->realHelper();
+    $helper->addCacheTags(['outer:1']);
+    $plugin = $this->tagPlugin($helper, ['media:7'], static function () {
+      throw new \LogicException('boom');
+    });
+    $mapper = $this->mapperWith($helper, $plugin);
+
+    try {
+      $mapper->map($this->paragraph([]), 'default');
+      $this->fail('Expected an exception.');
+    }
+    catch (\LogicException) {
+      $this->addToAssertionCount(1);
+    }
+
+    $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
+  }
+
+  /**
+   * A mapping that runs inside a mapping keeps both scopes apart.
+   *
+   * @covers ::map
+   */
+  public function testNestedMappingScopes(): void {
+    $helper = $this->realHelper();
+    $helper->addCacheTags(['outer:1']);
+    $inner_mapping = NULL;
+    $holder = new \stdClass();
+    $child = $this->paragraph([], 'contact', NULL, ['paragraph:2']);
+    // Only the first call re-enters, or the child would map itself forever.
+    $calls = 0;
+    $plugin_reentrant = $this->tagPlugin($helper, ['media:parent'], function () use ($holder, &$inner_mapping, $child, $helper, &$calls) {
+      if ($calls++ === 0) {
+        $inner_mapping = $holder->mapper->map($child, 'default');
+        $helper->addCacheTags(['after:child']);
+      }
+    });
+    $mapper = $holder->mapper = $this->mapperWith($helper, $plugin_reentrant);
+
+    $outer_mapping = $mapper->map($this->paragraph([]), 'default');
+    $this->assertInstanceOf(ParagraphMapping::class, $inner_mapping);
+
+    $this->assertEqualsCanonicalizing(['paragraph:2', 'media:parent'], $inner_mapping->getCacheableMetadata()->getCacheTags());
+    $this->assertEqualsCanonicalizing(['paragraph:1', 'media:parent', 'after:child'], $outer_mapping->getCacheableMetadata()->getCacheTags());
+    $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
   }
 
 }

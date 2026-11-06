@@ -102,14 +102,16 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     // and the fallback alert all differ by theme. Set it before any lookup.
     $mapping->addCacheableDependency((new CacheableMetadata())->setCacheContexts(['theme']));
 
+    // The EntityHelper accumulator is shared by all callers. A scope takes
+    // only what this build generates and gives the outer content back
+    // untouched, also when an exception passes. On an exception the scope's
+    // own metadata is dropped: no mapping is returned, so nothing uses it.
+    $scope = $this->entityHelper->beginCacheScope();
     try {
       $this->build($mapping, $paragraph, $viewMode);
     }
     finally {
-      // The EntityHelper accumulator is shared by all callers. Drain it also
-      // when an exception passes, so the cacheability of this paragraph's media
-      // and references does not leak into the next render.
-      $collected = $this->entityHelper->collectCacheMetadata();
+      $collected = $this->entityHelper->endCacheScope($scope);
     }
 
     $mapping->addCacheableDependency($collected);

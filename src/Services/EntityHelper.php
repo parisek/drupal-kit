@@ -171,6 +171,13 @@ class EntityHelper {
   protected CacheableMetadata $cacheMetadata;
 
   /**
+   * Outer accumulators of the open cache scopes, innermost last.
+   *
+   * @var \Drupal\Core\Cache\CacheableMetadata[]
+   */
+  protected array $cacheScopes = [];
+
+  /**
    * Constructs a new EntityHelper object.
    */
   public function __construct(
@@ -224,6 +231,56 @@ class EntityHelper {
     $cache = $this->cacheMetadata;
     $this->cacheMetadata = new CacheableMetadata();
     return $cache;
+  }
+
+  /**
+   * Start a cache scope.
+   *
+   * The accumulator is one mutable object shared by every caller in the
+   * request. A caller that must take only the metadata its own work creates
+   * opens a scope first. The metadata collected so far moves aside and the
+   * accumulator starts empty. Scopes nest: each scope keeps its own outer
+   * content on a stack.
+   *
+   * Always close the scope with endCacheScope() in a finally block.
+   * collectCacheMetadata() keeps its behavior and drains the current scope.
+   *
+   * @return int
+   *   The scope token to pass to endCacheScope().
+   */
+  public function beginCacheScope(): int {
+    $this->cacheScopes[] = $this->cacheMetadata;
+    $this->cacheMetadata = new CacheableMetadata();
+    return count($this->cacheScopes);
+  }
+
+  /**
+   * End a cache scope and restore the outer accumulator.
+   *
+   * The outer content comes back exactly as it was at beginCacheScope().
+   * Nothing from the scope stays in it: the caller decides where the returned
+   * metadata goes, and may drop it. A scope that an inner caller left open is
+   * closed first, and its metadata joins this scope's.
+   *
+   * @param int $scope
+   *   The token from beginCacheScope().
+   *
+   * @return \Drupal\Core\Cache\CacheableMetadata
+   *   What was added to the accumulator since the scope began.
+   *
+   * @throws \LogicException
+   *   When the scope is not open.
+   */
+  public function endCacheScope(int $scope): CacheableMetadata {
+    if ($scope < 1 || $scope > count($this->cacheScopes)) {
+      throw new \LogicException('The cache scope is not open.');
+    }
+    $collected = $this->cacheMetadata;
+    while (count($this->cacheScopes) > $scope) {
+      $collected = (array_pop($this->cacheScopes) ?? new CacheableMetadata())->merge($collected);
+    }
+    $this->cacheMetadata = array_pop($this->cacheScopes) ?? new CacheableMetadata();
+    return $collected;
   }
 
   /**
