@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\drupal_kit_paragraphs\Mapper;
 
 /**
- * The callables a colocated `<component>.drupal.php` file returned.
+ * The callables a colocated `<component>.php` file returned.
  *
  * - alter: Closure(ParagraphMapping, MappingContext, EntityHelper): void.
  *   Runs after the generic mapping (or after replace).

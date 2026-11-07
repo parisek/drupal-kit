@@ -596,7 +596,7 @@ The `drupal_kit_paragraphs` submodule maps a Paragraph to its Twig component fro
 
 The generic rules read the `fields` tree of the definition. A field with `role: field` maps. `drupal.field` names the Drupal field; without it the name is `field_<key>`. `EntityHelper` picks the formatter from the real field definition. A definition that says `multiple: false` on a many-value field gets the bare value instead of a list.
 
-### PHP for one component: `<component>.drupal.php`
+### PHP for one component: `<component>.php`
 
 When the definition is not enough, put a file next to the template and the definition:
 
@@ -604,7 +604,7 @@ When the definition is not enough, put a file next to the template and the defin
 article-video/
   article-video.twig
   article-video.yaml
-  article-video.drupal.php
+  article-video.php
 ```
 
 The Components registry picks the folder, so the active theme wins over a base theme, and a base theme wins over a module. The file is not a class. It has no namespace. It starts with `return`, prints nothing, and returns a Closure or an array:
@@ -634,20 +634,20 @@ return static function (ParagraphMapping $mapping, MappingContext $context, Enti
 
 ### Deny direct requests
 
-A web server can run a `.php` file under a theme when someone requests its URL. The file prints nothing, but deny the request anyway.
+A web server can run a `.php` file under a theme when someone requests its URL. The loader requires the file to `return` first and to print nothing, so a direct request shows an empty page. Deny the request anyway, for every `*.php` inside the component folders. The loader only ever includes the fixed `<component>.php` name, never the `.twig` or `.yaml`.
 
-Apache:
+Apache, scoped to the folder that holds the components (an `.htaccess` file there, or the same rule in a `<Directory>` block of the vhost):
 
 ```apache
-<FilesMatch "\.drupal\.php$">
+<FilesMatch "\.php$">
   Require all denied
 </FilesMatch>
 ```
 
-nginx, before the generic PHP location:
+nginx, before the generic PHP location (adjust the path to your theme):
 
 ```nginx
-location ~ \.drupal\.php$ {
+location ~ ^/themes/.+/templates/.+\.php$ {
   deny all;
 }
 ```

@@ -64,7 +64,7 @@ function hook_drupal_kit_paragraph_mapping_COMPONENT_alter(ParagraphMapping $map
  */
 
 /**
- * The colocated component file `<component>.drupal.php`.
+ * The colocated component file `<component>.php`.
  *
  * Component PHP lives in the component folder, next to `<component>.twig` and
  * `<component>.yaml`. It is not a PSR-4 class: it has no namespace, no class
@@ -88,7 +88,7 @@ function hook_drupal_kit_paragraph_mapping_COMPONENT_alter(ParagraphMapping $map
  * A component with `role: query` fields and no such file renders the alert
  * component, because nothing would fill those fields.
  *
- * Example, `article-video.drupal.php`:
+ * Example, `article-video.php`:
  * @code
  * <?php
  *
@@ -106,20 +106,23 @@ function hook_drupal_kit_paragraph_mapping_COMPONENT_alter(ParagraphMapping $map
  * @endcode
  *
  * Security: a web server may run a `.php` file under a theme when someone
- * requests its URL. The file prints nothing, so a direct request shows an
- * empty page, and the loader refuses a file that prints. Deny the request at
- * the web server all the same.
+ * requests its URL. The loader requires the file to `return` first and to
+ * print nothing, so a direct request shows an empty page. Deny the request at
+ * the web server all the same, for every `*.php` inside the component
+ * folders. Only the fixed `<component>.php` name is ever loaded, never the
+ * `.twig` or `.yaml`.
  *
- * Apache (.htaccess or the vhost):
+ * Apache, scoped to the folder that holds the components (an `.htaccess` file
+ * there, or the same rule in a `<Directory>` block of the vhost):
  * @code
- * <FilesMatch "\.drupal\.php$">
+ * <FilesMatch "\.php$">
  *   Require all denied
  * </FilesMatch>
  * @endcode
  *
- * nginx (before the generic PHP location):
+ * nginx, before the generic PHP location (adjust the path to your theme):
  * @code
- * location ~ \.drupal\.php$ {
+ * location ~ ^/themes/.+/templates/.+\.php$ {
  *   deny all;
  * }
  * @endcode

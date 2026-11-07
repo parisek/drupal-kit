@@ -32,7 +32,7 @@ use Drupal\paragraphs\ParagraphInterface;
  * 2. The `fields` tree of the definition. Only `role: field` nodes map. A node
  *    without a role inherits the role of its parent. Roles `query`, `parent`
  *    and `global` do not map.
- *    A colocated `<component>.drupal.php` file may return a `replace` step that
+ *    A colocated `<component>.php` file may return a `replace` step that
  *    builds the whole mapping instead of rules 1 and 2.
  * 3. The `alter` step of that file, if it has one. The Components registry
  *    already picked the winning folder, so Twig precedence decides the file.

@@ -9,14 +9,14 @@ use Drupal\drupal_kit\Component\ComponentDefinitionRepositoryInterface;
 use Drupal\drupal_kit\Component\InvalidComponentDefinitionException;
 
 /**
- * Includes the colocated `<component>.drupal.php` file of a component.
+ * Includes the colocated `<component>.php` file of a component.
  *
  * This is a deliberate exception from PSR-4. Component PHP lives in the
  * component folder, next to the template and the definition, and no class or
  * namespace is needed.
  *
  * Rules:
- * - The file name is fixed: `<component>.drupal.php`. The component name is
+ * - The file name is fixed: `<component>.php`. The component name is
  *   validated first.
  * - The real path of the file must lie inside the real path of the component
  *   directory. A symbolic link out of the folder is refused.
@@ -26,15 +26,17 @@ use Drupal\drupal_kit\Component\InvalidComponentDefinitionException;
  * - A file is included once per request. The result stays in memory.
  *
  * A web server may run a `.php` file under a theme when someone requests its
- * URL. The file prints nothing, so a direct request shows an empty page, but
- * a site should deny `*.drupal.php` at the web server all the same.
+ * URL. The file only returns and prints nothing, so a direct request shows an
+ * empty page, but a site should deny `*.php` inside the component folders at
+ * the web server all the same. Only the fixed `<component>.php` name is ever
+ * loaded, never the `.twig` or `.yaml` beside it.
  */
 class ComponentMapperFileLoader implements ComponentMapperFileLoaderInterface {
 
   /**
    * The suffix of the colocated file.
    */
-  public const SUFFIX = '.drupal.php';
+  public const SUFFIX = '.php';
 
   /**
    * Loaded files, keyed by real path.

@@ -122,7 +122,7 @@ class ComponentMapperFileLoaderTest extends TestCase {
    * Writes a generated component file.
    */
   private function write(string $contents, string $name = 'foo'): void {
-    file_put_contents($this->tmp . "/comp/foo/$name.drupal.php", $contents);
+    file_put_contents($this->tmp . "/comp/foo/$name.php", $contents);
   }
 
   /**
@@ -239,8 +239,8 @@ class ComponentMapperFileLoaderTest extends TestCase {
    * @covers ::load
    */
   public function testSymlinkOutOfDirectoryIsRefused(): void {
-    file_put_contents($this->tmp . '/outside/foo.drupal.php', "<?php\nreturn static function (): void {};\n");
-    symlink($this->tmp . '/outside/foo.drupal.php', $this->tmp . '/comp/foo/foo.drupal.php');
+    file_put_contents($this->tmp . '/outside/foo.php', "<?php\nreturn static function (): void {};\n");
+    symlink($this->tmp . '/outside/foo.php', $this->tmp . '/comp/foo/foo.php');
 
     $this->expectException(InvalidComponentDefinitionException::class);
     $this->expectExceptionMessage('outside its component directory');
@@ -254,7 +254,7 @@ class ComponentMapperFileLoaderTest extends TestCase {
    */
   public function testSymlinkInsideDirectoryIsAllowed(): void {
     file_put_contents($this->tmp . '/comp/foo/shared.php', "<?php\nreturn static function (): void {};\n");
-    symlink($this->tmp . '/comp/foo/shared.php', $this->tmp . '/comp/foo/foo.drupal.php');
+    symlink($this->tmp . '/comp/foo/shared.php', $this->tmp . '/comp/foo/foo.php');
 
     $this->assertNotNull($this->loadFoo());
   }

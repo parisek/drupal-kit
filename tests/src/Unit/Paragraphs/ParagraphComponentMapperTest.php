@@ -207,7 +207,7 @@ class ParagraphComponentMapperTest extends TestCase {
    */
   private function useFile(?\Closure $alter, ?\Closure $replace = NULL): void {
     $this->loader = $this->createMock(ComponentMapperFileLoaderInterface::class);
-    $this->loader->method('load')->willReturn(new ComponentMapperFile('/component/x.drupal.php', $alter, $replace));
+    $this->loader->method('load')->willReturn(new ComponentMapperFile('/component/x.php', $alter, $replace));
   }
 
   /**
@@ -941,7 +941,7 @@ class ParagraphComponentMapperTest extends TestCase {
     $this->assertSame('error', $mapping->get('type'));
     $this->assertStringContainsString('PHP mapper file', (string) $mapping->get('message'));
     $this->assertContains(
-      'The article-featured component has query fields (items, group.deep) and no article-featured.drupal.php file.',
+      'The article-featured component has query fields (items, group.deep) and no article-featured.php file.',
       $mapping->getDiagnostics(),
     );
     $this->assertContains('theme', $mapping->toRenderArray()['#cache']['contexts']);
@@ -966,7 +966,7 @@ class ParagraphComponentMapperTest extends TestCase {
     $this->assertSame('article-featured', $mapping->getTemplate());
     $this->assertCount(1, $ran);
     $this->assertNotContains(
-      'The article-featured component has query fields (items) and no article-featured.drupal.php file.',
+      'The article-featured component has query fields (items) and no article-featured.php file.',
       $mapping->getDiagnostics(),
     );
   }

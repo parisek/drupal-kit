@@ -12,7 +12,7 @@ use Drupal\drupal_kit\Component\ComponentDefinition;
 interface ComponentMapperFileLoaderInterface {
 
   /**
-   * Loads `<component>.drupal.php` from the component directory.
+   * Loads `<component>.php` from the component directory.
    *
    * @param \Drupal\drupal_kit\Component\ComponentDefinition $definition
    *   The definition. Its directory is the one the Components registry
