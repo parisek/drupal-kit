@@ -307,12 +307,17 @@ class ComponentMapperFileLoaderTest extends TestCase {
   }
 
   /**
-   * A file that prints anything is refused, and no buffer is left open.
+   * Runs a file whose return expression runs code, and expects a refusal.
    *
-   * @covers ::load
+   * @param string $body
+   *   The body of an immediately invoked closure that the file returns. The
+   *   loader's source check allows this: the code sits in the return
+   *   expression.
+   * @param string $message
+   *   Part of the expected exception message.
    */
-  public function testOutputIsRefused(): void {
-    $this->write("<?php\necho 'leak';\nreturn static function (): void {};\n");
+  private function assertRefusedAndBuffersRestored(string $body, string $message): void {
+    $this->write("<?php\nreturn (static function (): \\Closure {\n$body\n  return static function (): void {};\n})();\n");
     $level = ob_get_level();
 
     try {
@@ -320,18 +325,75 @@ class ComponentMapperFileLoaderTest extends TestCase {
       $this->fail('Expected an exception.');
     }
     catch (InvalidComponentDefinitionException $e) {
-      $this->assertStringContainsString('printed output', $e->getMessage());
+      $this->assertStringContainsString($message, $e->getMessage());
     }
 
     $this->assertSame($level, ob_get_level());
   }
 
   /**
-   * Whitespace before the opening tag counts as output.
+   * Output printed before the file opens a buffer of its own is refused.
+   *
+   * The file's own ob_start() hides our buffer from ob_get_contents(), so only
+   * a check of every level finds the echo.
    *
    * @covers ::load
    */
-  public function testLeadingWhitespaceIsOutput(): void {
+  public function testEchoBeforeObStartIsRefused(): void {
+    $this->assertRefusedAndBuffersRestored("echo 'LEAK'; ob_start();", 'printed output');
+  }
+
+  /**
+   * Output printed in a buffer that the file opens is refused.
+   *
+   * @covers ::load
+   */
+  public function testEchoAfterObStartIsRefused(): void {
+    $this->assertRefusedAndBuffersRestored("ob_start(); echo 'LEAK';", 'printed output');
+  }
+
+  /**
+   * A buffer with a callback is refused, and the callback hides nothing.
+   *
+   * @covers ::load
+   */
+  public function testObStartWithCallbackIsRefused(): void {
+    $this->assertRefusedAndBuffersRestored("ob_start(static fn (string \$buffer): string => ''); echo 'LEAK';", 'printed output');
+  }
+
+  /**
+   * Leaks at several nested levels are refused.
+   *
+   * @covers ::load
+   */
+  public function testNestedLeaksAreRefused(): void {
+    $this->assertRefusedAndBuffersRestored("echo 'a'; ob_start(); echo 'b'; ob_start(); echo 'c';", 'printed output');
+  }
+
+  /**
+   * A buffer that is opened and left empty is refused: the level changed.
+   *
+   * @covers ::load
+   */
+  public function testEmptyBufferLeftOpenIsRefused(): void {
+    $this->assertRefusedAndBuffersRestored('ob_start();', 'output buffer level');
+  }
+
+  /**
+   * A file that closes the loader's own buffer is refused.
+   *
+   * @covers ::load
+   */
+  public function testClosingTheLoaderBufferIsRefused(): void {
+    $this->assertRefusedAndBuffersRestored('ob_end_clean();', 'output buffer level');
+  }
+
+  /**
+   * Whitespace before the opening tag refuses the file.
+   *
+   * @covers ::load
+   */
+  public function testLeadingWhitespaceIsRefused(): void {
     $this->write("\n<?php\nreturn static function (): void {};\n");
 
     $this->expectException(InvalidComponentDefinitionException::class);
@@ -339,54 +401,156 @@ class ComponentMapperFileLoaderTest extends TestCase {
   }
 
   /**
-   * An exception from the file's own code passes through, buffers closed.
+   * Top-level code is refused before the file is included.
+   *
+   * The file would write a marker file if it ran. It must not.
    *
    * @covers ::load
    */
-  public function testOwnExceptionPropagates(): void {
-    $this->write("<?php\nthrow new \\RuntimeException('own');\n");
-    $level = ob_get_level();
+  #[DataProvider('rejectedSourceProvider')]
+  public function testRejectedSourceNeverRuns(string $source): void {
+    $marker = $this->tmp . '/ran';
+    $this->write(str_replace('MARKER', $marker, $source));
 
     try {
       $this->loadFoo();
       $this->fail('Expected an exception.');
     }
-    catch (\RuntimeException $e) {
-      $this->assertSame('own', $e->getMessage());
+    catch (InvalidComponentDefinitionException $e) {
+      $this->assertStringContainsString('not allowed', $e->getMessage());
     }
 
-    $this->assertSame($level, ob_get_level());
+    $this->assertFileDoesNotExist($marker);
   }
 
   /**
-   * A buffer the file opens and forgets is closed, and its output refused.
+   * Data provider for refused sources.
    *
-   * @covers ::load
+   * @return array<string, array<int, string>>
+   *   The cases.
    */
-  public function testBufferLeftOpenByFileIsClosed(): void {
-    $this->write("<?php\nob_start();\necho 'x';\nreturn static function (): void {};\n");
-    $level = ob_get_level();
-
-    try {
-      $this->loadFoo();
-      $this->fail('Expected an exception.');
-    }
-    catch (InvalidComponentDefinitionException) {
-      $this->addToAssertionCount(1);
-    }
-
-    $this->assertSame($level, ob_get_level());
+  public static function rejectedSourceProvider(): array {
+    $return = 'return static function (): void {};';
+    return [
+      'function call' => ["<?php\nfile_put_contents('MARKER', 'x');\n$return"],
+      'echo' => ["<?php\necho 'x';\n$return"],
+      'assignment' => ["<?php\n\$a = file_put_contents('MARKER', 'x');\n$return"],
+      'named function before return' => ["<?php\nfunction evil() { file_put_contents('MARKER', 'x'); }\nevil();\n$return"],
+      'class before return' => ["<?php\nclass Evil {}\n$return"],
+      'require' => ["<?php\nrequire 'MARKER';\n$return"],
+      'inline html' => ["<?php\n?>html<?php\n$return"],
+      'namespace' => ["<?php\nnamespace Foo;\n$return"],
+      'declare ticks' => ["<?php\ndeclare(ticks=1);\n$return"],
+      'declare after use' => ["<?php\nuse Foo\\Bar;\ndeclare(strict_types=1);\n$return"],
+      'if statement' => ["<?php\nif (TRUE) { file_put_contents('MARKER', 'x'); }\n$return"],
+      'named function after return' => ["<?php\n$return\nfunction hoisted() {}\n"],
+      'class after return' => ["<?php\n$return\nclass Hoisted {}\n"],
+      'interface after return' => ["<?php\n$return\ninterface Hoisted {}\n"],
+      'trait after return' => ["<?php\n$return\ntrait Hoisted {}\n"],
+      'enum after return' => ["<?php\n$return\nenum Hoisted {}\n"],
+      'named function inside a closure' => ["<?php\nreturn static function (): void { function inner() {} };\n"],
+      'no return' => ["<?php\n// nothing here\n"],
+      'no open tag' => ["return static function (): void {};\n"],
+      'close tag before return' => ["<?php ?>\n<?php\n$return"],
+    ];
   }
 
   /**
-   * The file sees no $this.
+   * Headers that the loader accepts.
    *
    * @covers ::load
    */
-  public function testFileHasNoThis(): void {
-    $this->write("<?php\nif (isset(\$this)) { throw new \\LogicException('this'); }\nreturn static function (): void {};\n");
+  #[DataProvider('acceptedSourceProvider')]
+  public function testAcceptedSourcesLoad(string $source): void {
+    $this->write($source);
 
     $this->assertNotNull($this->loadFoo());
+  }
+
+  /**
+   * Data provider for accepted sources.
+   *
+   * @return array<string, array<int, string>>
+   *   The cases.
+   */
+  public static function acceptedSourceProvider(): array {
+    return [
+      'bare return' => ["<?php\nreturn static function (): void {};\n"],
+      'comments and doc block' => ["<?php\n\n/**\n * @file\n * Doc.\n */\n\n// A comment.\n# Another.\nreturn static function (): void {};\n"],
+      'strict types first' => ["<?php\n\ndeclare(strict_types=1);\n\nreturn static function (): void {};\n"],
+      'use statements' => ["<?php\n\nuse Drupal\\drupal_kit\\Services\\EntityHelper;\nuse function Foo\\bar;\nuse const Foo\\BAZ;\nuse Foo\\{Bar, Baz as Qux};\n\nreturn static function (EntityHelper \$fields): void {};\n"],
+      'strict types and use' => ["<?php\ndeclare(strict_types=1);\nuse Foo\\Bar;\nreturn static function (): void {};\n"],
+      'class constant and anonymous class' => ["<?php\nreturn static function (): object {\n  \$name = \\stdClass::class;\n  return new class(\$name) {\n    public function __construct(public string \$name) {}\n    public function method(): string { return \$this->name; }\n  };\n};\n"],
+      'array form' => ["<?php\nreturn ['alter' => static function (): void {}, 'replace' => static fn () => NULL];\n"],
+    ];
+  }
+
+  /**
+   * The closures have no class scope: `self::` and `static::` fail.
+   *
+   * @covers ::load
+   */
+  #[DataProvider('scopeProvider')]
+  public function testClosuresHaveNoClassScope(string $expression): void {
+    $this->write("<?php\nreturn static function (): string { return $expression; };\n");
+    $file = $this->loadFoo();
+    $this->assertNotNull($file);
+    $alter = $file->getAlter();
+    $this->assertNotNull($alter);
+
+    $this->expectException(\Error::class);
+    $alter(new ParagraphMapping(), new MappingContext($this->createMock(ParagraphInterface::class), 'default', new ComponentDefinition('foo', 'x/x.yaml', [])), $this->createMock(EntityHelper::class));
+  }
+
+  /**
+   * Data provider for scope expressions.
+   *
+   * @return array<string, array<int, string>>
+   *   The cases.
+   */
+  public static function scopeProvider(): array {
+    return [
+      'self' => ['self::class'],
+      'static' => ['static::class'],
+    ];
+  }
+
+  /**
+   * The closures of the array form have no class scope either.
+   *
+   * @covers ::load
+   */
+  public function testArrayFormClosuresHaveNoClassScope(): void {
+    $this->write("<?php\nreturn ['replace' => static function (): string { return self::class; }];\n");
+    $file = $this->loadFoo();
+    $replace = $file?->getReplace();
+    $this->assertNotNull($replace);
+
+    $this->expectException(\Error::class);
+    $replace();
+  }
+
+  /**
+   * A returned closure that uses $this cannot be unbound, so it is refused.
+   *
+   * PHP warns when it cannot unbind $this. The test swallows that warning.
+   *
+   * @covers ::load
+   */
+  public function testReturnedClosureUsingThisIsRefused(): void {
+    $this->write("<?php\nreturn (new class { public function make(): \\Closure { return function (): bool { return isset(\$this); }; } })->make();\n");
+
+    set_error_handler(static fn (): bool => TRUE);
+    try {
+      $this->loadFoo();
+      $this->fail('Expected an exception.');
+    }
+    catch (InvalidComponentDefinitionException $e) {
+      $this->assertStringContainsString('cannot be unbound', $e->getMessage());
+    }
+    finally {
+      restore_error_handler();
+    }
   }
 
 }
