@@ -11,7 +11,7 @@ use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
 use Drupal\paragraphs\ParagraphInterface;
 
 return [
-  'replace' => static function (ParagraphInterface $paragraph, string $view_mode, EntityHelper $fields): ParagraphMapping {
+  'replace' => static function (ParagraphInterface $paragraph, string $view_mode, EntityHelper $fields, MappingContext $context): ParagraphMapping {
     return (new ParagraphMapping())->set('built', 'by replace');
   },
   'alter' => static function (ParagraphMapping $mapping, MappingContext $context, EntityHelper $fields): void {

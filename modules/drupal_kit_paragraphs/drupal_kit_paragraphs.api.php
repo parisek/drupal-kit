@@ -71,14 +71,28 @@ function hook_drupal_kit_paragraph_mapping_COMPONENT_alter(ParagraphMapping $map
  * and no attribute. The Components registry picks the folder, so Twig
  * precedence decides the file: active theme, then base themes, then modules.
  *
- * The file must start with `return` and print nothing. It returns one of:
+ * The file has no top-level code. It returns one of:
  * - A Closure(ParagraphMapping $mapping, MappingContext $context,
  *   EntityHelper $fields): void. This is the `alter` step. It runs after the
  *   generic mapping from the YAML definition.
  * - An array with `alter` and/or `replace`. `replace` is a
  *   Closure(ParagraphInterface $paragraph, string $view_mode,
- *   EntityHelper $fields): ParagraphMapping that builds the whole mapping and
- *   skips the generic rules and the framework fields.
+ *   EntityHelper $fields, MappingContext $context): ParagraphMapping that
+ *   builds the data instead of the generic rules. The framework fields are set
+ *   first and its data merges over them.
+ *
+ * The closures have no class scope and no $this.
+ *
+ * The loader reads the tokens before it includes the file. The first token
+ * must be the open tag. Before the first `return` only whitespace, comments,
+ * `declare(strict_types=1);` as the first statement and `use` statements may
+ * appear. Named functions, classes, interfaces, traits, enums and namespaces
+ * are refused anywhere. The file must print nothing, at any output buffer
+ * level. Only a ParseError is recoverable; a redeclaration is a fatal error
+ * that PHP cannot catch, so run `php -l` on the component `*.php` files in CI.
+ * `exit` or `die` in the file ends the request. A sub theme that copies only
+ * the `.twig` and `.yaml` loses the base theme's `.php`. A Fiber that
+ * suspends during a mapping is not supported.
  *
  * Order: generic mapping (or `replace`), the file's `alter`, then
  * hook_drupal_kit_paragraph_mapping_alter() and its COMPONENT variant.
@@ -105,24 +119,28 @@ function hook_drupal_kit_paragraph_mapping_COMPONENT_alter(ParagraphMapping $map
  * };
  * @endcode
  *
- * Security: a web server may run a `.php` file under a theme when someone
- * requests its URL. The loader requires the file to `return` first and to
- * print nothing, so a direct request shows an empty page. Deny the request at
- * the web server all the same, for every `*.php` inside the component
- * folders. Only the fixed `<component>.php` name is ever loaded, never the
- * `.twig` or `.yaml`.
+ * Security: the loader cannot stop a web server from running a component file
+ * when someone requests its URL. Because of the checks above, such a request
+ * runs only the `return` expression, which builds closures and prints nothing.
+ * Deny it at the web server all the same. Only the fixed `<component>.php`
+ * name is ever loaded, never the `.twig` or `.yaml`.
  *
- * Apache, scoped to the folder that holds the components (an `.htaccess` file
- * there, or the same rule in a `<Directory>` block of the vhost):
+ * Drupal core's web/.htaccess already denies direct `.php` requests under
+ * folders (RewriteRule "^(.+/.*|autoload)\.php($|/)" - [F]). The Apache rule
+ * below is only for servers without it. The real exposure is an nginx
+ * configuration that sends every `.php` file to PHP-FPM. No test covers the
+ * server rule.
+ *
+ * Apache, scoped to the folder that holds the components:
  * @code
  * <FilesMatch "\.php$">
  *   Require all denied
  * </FilesMatch>
  * @endcode
  *
- * nginx, before the generic PHP location (adjust the path to your theme):
+ * nginx, before the PHP location (covers themes and modules):
  * @code
- * location ~ ^/themes/.+/templates/.+\.php$ {
+ * location ~* ^/(themes|modules)/.+\.php$ {
  *   deny all;
  * }
  * @endcode

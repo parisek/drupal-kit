@@ -33,7 +33,7 @@ use Drupal\paragraphs\ParagraphInterface;
  *    without a role inherits the role of its parent. Roles `query`, `parent`
  *    and `global` do not map.
  *    A colocated `<component>.php` file may return a `replace` step that
- *    builds the whole mapping instead of rules 1 and 2.
+ *    builds the data of rule 2 instead. Its data merges over rule 1.
  * 3. The `alter` step of that file, if it has one. The Components registry
  *    already picked the winning folder, so Twig precedence decides the file.
  * 4. The module alter hooks, then the theme alter hooks of the active theme
@@ -158,9 +158,11 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     try {
       $definition = $this->repository->loadForBundle($paragraph->bundle());
       $file = $definition === NULL ? NULL : $this->fileLoader->load($definition);
-      // A replace step builds everything, so the generic rules would only
-      // read fields for nothing.
-      $generic = $definition === NULL || $file?->getReplace() !== NULL
+      $query_fields = $definition === NULL ? [] : $this->findQueryFields($definition->getFields());
+      // Read fields only when something will render. An alert, and a replace
+      // step that builds everything, need no generic rules, and the reads
+      // would only spend cache tags.
+      $generic = $definition === NULL || ($query_fields !== [] && $file === NULL) || $file?->getReplace() !== NULL
         ? NULL
         : $this->mapNodes($paragraph, $definition->getFields(), NULL, $mapping, '');
     }
@@ -182,7 +184,6 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     }
 
     $component = $definition->getName();
-    $query_fields = $this->findQueryFields($definition->getFields());
     if ($query_fields !== [] && $file === NULL) {
       // The data of these fields comes from PHP (queries, views). Without a
       // colocated PHP step the component would render with the data missing
@@ -201,9 +202,11 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     }
 
     $mapping->setComponent($component)->setTemplate($component);
+    $context = new MappingContext($paragraph, $viewMode, $definition, $this->container);
+    $this->mapFrameworkFields($mapping, $paragraph);
     $replace = $file?->getReplace();
     if ($replace !== NULL) {
-      $replaced = $replace($paragraph, $viewMode, $this->entityHelper);
+      $replaced = $replace($paragraph, $viewMode, $this->entityHelper, $context);
       if (!$replaced instanceof ParagraphMapping) {
         throw new \UnexpectedValueException(sprintf('The "replace" step in %s must return a ParagraphMapping.', $file->getPath()));
       }
@@ -211,13 +214,11 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
       $this->adopt($mapping, $replaced);
     }
     else {
-      $this->mapFrameworkFields($mapping, $paragraph);
       foreach ($generic ?? [] as $key => $value) {
         $this->merge($mapping, $key, $value);
       }
     }
 
-    $context = new MappingContext($paragraph, $viewMode, $definition, $this->container);
     $alter = $file?->getAlter();
     if ($alter !== NULL) {
       $alter($mapping, $context, $this->entityHelper);
@@ -235,11 +236,15 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
   /**
    * Takes the result of a `replace` step into our mapping.
    *
-   * Data, template, component, cacheability and notes move over. The mapping
+   * The data merges over the framework fields, so container, heading,
+   * wrapper_id, wrapper_classes, spacing and border stay unless the step sets
+   * them. Template, component, cacheability and notes move over. The mapping
    * the caller gets stays our object, so the cache scope bookkeeping holds.
    */
   private function adopt(ParagraphMapping $mapping, ParagraphMapping $replaced): void {
-    $mapping->replaceData($replaced->getData());
+    foreach ($replaced->getData() as $key => $value) {
+      $this->merge($mapping, $key, $value);
+    }
     if ($replaced->getComponent() !== NULL) {
       $mapping->setComponent($replaced->getComponent());
     }

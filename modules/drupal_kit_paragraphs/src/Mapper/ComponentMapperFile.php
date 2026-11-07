@@ -9,8 +9,9 @@ namespace Drupal\drupal_kit_paragraphs\Mapper;
  *
  * - alter: Closure(ParagraphMapping, MappingContext, EntityHelper): void.
  *   Runs after the generic mapping (or after replace).
- * - replace: Closure(ParagraphInterface, string, EntityHelper):
- *   ParagraphMapping. Replaces the generic mapping completely.
+ * - replace: Closure(ParagraphInterface, string, EntityHelper,
+ *   MappingContext): ParagraphMapping. Builds the data instead of the generic
+ *   rules. The framework fields stay unless it sets them.
  */
 final class ComponentMapperFile {
 

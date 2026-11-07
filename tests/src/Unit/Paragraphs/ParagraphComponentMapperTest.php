@@ -634,7 +634,6 @@ class ParagraphComponentMapperTest extends TestCase {
    */
   public function testReplaceStepReplacesGenericMapping(): void {
     $this->helper->expects($this->never())->method('mapFields');
-    $this->helper->expects($this->never())->method('getTextField');
     $this->definition(['phone' => ['type' => 'text', 'role' => 'field']], 'replacing');
     $calls = new \ArrayObject();
     $this->useFile(
@@ -642,7 +641,8 @@ class ParagraphComponentMapperTest extends TestCase {
         $calls->append('alter:' . $mapping->get('built'));
         $mapping->set('altered', TRUE);
       },
-      static function (ParagraphInterface $paragraph, string $view_mode) use ($calls): ParagraphMapping {
+      static function (ParagraphInterface $paragraph, string $view_mode, EntityHelper $fields, MappingContext $context) use ($calls): ParagraphMapping {
+        $calls->append('context:' . $context->getComponent());
         $calls->append('replace:' . $view_mode);
         return (new ParagraphMapping())->set('built', 'by-replace')->setTemplate('other')
           ->addDiagnostic('note')
@@ -652,8 +652,9 @@ class ParagraphComponentMapperTest extends TestCase {
 
     $mapping = $this->mapper()->map($this->paragraph([], 'replacing'), 'full');
 
-    $this->assertSame(['replace:full', 'alter:by-replace'], $calls->getArrayCopy());
-    $this->assertSame(['built' => 'by-replace', 'altered' => TRUE], $mapping->getData());
+    $this->assertSame(['context:replacing', 'replace:full', 'alter:by-replace'], $calls->getArrayCopy());
+    // The framework field stays, the replace data merges over it.
+    $this->assertSame(['container' => '', 'built' => 'by-replace', 'altered' => TRUE], $mapping->getData());
     $this->assertSame('replacing', $mapping->getComponent());
     $this->assertSame('other', $mapping->getTemplate());
     $this->assertSame(['note'], $mapping->getDiagnostics());
@@ -940,8 +941,9 @@ class ParagraphComponentMapperTest extends TestCase {
     $this->assertSame('alert', $mapping->getTemplate());
     $this->assertSame('error', $mapping->get('type'));
     $this->assertStringContainsString('PHP mapper file', (string) $mapping->get('message'));
-    $this->assertContains(
-      'The article-featured component has query fields (items, group.deep) and no article-featured.php file.',
+    // The alert is decided before any field is read: only the one note.
+    $this->assertSame(
+      ['The article-featured component has query fields (items, group.deep) and no article-featured.php file.'],
       $mapping->getDiagnostics(),
     );
     $this->assertContains('theme', $mapping->toRenderArray()['#cache']['contexts']);
@@ -1271,6 +1273,47 @@ class ParagraphComponentMapperTest extends TestCase {
     $this->assertSame('https://video.example/embed/1', $mapping->get('video'));
     $this->assertSame([['src' => 'thumb.jpg']], $mapping->get('image'));
     $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
+  }
+
+  /**
+   * The real replacing.php fixture keeps the framework fields.
+   *
+   * The file is loaded by the real loader, not a stub. Its replace step sets
+   * only `built`; the framework keys come from the mapper and survive.
+   *
+   * @covers ::build
+   * @covers ::adopt
+   */
+  public function testRealReplaceFileKeepsFrameworkFields(): void {
+    $repository = $this->createMock(ComponentDefinitionRepositoryInterface::class);
+    $repository->method('isValidComponentName')->willReturn(TRUE);
+    $repository->method('loadForBundle')->willReturn(new ComponentDefinition(
+      'replacing',
+      'theme_active/component/replacing/replacing.yaml',
+      ['fields' => ['never' => ['type' => 'text', 'role' => 'field']]],
+    ));
+    $this->repository = $repository;
+    $loader = new ComponentMapperFileLoader($repository, dirname(__DIR__, 3) . '/fixtures/component_files');
+    $string = ['type' => 'string', 'cardinality' => 1];
+    $paragraph = $this->stateful([
+      'field_title' => $string + ['values' => ['Title']],
+      'field_wrapper_id' => $string + ['values' => ['anchor']],
+      'field_wrapper_classes' => $string + ['values' => ['a b']],
+      'field_never' => $string + ['values' => ['generic rule ran']],
+    ]);
+    $helper = $this->realHelper();
+
+    $mapping = $this->mapper($helper, $loader)->map($paragraph, 'default');
+
+    $data = $mapping->getData();
+    $this->assertSame('', $data['container']);
+    $this->assertSame('Title', $data['heading']['title']);
+    $this->assertSame('anchor', $data['wrapper_id']);
+    $this->assertSame('a b', $data['wrapper_classes']);
+    $this->assertSame('by replace', $data['built']);
+    $this->assertTrue($data['altered']);
+    // The generic rules did not run.
+    $this->assertArrayNotHasKey('never', $data);
   }
 
 }
