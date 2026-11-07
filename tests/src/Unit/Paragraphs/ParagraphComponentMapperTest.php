@@ -712,7 +712,7 @@ class ParagraphComponentMapperTest extends TestCase {
   /**
    * Builds a real EntityHelper. Its accumulator is real state.
    */
-  private function realHelper(?EntityRepositoryInterface $repository = NULL, ?MediaArrayBuilder $media = NULL): EntityHelper {
+  private function realHelper(?EntityRepositoryInterface $repository = NULL, ?MediaArrayBuilder $media = NULL, ?RendererInterface $renderer = NULL): EntityHelper {
     return new EntityHelper(
       $this->createMock(EntityTypeManagerInterface::class),
       $this->createMock(RouteMatchInterface::class),
@@ -724,7 +724,7 @@ class ParagraphComponentMapperTest extends TestCase {
       $this->createMock(MenuLinkTreeInterface::class),
       $this->createMock(FileUrlGeneratorInterface::class),
       $this->createMock(LoggerChannelFactoryInterface::class),
-      $this->createMock(RendererInterface::class),
+      $renderer ?? $this->createMock(RendererInterface::class),
       $this->createMock(DateFormatterInterface::class),
       $this->createMock(ImageFactory::class),
       $this->createMock(RequestStack::class),
@@ -1033,6 +1033,11 @@ class ParagraphComponentMapperTest extends TestCase {
           public mixed $entity;
 
           /**
+           * The text format.
+           */
+          public mixed $format = 'plain_text';
+
+          /**
            * Constructs the item.
            */
           public function __construct(mixed $value) {
@@ -1314,6 +1319,97 @@ class ParagraphComponentMapperTest extends TestCase {
     $this->assertTrue($data['altered']);
     // The generic rules did not run.
     $this->assertArrayNotHasKey('never', $data);
+  }
+
+  /**
+   * Maps a heading definition against a real helper and returns the data.
+   *
+   * @param array<string, mixed> $fields
+   *   The field specs for stateful().
+   * @param string $renderer_output
+   *   What the renderer returns for processed text.
+   *
+   * @return array<string, mixed>
+   *   The mapping data.
+   */
+  private function mapHeading(array $fields, string $renderer_output = '<p>Perex</p>'): array {
+    $renderer = $this->createMock(RendererInterface::class);
+    $renderer->method('renderInIsolation')->willReturn($renderer_output);
+    $this->repository = $this->createMock(ComponentDefinitionRepositoryInterface::class);
+    $this->definition([
+      'heading' => [
+        'type' => 'object',
+        'role' => 'field',
+        'fields' => [
+          'title' => ['type' => 'text', 'role' => 'field'],
+          'perex' => ['type' => 'richtext', 'role' => 'field'],
+        ],
+      ],
+      'spacing' => ['type' => 'select', 'role' => 'field'],
+    ], 'article-list');
+
+    return $this->mapper($this->realHelper(NULL, NULL, $renderer))->map($this->stateful($fields), 'default')->getData();
+  }
+
+  /**
+   * An empty title and perex create no heading, as the old display did.
+   *
+   * @covers ::mapNodes
+   * @covers ::mapFrameworkFields
+   */
+  public function testEmptyHeadingFieldsCreateNoHeading(): void {
+    $string = ['type' => 'string', 'cardinality' => 1];
+    $data = $this->mapHeading([
+      'field_title' => $string + ['values' => []],
+      'field_perex' => ['type' => 'text_long', 'cardinality' => 1, 'values' => []],
+      'field_spacing' => ['type' => 'list_string', 'cardinality' => 1, 'values' => []],
+    ]);
+
+    $this->assertArrayNotHasKey('heading', $data);
+    $this->assertArrayNotHasKey('spacing', $data);
+    // The one key the old display always set.
+    $this->assertSame('', $data['container']);
+  }
+
+  /**
+   * A paragraph type with no title field at all creates no heading.
+   *
+   * @covers ::mapNodes
+   */
+  public function testMissingHeadingFieldsCreateNoHeading(): void {
+    $data = $this->mapHeading([]);
+
+    $this->assertArrayNotHasKey('heading', $data);
+  }
+
+  /**
+   * A non-empty title keeps the heading.
+   *
+   * @covers ::mapNodes
+   */
+  public function testNonEmptyTitleKeepsHeading(): void {
+    $string = ['type' => 'string', 'cardinality' => 1];
+    $data = $this->mapHeading([
+      'field_title' => $string + ['values' => ['Title']],
+      'field_perex' => ['type' => 'text_long', 'cardinality' => 1, 'values' => []],
+    ]);
+
+    $this->assertSame(['title' => 'Title'], $data['heading']);
+  }
+
+  /**
+   * A heading with only a perex has only the perex.
+   *
+   * @covers ::mapNodes
+   */
+  public function testHeadingWithOnlyPerex(): void {
+    $string = ['type' => 'string', 'cardinality' => 1];
+    $data = $this->mapHeading([
+      'field_title' => $string + ['values' => []],
+      'field_perex' => ['type' => 'text_long', 'cardinality' => 1, 'values' => ['x']],
+    ]);
+
+    $this->assertSame(['perex' => '<p>Perex</p>'], $data['heading']);
   }
 
 }

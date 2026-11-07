@@ -59,6 +59,21 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
   private const FRAMEWORK_KEYS = ['container', 'heading', 'wrapper_id', 'wrapper_classes', 'spacing', 'border'];
 
   /**
+   * Keys that are set only when their value is not empty.
+   *
+   * The same rule as the framework fields: container is always set, these are
+   * not. A generic rule must not write an empty value over a missing key.
+   */
+  private const CONDITIONAL_KEYS = [
+    'heading.title',
+    'heading.perex',
+    'wrapper_id',
+    'wrapper_classes',
+    'spacing',
+    'border',
+  ];
+
+  /**
    * YAML node types and the Drupal field types that fit them.
    *
    * A type that is not listed here is not checked.
@@ -443,11 +458,18 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
       // formatField() with no list option. The definition never forces a list
       // on a one-value field: the formatter already returns one.
       if (($node['multiple'] ?? NULL) === FALSE && $this->effectiveCardinality($field_definition) !== 1) {
-        $result[$key] = $this->entityHelper->formatField($entity, $field_name, []);
+        $value = $this->entityHelper->formatField($entity, $field_name, []);
+      }
+      else {
+        $mapped = $this->entityHelper->mapFields($entity, [$key => ['field' => $field_name]]);
+        $value = $mapped[$key] ?? NULL;
+      }
+      // The old display set these keys only when the value was not empty. An
+      // empty heading would render an empty component-heading.
+      if (empty($value) && in_array($here, self::CONDITIONAL_KEYS, TRUE)) {
         continue;
       }
-      $mapped = $this->entityHelper->mapFields($entity, [$key => ['field' => $field_name]]);
-      $result[$key] = $mapped[$key] ?? NULL;
+      $result[$key] = $value;
     }
     return $result;
   }
