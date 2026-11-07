@@ -122,3 +122,15 @@ msgstr "Domyślny motyw (%theme) nie deklaruje żadnych lokalizacji menu. Dodaj 
 
 msgid "Language"
 msgstr "Język"
+
+msgid "Paragraph component"
+msgstr "Komponent akapitu"
+
+msgid "Renders the paragraph as the Twig component that its definition names."
+msgstr "Renderuje akapit jako komponent Twig, który wskazuje jego definicja."
+
+msgid "Drupal implementation for component <strong>@template</strong> is missing"
+msgstr "Brakuje implementacji Drupala dla komponentu <strong>@template</strong>"
+
+msgid "Drupal implementation for component <strong>@template</strong> needs a PHP mapper file"
+msgstr "Implementacja Drupala dla komponentu <strong>@template</strong> wymaga pliku PHP mappera"

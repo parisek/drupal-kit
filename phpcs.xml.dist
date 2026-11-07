@@ -3,6 +3,7 @@
   <description>Drupal coding standards for parisek/drupal-kit.</description>
 
   <file>src</file>
+  <file>modules</file>
   <file>tests</file>
 
   <arg name="extensions" value="php,module,install,inc"/>

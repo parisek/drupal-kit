@@ -122,3 +122,15 @@ msgstr "Predvolená téma (%theme) nedeklaruje žiadne umiestnenia menu. Pridajt
 
 msgid "Language"
 msgstr "Jazyk"
+
+msgid "Paragraph component"
+msgstr "Komponent odseku"
+
+msgid "Renders the paragraph as the Twig component that its definition names."
+msgstr "Vykreslí odsek ako Twig komponent, ktorý určuje jeho definícia."
+
+msgid "Drupal implementation for component <strong>@template</strong> is missing"
+msgstr "Implementácia Drupalu pre komponent <strong>@template</strong> chýba"
+
+msgid "Drupal implementation for component <strong>@template</strong> needs a PHP mapper file"
+msgstr "Implementácia Drupalu pre komponent <strong>@template</strong> potrebuje PHP súbor mappera"

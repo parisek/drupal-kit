@@ -122,3 +122,15 @@ msgstr "Das Standardtheme (%theme) deklariert keine Menüpositionen. Fügen Sie 
 
 msgid "Language"
 msgstr "Sprache"
+
+msgid "Paragraph component"
+msgstr "Absatz-Komponente"
+
+msgid "Renders the paragraph as the Twig component that its definition names."
+msgstr "Gibt den Absatz als die Twig-Komponente aus, die seine Definition nennt."
+
+msgid "Drupal implementation for component <strong>@template</strong> is missing"
+msgstr "Die Drupal-Implementierung für die Komponente <strong>@template</strong> fehlt"
+
+msgid "Drupal implementation for component <strong>@template</strong> needs a PHP mapper file"
+msgstr "Die Drupal-Implementierung für die Komponente <strong>@template</strong> braucht eine PHP-Mapper-Datei"

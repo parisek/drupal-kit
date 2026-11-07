@@ -590,6 +590,80 @@ On the redirect path the page that carries the lead is cached. The layer already
 
 Drupal cannot uninstall a module whose code is gone. Uninstall it in a deploy that still has the code, or in the same deploy before the code is removed.
 
+## Paragraph components (`drupal_kit_paragraphs`)
+
+The `drupal_kit_paragraphs` submodule maps a Paragraph to its Twig component from the component definition (`<component>.yaml`). It needs Paragraphs. Enable it, then turn on the `paragraph_component` extra field on the view display of each paragraph bundle. Never enable it on a display that also shows another component display.
+
+The generic rules read the `fields` tree of the definition. A field with `role: field` maps. `drupal.field` names the Drupal field; without it the name is `field_<key>`. `EntityHelper` picks the formatter from the real field definition. A definition that says `multiple: false` on a many-value field gets a bare value when the field holds one value, and a list when it holds two or more. A template must handle both. A node with child `fields` (a list of referenced entities) ignores `multiple: false` and always gives a list.
+
+### PHP for one component: `<component>.php`
+
+When the definition is not enough, put a file next to the template and the definition:
+
+```text
+article-video/
+  article-video.twig
+  article-video.yaml
+  article-video.php
+```
+
+The Components registry picks the folder, so the active theme wins over a base theme, and a base theme wins over a module. The file is not a class. It has no namespace. It has no top-level code. It returns a Closure or an array:
+
+```php
+<?php
+
+use Drupal\drupal_kit\Services\EntityHelper;
+use Drupal\drupal_kit_paragraphs\Mapping\MappingContext;
+use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
+
+return static function (ParagraphMapping $mapping, MappingContext $context, EntityHelper $fields): void {
+  $paragraph = $context->getParagraph();
+  $image = $fields->getMediaField($paragraph, 'image');
+  $media = $fields->getMediaField($paragraph, 'media');
+  $mapping->set('video', $media['iframe'] ?? NULL);
+  $mapping->set('image', !empty($image) ? $image : ($media['image'] ?? NULL));
+};
+```
+
+- A Closure is the `alter` step. It runs after the generic mapping.
+- An array may hold `alter` and `replace`. `replace` is `Closure(ParagraphInterface $paragraph, string $viewMode, EntityHelper $fields, MappingContext $context): ParagraphMapping`. It builds the data instead of the generic rules. The framework fields (container, heading, wrapper_id, wrapper_classes, spacing, border) are set first, and the data of `replace` merges over them, so they stay unless the step sets them.
+- `$context->service('id')` gives any other service.
+- The closures have no class scope and no `$this`: `self::` and `static::` do not work.
+- After the file, `hook_drupal_kit_paragraph_mapping_alter()` and `hook_drupal_kit_paragraph_mapping_COMPONENT_alter()` run: modules first, then the theme chain.
+- A component with `role: query` fields and no such file renders the `alert` component and writes a log warning, because nothing would fill those fields.
+- A missing definition, a malformed definition and a broken file also render the alert and write a log entry. Any other exception from your code passes through.
+
+What the loader checks before it includes the file (the file never runs if a check fails): the first token is `<?php`; before the first `return` there may be only whitespace, comments, `declare(strict_types=1);` as the first statement, and `use` statements; no named function, class, interface, trait, enum or namespace appears anywhere. It also refuses a file that prints anything, at any output buffer level, and a file that changes the buffer level.
+
+Limits you should know:
+
+- Only a syntax error (`ParseError`) is recoverable. A redeclared function or class is a fatal error that PHP cannot catch. The loader refuses named declarations for that reason, but run `php -l` on `templates/**/*.php` in CI as well.
+- `exit` or `die` in the file ends the request. Do not use them.
+- A sub theme that copies only the `.twig` and `.yaml` of a component silently loses the `.php` of the base theme. Copy all three files, or none.
+- A Fiber that suspends while a mapping runs is not supported.
+
+### Deny direct requests
+
+The loader cannot stop a web server from running a component file when someone requests its URL. Because of the checks above, such a request runs only the `return` expression, which builds closures and prints nothing. Still, deny it at the web server. The loader only ever includes the fixed `<component>.php` name, never the `.twig` or `.yaml`.
+
+Drupal core's `web/.htaccess` already denies direct `.php` requests under folders (the rule `RewriteRule "^(.+/.*|autoload)\.php($|/)" - [F]`). The Apache rule below is only for servers that do not use that file. The real exposure is an nginx configuration that sends every `.php` file to PHP-FPM. No test in this repository covers the server rule; check it by requesting a component file on your site and expecting 403 or 404.
+
+Apache, scoped to the folder that holds the components (an `.htaccess` file there, or the same rule in a `<Directory>` block of the vhost):
+
+```apache
+<FilesMatch "\.php$">
+  Require all denied
+</FilesMatch>
+```
+
+nginx, before the PHP location. It covers themes and modules:
+
+```nginx
+location ~* ^/(themes|modules)/.+\.php$ {
+  deny all;
+}
+```
+
 ## Optional integrations
 
 The following modules are optional. When present, `EntityHelper` automatically exposes additional fields and renderers; when absent, those code paths gracefully no-op.
