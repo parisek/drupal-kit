@@ -23,6 +23,11 @@ use Drupal\Core\Cache\CacheableMetadata;
 final class ParagraphMapping {
 
   /**
+   * Core entity types that have a bundle key, so core invalidates bundle tags.
+   */
+  public const BUNDLE_TYPES = ['node', 'taxonomy_term', 'media', 'paragraph', 'block_content', 'comment'];
+
+  /**
    * The content array of the component.
    *
    * @var array<string, mixed>
@@ -181,13 +186,18 @@ final class ParagraphMapping {
    * decide which entities the user may see. With no bundle the tag is the broad
    * `<type>_list`. With bundles it is `<type>_list:<bundle>` for each.
    *
+   * Core invalidates the bundle tag only for an entity type that has a bundle
+   * key. This method knows the core types that have one (BUNDLE_TYPES). For any
+   * other type it ignores the bundles and uses the broad tag, because a tag that
+   * core never invalidates would leave the page stale with no warning.
+   *
    * @param string $entityType
    *   The entity type id, for example `node`.
    * @param string ...$bundles
    *   Optional bundles to narrow the tag.
    */
   public function addListDependency(string $entityType, string ...$bundles): static {
-    $tags = $bundles === []
+    $tags = $bundles === [] || !in_array($entityType, self::BUNDLE_TYPES, TRUE)
       ? [$entityType . '_list']
       : array_map(static fn (string $bundle): string => $entityType . '_list:' . $bundle, $bundles);
     $contexts = $entityType === 'node'
@@ -200,13 +210,40 @@ final class ParagraphMapping {
    * Tells if the cacheability has a list tag or cannot be cached.
    *
    * The mapper uses this to warn about a query component that declared neither.
+   * It is a heuristic. Any `<type>_list` tag counts, for any entity type, and so
+   * does a `config:views.view.*` tag and a `#type => view` element in the data
+   * (a view adds its list tags when it renders, after the mapping is done). A
+   * component that lists nodes but declares only another type's list tag passes.
    */
   public function hasListDependency(): bool {
     if ($this->cacheability->getCacheMaxAge() === 0) {
       return TRUE;
     }
     foreach ($this->cacheability->getCacheTags() as $tag) {
-      if (preg_match('/_list(:|$)/', $tag) === 1) {
+      if (preg_match('/_list(:|$)|^config:views\.view\./', $tag) === 1) {
+        return TRUE;
+      }
+    }
+    return $this->containsViewElement($this->data);
+  }
+
+  /**
+   * Tells if a value holds a `#type => view` render element.
+   *
+   * @param mixed $value
+   *   The value to scan.
+   * @param int $depth
+   *   The recursion depth, to stop on deep data.
+   */
+  private function containsViewElement(mixed $value, int $depth = 0): bool {
+    if (!is_array($value) || $depth > 8) {
+      return FALSE;
+    }
+    if (($value['#type'] ?? NULL) === 'view') {
+      return TRUE;
+    }
+    foreach ($value as $item) {
+      if ($this->containsViewElement($item, $depth + 1)) {
         return TRUE;
       }
     }

@@ -196,7 +196,7 @@ final class ParagraphComponentCommands extends DrushCommands {
       if (!is_dir($root)) {
         throw new \InvalidArgumentException(sprintf('%s is not a folder.', $root));
       }
-      $this->scan($root, $found, $visited);
+      $this->scan($root, $found, $visited, basename(rtrim($root, '/')));
     }
     sort($found);
     return array_values(array_unique($found));
@@ -210,14 +210,18 @@ final class ParagraphComponentCommands extends DrushCommands {
    * @param string[] $found
    *   The result, by reference.
    * @param array<string, true> $visited
-   *   Real paths already scanned, by reference.
+   *   Label and real path pairs already scanned, by reference.
+   * @param string $label
+   *   The name the folder has where it was found. A symbolic link can carry
+   *   another name than its target, and the component name follows the link,
+   *   as the loader does.
    */
-  private function scan(string $directory, array &$found, array &$visited): void {
+  private function scan(string $directory, array &$found, array &$visited, string $label): void {
     $real = realpath($directory);
-    if ($real === FALSE || isset($visited[$real])) {
+    if ($real === FALSE || isset($visited[$label . '|' . $real])) {
       return;
     }
-    $visited[$real] = TRUE;
+    $visited[$label . '|' . $real] = TRUE;
 
     foreach (scandir($real) ?: [] as $entry) {
       if ($entry === '.' || $entry === '..') {
@@ -226,7 +230,7 @@ final class ParagraphComponentCommands extends DrushCommands {
       $path = $real . '/' . $entry;
       if (is_dir($path)) {
         if (!in_array($entry, self::SKIP_DIRECTORIES, TRUE)) {
-          $this->scan($path, $found, $visited);
+          $this->scan($path, $found, $visited, $entry);
         }
         continue;
       }
@@ -234,7 +238,7 @@ final class ParagraphComponentCommands extends DrushCommands {
         continue;
       }
       $name = basename($entry, '.php');
-      if (basename($real) === $name && (is_file("$real/$name.twig") || is_file("$real/$name.yaml"))) {
+      if ($label === $name && (is_file("$real/$name.twig") || is_file("$real/$name.yaml"))) {
         $found[] = $path;
       }
     }

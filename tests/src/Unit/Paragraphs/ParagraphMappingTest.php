@@ -153,4 +153,34 @@ class ParagraphMappingTest extends TestCase {
     $this->assertTrue($mapping->hasListDependency());
   }
 
+  /**
+   * Bundles are ignored for an entity type that has no bundle key.
+   *
+   * @covers ::addListDependency
+   */
+  public function testBundlesAreIgnoredWithoutBundleKey(): void {
+    $mapping = (new ParagraphMapping('x'))->addListDependency('user', 'editor');
+    $this->assertSame(['user_list'], $mapping->getCacheableMetadata()->getCacheTags());
+
+    $file = (new ParagraphMapping('x'))->addListDependency('file', 'image');
+    $this->assertSame(['file_list'], $file->getCacheableMetadata()->getCacheTags());
+  }
+
+  /**
+   * A view tag or a view element counts as a list dependency.
+   *
+   * @covers ::hasListDependency
+   */
+  public function testViewCountsAsListDependency(): void {
+    $tag = (new ParagraphMapping('x'))->addCacheableDependency((new CacheableMetadata())->setCacheTags(['config:views.view.news']));
+    $this->assertTrue($tag->hasListDependency());
+
+    $element = (new ParagraphMapping('x'))->set('items', ['nested' => ['#type' => 'view', '#name' => 'news']]);
+    $this->assertTrue($element->hasListDependency());
+
+    $plain = (new ParagraphMapping('x'))->set('items', ['#type' => 'markup'])
+      ->addCacheableDependency((new CacheableMetadata())->setCacheTags(['config:filter.format.basic']));
+    $this->assertFalse($plain->hasListDependency());
+  }
+
 }
