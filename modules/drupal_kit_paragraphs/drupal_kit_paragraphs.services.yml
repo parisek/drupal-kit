@@ -28,3 +28,10 @@ services:
       - "@entity_type.manager"
       - "@state"
       - "@entity_field.manager"
+  drupal_kit.paragraph_component_uninstall_validator:
+    class: Drupal\drupal_kit_paragraphs\Display\ParagraphComponentUninstallValidator
+    arguments:
+      - "@entity_type.manager"
+      - "@string_translation"
+    tags:
+      - { name: module_install.uninstall_validator }
