@@ -1,0 +1,6 @@
+name: precedence
+fields:
+  title:
+    type: text
+    role: field
+    from: base

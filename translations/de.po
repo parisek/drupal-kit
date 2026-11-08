@@ -134,3 +134,6 @@ msgstr "Die Drupal-Implementierung für die Komponente <strong>@template</strong
 
 msgid "Drupal implementation for component <strong>@template</strong> needs a PHP mapper file"
 msgstr "Die Drupal-Implementierung für die Komponente <strong>@template</strong> braucht eine PHP-Mapper-Datei"
+
+msgid "Paragraph displays still use the paragraph_component field. Switch each back first: @commands"
+msgstr "Absatzanzeigen verwenden noch das Feld paragraph_component. Schalten Sie zuerst jede zurück: @commands"

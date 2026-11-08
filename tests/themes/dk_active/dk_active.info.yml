@@ -1,0 +1,8 @@
+name: 'Drupal Kit test active theme'
+type: theme
+description: 'Sub theme of the component definition kernel test.'
+core_version_requirement: ^11
+base theme: dk_base
+components:
+  namespaces:
+    component: templates

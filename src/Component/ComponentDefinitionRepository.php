@@ -172,7 +172,9 @@ class ComponentDefinitionRepository implements ComponentDefinitionRepositoryInte
       throw new InvalidComponentDefinitionException(sprintf('The component definition %s is not valid YAML: %s', $path, $e->getMessage()), 0, $e);
     }
 
-    if (!is_array($data) || (isset($data['fields']) && !is_array($data['fields']))) {
+    // `fields` must be a map. A non-empty list such as `[a, b]` is an array
+    // too, so test for it on its own.
+    if (!is_array($data) || (isset($data['fields']) && (!is_array($data['fields']) || ($data['fields'] !== [] && array_is_list($data['fields']))))) {
       throw new InvalidComponentDefinitionException(sprintf('The component definition %s must be a map, and its "fields" key must be a map too.', $path));
     }
 

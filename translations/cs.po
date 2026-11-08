@@ -134,3 +134,6 @@ msgstr "Implementace Drupalu pro komponentu <strong>@template</strong> chybí"
 
 msgid "Drupal implementation for component <strong>@template</strong> needs a PHP mapper file"
 msgstr "Implementace Drupalu pro komponentu <strong>@template</strong> potřebuje PHP soubor mapperu"
+
+msgid "Paragraph displays still use the paragraph_component field. Switch each back first: @commands"
+msgstr "Zobrazení odstavců stále používají pole paragraph_component. Nejdříve každé přepněte zpět: @commands"

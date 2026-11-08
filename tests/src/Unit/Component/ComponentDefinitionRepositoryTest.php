@@ -248,6 +248,7 @@ class ComponentDefinitionRepositoryTest extends TestCase {
     return [
       'invalid yaml' => ['bad-yaml'],
       'fields is not a map' => ['bad-fields'],
+      'fields is a list' => ['bad-fields-list'],
       'document is a scalar' => ['scalar'],
     ];
   }
