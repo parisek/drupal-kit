@@ -136,8 +136,9 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     // own metadata is dropped: no mapping is returned, so nothing uses it.
     $scope = $this->entityHelper->beginCacheScope();
     $completed = FALSE;
+    $query_fields = [];
     try {
-      $this->build($mapping, $paragraph, $viewMode, $scope);
+      $query_fields = $this->build($mapping, $paragraph, $viewMode, $scope);
       $completed = TRUE;
     }
     finally {
@@ -157,6 +158,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     }
 
     $mapping->addCacheableDependency($collected);
+    $this->warnWithoutListDependency($mapping, $paragraph, $query_fields);
     return $mapping;
   }
 
@@ -166,8 +168,12 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
    * Two problems are recoverable and render the alert component, as the old
    * hand-written display did: no definition, and a malformed definition. Any
    * other exception is a programming error and propagates.
+   *
+   * @return string[]
+   *   The dotted paths of the query fields when a component file ran, else an
+   *   empty array. The caller uses them to check the list cache dependency.
    */
-  protected function build(ParagraphMapping $mapping, ParagraphInterface $paragraph, string $viewMode, CacheScope $scope): void {
+  protected function build(ParagraphMapping $mapping, ParagraphInterface $paragraph, string $viewMode, CacheScope $scope): array {
     $logger = $this->loggerFactory->get('drupal_kit_paragraphs');
 
     try {
@@ -187,7 +193,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
         '@message' => $e->getMessage(),
       ]);
       $this->mapAlert($mapping, $paragraph);
-      return;
+      return [];
     }
 
     if ($definition === NULL) {
@@ -195,7 +201,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
         '@bundle' => $paragraph->bundle(),
       ]);
       $this->mapAlert($mapping, $paragraph);
-      return;
+      return [];
     }
 
     $component = $definition->getName();
@@ -213,7 +219,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
       $this->mapAlert($mapping, $paragraph, new TranslatableMarkup('Drupal implementation for component <strong>@template</strong> needs a PHP mapper file', [
         '@template' => Html::cleanCssIdentifier($paragraph->bundle()),
       ]));
-      return;
+      return [];
     }
 
     $mapping->setComponent($component)->setTemplate($component);
@@ -259,6 +265,35 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     $this->themeManager->alter($types, $mapping, $context);
     $this->closeLeakedScopes($scope, 'a theme alter hook');
     $this->recordOrigins($mapping, $before, 'theme hook');
+
+    return $query_fields;
+  }
+
+  /**
+   * Warns when a query component declared no list cache dependency.
+   *
+   * A component with `role: query` fields shows a list of entities. Without a
+   * list tag, a new or removed entity does not rebuild the page and the list
+   * goes stale. The warning is a log entry and a diagnostic, not an error: the
+   * component may cache on something else (a view tag, max-age 0).
+   *
+   * @param \Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping $mapping
+   *   The finished mapping.
+   * @param \Drupal\paragraphs\ParagraphInterface $paragraph
+   *   The paragraph.
+   * @param string[] $query_fields
+   *   The query fields of the definition, empty for other components.
+   */
+  private function warnWithoutListDependency(ParagraphMapping $mapping, ParagraphInterface $paragraph, array $query_fields): void {
+    if ($query_fields === [] || $mapping->isEmpty() || $mapping->hasListDependency()) {
+      return;
+    }
+    $note = sprintf('The %s component has query fields (%s) and declares no list cache tag. Call $mapping->addListDependency().', $mapping->getComponent(), implode(', ', $query_fields));
+    $mapping->addDiagnostic($note);
+    $this->loggerFactory->get('drupal_kit_paragraphs')->warning('The @component component has query fields (@fields) and declares no list cache tag (for example node_list). A new or removed entity will not rebuild the page.', [
+      '@component' => $mapping->getComponent(),
+      '@fields' => implode(', ', $query_fields),
+    ]);
   }
 
   /**

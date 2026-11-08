@@ -992,7 +992,8 @@ class ParagraphComponentMapperTest extends TestCase {
     $this->useFile(static function () use ($ran): void {
       $ran->append(1);
     });
-    $this->logger->expects($this->never())->method('warning');
+    $this->logger->expects($this->once())->method('warning')
+      ->with($this->stringContains('declares no list cache tag'), $this->anything());
 
     $mapping = $this->mapper()->map($this->paragraph([], 'article_featured'), 'default');
 
@@ -1002,6 +1003,45 @@ class ParagraphComponentMapperTest extends TestCase {
       'The article-featured component has query fields (items) and no article-featured.php file.',
       $mapping->getDiagnostics(),
     );
+    // The file declared no list tag, so the mapper says so.
+    $this->assertStringContainsString('declares no list cache tag', implode(' ', $mapping->getDiagnostics()));
+  }
+
+  /**
+   * A query component that declares its list dependency raises no warning.
+   *
+   * @covers ::map
+   * @covers ::warnWithoutListDependency
+   */
+  public function testQueryComponentWithListDependencyIsQuiet(): void {
+    $this->helper->method('mapFields')->willReturn([]);
+    $this->definition(['items' => ['type' => 'list', 'role' => 'query']], 'article-featured');
+    $this->useFile(static function (ParagraphMapping $mapping): void {
+      $mapping->addListDependency('node', 'article');
+    });
+    $this->logger->expects($this->never())->method('warning');
+
+    $mapping = $this->mapper()->map($this->paragraph([], 'article_featured'), 'default');
+
+    $this->assertSame([], $mapping->getDiagnostics());
+    $this->assertContains('node_list:article', $mapping->getCacheableMetadata()->getCacheTags());
+    $this->assertContains('user.node_grants:view', $mapping->getCacheableMetadata()->getCacheContexts());
+  }
+
+  /**
+   * A component without query fields is never checked for a list tag.
+   *
+   * @covers ::map
+   * @covers ::warnWithoutListDependency
+   */
+  public function testPlainComponentNeedsNoListDependency(): void {
+    $this->helper->method('mapFields')->willReturn([]);
+    $this->definition(['phone' => ['type' => 'text', 'role' => 'field']], 'contact');
+    $this->useFile(static function (): void {});
+    $this->logger->expects($this->never())->method('warning');
+
+    $diagnostics = $this->mapper()->map($this->paragraph([], 'contact'), 'default')->getDiagnostics();
+    $this->assertStringNotContainsString('list cache tag', implode(' ', $diagnostics));
   }
 
   /**

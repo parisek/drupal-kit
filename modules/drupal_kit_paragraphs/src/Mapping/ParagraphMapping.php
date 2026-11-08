@@ -174,6 +174,46 @@ final class ParagraphMapping {
   }
 
   /**
+   * Declares that the content is a list of entities of one type.
+   *
+   * A query component calls this. The mapping then gets the list cache tag, so
+   * a new, changed or removed entity rebuilds the page, and the contexts that
+   * decide which entities the user may see. With no bundle the tag is the broad
+   * `<type>_list`. With bundles it is `<type>_list:<bundle>` for each.
+   *
+   * @param string $entityType
+   *   The entity type id, for example `node`.
+   * @param string ...$bundles
+   *   Optional bundles to narrow the tag.
+   */
+  public function addListDependency(string $entityType, string ...$bundles): static {
+    $tags = $bundles === []
+      ? [$entityType . '_list']
+      : array_map(static fn (string $bundle): string => $entityType . '_list:' . $bundle, $bundles);
+    $contexts = $entityType === 'node'
+      ? ['user.permissions', 'user.node_grants:view']
+      : ['user.permissions'];
+    return $this->addCacheableDependency((new CacheableMetadata())->setCacheTags($tags)->setCacheContexts($contexts));
+  }
+
+  /**
+   * Tells if the cacheability has a list tag or cannot be cached.
+   *
+   * The mapper uses this to warn about a query component that declared neither.
+   */
+  public function hasListDependency(): bool {
+    if ($this->cacheability->getCacheMaxAge() === 0) {
+      return TRUE;
+    }
+    foreach ($this->cacheability->getCacheTags() as $tag) {
+      if (preg_match('/_list(:|$)/', $tag) === 1) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
    * Gets the accumulated cacheability.
    */
   public function getCacheableMetadata(): CacheableMetadata {

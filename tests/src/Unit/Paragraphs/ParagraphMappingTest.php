@@ -120,4 +120,37 @@ class ParagraphMappingTest extends TestCase {
     $this->assertSame(['a', 'b'], $mapping->getDiagnostics());
   }
 
+  /**
+   * The list helper adds the tag and the access contexts.
+   *
+   * @covers ::addListDependency
+   * @covers ::hasListDependency
+   */
+  public function testListDependency(): void {
+    $mapping = new ParagraphMapping('x');
+    $this->assertFalse($mapping->hasListDependency());
+
+    $mapping->addListDependency('node');
+    $this->assertTrue($mapping->hasListDependency());
+    $this->assertSame(['node_list'], $mapping->getCacheableMetadata()->getCacheTags());
+    $this->assertContains('user.node_grants:view', $mapping->getCacheableMetadata()->getCacheContexts());
+
+    $narrow = (new ParagraphMapping('x'))->addListDependency('node', 'company', 'product');
+    $this->assertSame(['node_list:company', 'node_list:product'], $narrow->getCacheableMetadata()->getCacheTags());
+
+    $other = (new ParagraphMapping('x'))->addListDependency('taxonomy_term', 'topic');
+    $this->assertSame(['taxonomy_term_list:topic'], $other->getCacheableMetadata()->getCacheTags());
+    $this->assertSame(['user.permissions'], $other->getCacheableMetadata()->getCacheContexts());
+  }
+
+  /**
+   * A mapping that cannot be cached counts as handled.
+   *
+   * @covers ::hasListDependency
+   */
+  public function testUncacheableCountsAsListDependency(): void {
+    $mapping = (new ParagraphMapping('x'))->addCacheableDependency((new CacheableMetadata())->setCacheMaxAge(0));
+    $this->assertTrue($mapping->hasListDependency());
+  }
+
 }
