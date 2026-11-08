@@ -188,8 +188,8 @@ final class ParagraphMapping {
    *
    * Core invalidates the bundle tag only for an entity type that has a bundle
    * key. This method knows the core types that have one (BUNDLE_TYPES). For any
-   * other type it ignores the bundles and uses the broad tag, because a tag that
-   * core never invalidates would leave the page stale with no warning.
+   * other type it ignores the bundles and uses the broad tag, because a tag
+   * that core never invalidates would leave the page stale with no warning.
    *
    * @param string $entityType
    *   The entity type id, for example `node`.
@@ -210,10 +210,11 @@ final class ParagraphMapping {
    * Tells if the cacheability has a list tag or cannot be cached.
    *
    * The mapper uses this to warn about a query component that declared neither.
-   * It is a heuristic. Any `<type>_list` tag counts, for any entity type, and so
-   * does a `config:views.view.*` tag and a `#type => view` element in the data
-   * (a view adds its list tags when it renders, after the mapping is done). A
-   * component that lists nodes but declares only another type's list tag passes.
+   * It is a heuristic. Any `<type>_list` tag counts, for any entity type. So
+   * does a `config:views.view.*` tag and a `#type => view` element in the data,
+   * because a view adds its list tags when it renders, after the mapping is
+   * done. A component that lists nodes but declares only the list tag of
+   * another type passes.
    */
   public function hasListDependency(): bool {
     if ($this->cacheability->getCacheMaxAge() === 0) {
