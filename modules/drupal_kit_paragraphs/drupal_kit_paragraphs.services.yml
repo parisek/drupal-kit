@@ -27,3 +27,4 @@ services:
     arguments:
       - "@entity_type.manager"
       - "@state"
+      - "@entity_field.manager"

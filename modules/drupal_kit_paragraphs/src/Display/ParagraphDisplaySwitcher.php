@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\drupal_kit_paragraphs\Display;
 
-use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\Entity\EntityViewDisplay;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\State\StateInterface;
 
 /**
@@ -14,7 +15,13 @@ use Drupal\Core\State\StateInterface;
  * A bundle renders through one extra field on its view display. This service
  * swaps that extra field between the hand-written one (the legacy display) and
  * `paragraph_component`. It remembers the legacy settings in State, so a switch
- * back restores them. No release and no config import is needed to roll back.
+ * back restores them. No release is needed to roll back.
+ *
+ * The change is made on the active configuration only. A site that imports
+ * configuration on deploy must export the display and commit it, or the next
+ * import undoes the switch. State is local to one environment: a switch made on
+ * another environment leaves nothing here, and a rollback then needs the legacy
+ * field name.
  */
 class ParagraphDisplaySwitcher {
 
@@ -34,6 +41,7 @@ class ParagraphDisplaySwitcher {
   public function __construct(
     protected EntityTypeManagerInterface $entityTypeManager,
     protected StateInterface $state,
+    protected EntityFieldManagerInterface $entityFieldManager,
   ) {}
 
   /**
@@ -70,6 +78,7 @@ class ParagraphDisplaySwitcher {
 
     $key = "drupal_kit_paragraphs.legacy_display.$bundle.$viewMode";
     $remember = NULL;
+    $forget = FALSE;
     $legacy = $display->getComponent($legacyField);
     $component = $display->getComponent(self::COMPONENT_FIELD);
 
@@ -90,17 +99,12 @@ class ParagraphDisplaySwitcher {
       ]);
     }
     else {
-      if ($legacy !== NULL && $component === NULL) {
+      if ($component === NULL && $legacy !== NULL) {
         return $this->result($id, $target, FALSE, FALSE, 'The display already uses the legacy field.');
       }
       if ($component === NULL) {
         throw new \InvalidArgumentException(sprintf('The display %s shows neither %s nor %s.', $id, self::COMPONENT_FIELD, $legacyField));
       }
-      $saved = $this->state->get($key);
-      $field = is_array($saved) && is_string($saved['field'] ?? NULL) ? $saved['field'] : $legacyField;
-      $config = is_array($saved) && is_array($saved['config'] ?? NULL)
-        ? $saved['config']
-        : ['weight' => $component['weight'] ?? 0, 'settings' => [], 'third_party_settings' => []];
       $display->removeComponent(self::COMPONENT_FIELD);
       // The component field is hidden by default, so a "hidden" marker for it
       // only adds noise. Dropping it restores the display as it was before the
@@ -111,7 +115,21 @@ class ParagraphDisplaySwitcher {
         unset($hidden[self::COMPONENT_FIELD]);
         $display->set('hidden', $hidden);
       }
-      $display->setComponent($field, $config);
+      // A display that shows both fields keeps its live legacy settings. Only
+      // the component goes.
+      if ($legacy === NULL) {
+        $saved = $this->state->get($key);
+        $field = is_array($saved) && is_string($saved['field'] ?? NULL) ? $saved['field'] : $legacyField;
+        $extra = $this->entityFieldManager->getExtraFields('paragraph', $bundle)['display'] ?? [];
+        if (!isset($extra[$field])) {
+          throw new \InvalidArgumentException(sprintf('The legacy field %s is not an extra field of the %s bundle. Pass the right name with --legacy-field.', $field, $bundle));
+        }
+        $config = is_array($saved) && is_array($saved['config'] ?? NULL)
+          ? $saved['config']
+          : ['weight' => $component['weight'] ?? 0, 'settings' => [], 'third_party_settings' => []];
+        $display->setComponent($field, $config);
+        $forget = TRUE;
+      }
     }
 
     if ($dryRun) {
@@ -123,7 +141,12 @@ class ParagraphDisplaySwitcher {
       $this->state->set($key, $remember);
     }
     $display->save();
-    return $this->result($id, $target, TRUE, TRUE, 'The display was saved.');
+    if ($forget) {
+      // The remembered settings are used up. An old entry must not win later
+      // over the legacy settings that are live again.
+      $this->state->delete($key);
+    }
+    return $this->result($id, $target, TRUE, TRUE, 'The display was saved on this environment only. Export it to the config sync folder, or the next config import undoes the switch.');
   }
 
   /**

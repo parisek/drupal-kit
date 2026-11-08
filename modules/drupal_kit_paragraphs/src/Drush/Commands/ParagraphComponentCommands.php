@@ -151,7 +151,7 @@ final class ParagraphComponentCommands extends DrushCommands {
    */
   #[CLI\Command(name: 'drupal-kit:lint-components', aliases: ['dklc'])]
   #[CLI\Argument(name: 'paths', description: 'Folders to scan, relative to the Drupal root or absolute.')]
-  #[CLI\Usage(name: 'drush drupal-kit:lint-components web/themes/custom', description: 'Lint every component PHP file of the custom themes.')]
+  #[CLI\Usage(name: 'drush drupal-kit:lint-components themes/custom', description: 'Lint every component PHP file of the custom themes. Paths are relative to the Drupal web root.')]
   public function lintComponents(array $paths): RowsOfFields {
     $paths = $paths === [] ? ['themes/custom'] : $paths;
     $rows = [];
@@ -190,28 +190,54 @@ final class ParagraphComponentCommands extends DrushCommands {
    */
   private function findComponentFiles(array $paths): array {
     $found = [];
+    $visited = [];
     foreach ($paths as $path) {
       $root = str_starts_with($path, '/') ? $path : $this->kernel->getAppRoot() . '/' . $path;
       if (!is_dir($root)) {
         throw new \InvalidArgumentException(sprintf('%s is not a folder.', $root));
       }
-      $iterator = new \RecursiveIteratorIterator(new \RecursiveCallbackFilterIterator(
-        new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS),
-        static fn (\SplFileInfo $item): bool => !($item->isDir() && in_array($item->getFilename(), self::SKIP_DIRECTORIES, TRUE)),
-      ));
-      foreach ($iterator as $item) {
-        if (!$item instanceof \SplFileInfo || !$item->isFile() || $item->getExtension() !== 'php') {
-          continue;
-        }
-        $name = $item->getBasename('.php');
-        $directory = $item->getPath();
-        if (basename($directory) === $name && (is_file("$directory/$name.twig") || is_file("$directory/$name.yaml"))) {
-          $found[] = $item->getPathname();
-        }
-      }
+      $this->scan($root, $found, $visited);
     }
     sort($found);
-    return $found;
+    return array_values(array_unique($found));
+  }
+
+  /**
+   * Scans one folder, follows symbolic links and stops on a cycle.
+   *
+   * @param string $directory
+   *   The folder.
+   * @param string[] $found
+   *   The result, by reference.
+   * @param array<string, true> $visited
+   *   Real paths already scanned, by reference.
+   */
+  private function scan(string $directory, array &$found, array &$visited): void {
+    $real = realpath($directory);
+    if ($real === FALSE || isset($visited[$real])) {
+      return;
+    }
+    $visited[$real] = TRUE;
+
+    foreach (scandir($real) ?: [] as $entry) {
+      if ($entry === '.' || $entry === '..') {
+        continue;
+      }
+      $path = $real . '/' . $entry;
+      if (is_dir($path)) {
+        if (!in_array($entry, self::SKIP_DIRECTORIES, TRUE)) {
+          $this->scan($path, $found, $visited);
+        }
+        continue;
+      }
+      if (!is_file($path) || pathinfo($entry, PATHINFO_EXTENSION) !== 'php') {
+        continue;
+      }
+      $name = basename($entry, '.php');
+      if (basename($real) === $name && (is_file("$real/$name.twig") || is_file("$real/$name.yaml"))) {
+        $found[] = $path;
+      }
+    }
   }
 
   /**

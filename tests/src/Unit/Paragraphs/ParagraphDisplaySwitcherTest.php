@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\drupal_kit\Unit\Paragraphs;
 
 use Drupal\Core\Entity\Entity\EntityViewDisplay;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\State\StateInterface;
@@ -43,8 +44,10 @@ class ParagraphDisplaySwitcherTest extends TestCase {
    *   The components of the display, keyed by name.
    * @param bool $exists
    *   Whether the storage finds the display.
+   * @param string[] $extraFields
+   *   The names of the extra fields the bundle has.
    */
-  private function switcher(array $content, bool $exists = TRUE): ParagraphDisplaySwitcher {
+  private function switcher(array $content, bool $exists = TRUE, array $extraFields = [self::LEGACY, self::COMPONENT]): ParagraphDisplaySwitcher {
     $this->display = $this->createMock(EntityViewDisplay::class);
     $this->display->method('getComponent')->willReturnCallback(static fn (string $name) => $content[$name] ?? NULL);
 
@@ -58,9 +61,15 @@ class ParagraphDisplaySwitcherTest extends TestCase {
     $state->method('set')->willReturnCallback(function (string $key, mixed $value): void {
       $this->stateData[$key] = $value;
     });
+    $state->method('delete')->willReturnCallback(function (string $key): void {
+      unset($this->stateData[$key]);
+    });
     $state->method('get')->willReturnCallback(fn (string $key) => $this->stateData[$key] ?? NULL);
 
-    return new ParagraphDisplaySwitcher($manager, $state);
+    $fields = $this->createMock(EntityFieldManagerInterface::class);
+    $fields->method('getExtraFields')->willReturn(['display' => array_fill_keys($extraFields, [])]);
+
+    return new ParagraphDisplaySwitcher($manager, $state, $fields);
   }
 
   /**
@@ -105,6 +114,56 @@ class ParagraphDisplaySwitcherTest extends TestCase {
     $result = $switcher->switch('contact', 'legacy');
 
     $this->assertTrue($result['saved']);
+    $this->assertArrayNotHasKey($key, $this->stateData);
+  }
+
+  /**
+   * A display that shows both fields keeps its live legacy settings.
+   *
+   * @covers ::switch
+   */
+  public function testBothFieldsOnlyRemovesTheComponent(): void {
+    $switcher = $this->switcher([
+      self::COMPONENT => ['weight' => 1],
+      self::LEGACY => ['weight' => 9],
+    ]);
+    $key = 'drupal_kit_paragraphs.legacy_display.contact.default';
+    $this->stateData[$key] = ['field' => self::LEGACY, 'config' => ['weight' => 2]];
+    $this->display->expects($this->once())->method('removeComponent')->with(self::COMPONENT);
+    $this->display->expects($this->never())->method('setComponent');
+    $this->display->expects($this->once())->method('save');
+
+    $this->assertTrue($switcher->switch('contact', 'legacy')['saved']);
+  }
+
+  /**
+   * A rollback with no State refuses a legacy field the bundle does not have.
+   *
+   * @covers ::switch
+   */
+  public function testRollbackToUnknownLegacyFieldIsRefused(): void {
+    $extra = [self::COMPONENT, 'extra_field_custom_paragraph_display'];
+    $switcher = $this->switcher([self::COMPONENT => ['weight' => 1]], TRUE, $extra);
+    $this->display->expects($this->never())->method('save');
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('--legacy-field');
+    $switcher->switch('contact', 'legacy');
+  }
+
+  /**
+   * A rollback with no State works with the right --legacy-field.
+   *
+   * @covers ::switch
+   */
+  public function testRollbackWithoutStateUsesGivenLegacyField(): void {
+    $custom = 'extra_field_custom_paragraph_display';
+    $switcher = $this->switcher([self::COMPONENT => ['weight' => 3]], TRUE, [self::COMPONENT, $custom]);
+    $expected = ['weight' => 3, 'settings' => [], 'third_party_settings' => []];
+    $this->display->expects($this->once())->method('setComponent')->with($custom, $expected);
+    $this->display->expects($this->once())->method('save');
+
+    $this->assertTrue($switcher->switch('contact', 'legacy', 'default', $custom)['saved']);
   }
 
   /**

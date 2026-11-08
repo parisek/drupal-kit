@@ -55,6 +55,8 @@ class ComponentFileSourceCheckerTest extends TestCase {
       'trait after return' => ["<?php\n$return\ntrait Hoisted {}\n"],
       'enum after return' => ["<?php\n$return\nenum Hoisted {}\n"],
       'named function inside a closure' => ["<?php\nreturn static function (): void { function inner() {} };\n"],
+      'require in a closure' => ["<?php\nreturn static function (): void { require 'x.php'; };\n"],
+      'include_once in a closure' => ["<?php\nreturn static function (): void { include_once 'x.php'; };\n"],
       'no return' => ["<?php\n// nothing here\n"],
       'no open tag' => ["return static function (): void {};\n"],
       'close tag before return' => ["<?php ?>\n<?php\n$return"],

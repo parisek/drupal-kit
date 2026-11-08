@@ -127,6 +127,11 @@ final class ComponentFileSourceChecker {
       if (in_array($id, [T_NAMESPACE, T_INTERFACE, T_TRAIT, T_ENUM], TRUE)) {
         return 'it declares a namespace, interface, trait or enum';
       }
+      if (in_array($id, [T_REQUIRE, T_REQUIRE_ONCE, T_INCLUDE, T_INCLUDE_ONCE], TRUE)) {
+        // An included file can declare a function or class that this check
+        // never sees.
+        return 'it includes another file';
+      }
       if ($id === T_CLASS) {
         if ($previous === T_NEW) {
           $pending_anonymous = TRUE;

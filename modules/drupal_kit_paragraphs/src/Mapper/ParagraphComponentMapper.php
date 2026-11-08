@@ -264,6 +264,9 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
   /**
    * Records the top-level keys that a step added, changed or removed.
    *
+   * Values compare with identity. A step that changes an object in place, for
+   * example an Attribute, is not seen. This is for diagnostics only.
+   *
    * @param \Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping $mapping
    *   The mapping after the step.
    * @param array<string, mixed> $before
