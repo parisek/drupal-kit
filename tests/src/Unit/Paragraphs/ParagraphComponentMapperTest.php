@@ -627,6 +627,37 @@ class ParagraphComponentMapperTest extends TestCase {
   }
 
   /**
+   * Each step is recorded as the writer of the keys it changed.
+   *
+   * @covers ::build
+   * @covers ::recordOrigins
+   */
+  public function testOriginsNameTheStepsInOrder(): void {
+    $this->helper->method('mapFields')->willReturn(['phone' => '123']);
+    $this->definition(['phone' => ['type' => 'text', 'role' => 'field']], 'article-video');
+    $this->useFile(static function (ParagraphMapping $mapping): void {
+      $mapping->set('phone', '456')->set('from_file', TRUE)->remove('container');
+    });
+    $this->moduleHandler->method('alter')->willReturnCallback(static function ($types, ParagraphMapping $mapping) {
+      $mapping->set('from_module', TRUE);
+    });
+    $this->themeManager->method('alter')->willReturnCallback(static function ($types, ParagraphMapping $mapping) {
+      $mapping->set('from_module', 'theme wins');
+    });
+
+    $mapping = $this->mapper()->map($this->paragraph(['field_phone' => ['telephone']], 'article_video'), 'full');
+
+    $this->assertSame([
+      'container' => ['framework', 'file alter (removed)'],
+      'phone' => ['definition', 'file alter'],
+      'from_file' => ['file alter'],
+      'from_module' => ['module hook', 'theme hook'],
+    ], $mapping->getOrigins());
+    $this->assertSame('/component/x.php', $mapping->getSources()['file']);
+    $this->assertArrayHasKey('definition', $mapping->getSources());
+  }
+
+  /**
    * A replace step builds the mapping; the generic rules do not run.
    *
    * @covers ::build

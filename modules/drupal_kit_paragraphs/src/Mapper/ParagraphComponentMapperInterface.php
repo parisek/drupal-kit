@@ -9,6 +9,9 @@ use Drupal\paragraphs\ParagraphInterface;
 
 /**
  * Maps a paragraph to the content of its Twig component.
+ *
+ * @experimental
+ *   The API may change before the module has a stable release.
  */
 interface ParagraphComponentMapperInterface {
 

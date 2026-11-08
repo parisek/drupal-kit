@@ -20,11 +20,6 @@ use Drupal\drupal_kit\Component\InvalidComponentDefinitionException;
  *   validated first.
  * - The real path of the file must lie inside the real path of the component
  *   directory. A symbolic link out of the folder is refused.
- * - Before the file is included, its tokens are read. Only the open tag,
- *   whitespace and comments, `declare(strict_types=1);` as the first
- *   statement, `use` statements and then `return` may come first. Named
- *   functions, classes, interfaces, traits, enums and namespaces are refused
- *   anywhere in the file. A file that fails this check never runs.
  * - The file must print nothing, in any output buffer level it opens. Output is
  *   refused.
  * - It returns a Closure (the alter step) or an array with `alter` and
@@ -32,17 +27,21 @@ use Drupal\drupal_kit\Component\InvalidComponentDefinitionException;
  *   scope and no $this.
  * - A file is included once per request. The result stays in memory.
  *
- * The loader cannot stop a web server from running the file when someone
- * requests its URL. Because of the header rule above, such a request runs only
- * the `return` expression, which builds closures and prints nothing, but a site
- * should deny `*.php` inside the component folders at the web server all the
- * same. Only the fixed `<component>.php` name is ever loaded, never the `.twig`
- * or `.yaml` beside it.
+ * The loader does not read the source of the file. A component file belongs to
+ * the theme repository and is as trusted as the rest of that code. The rules
+ * for the source (see ComponentFileSourceChecker) are checked in CI with
+ * `drush drupal-kit:lint-components`. A file that breaks them is a defect of
+ * the
+ * theme, not an input to defend against at run time: top-level code in it runs
+ * when the file is included, and a second declaration of a function or class is
+ * a fatal error that no code can catch.
  *
- * Only a ParseError is recoverable. A redeclared function or class is a fatal
- * error that no code can catch; the source check above refuses named
- * declarations for that reason. Sites should also run `php -l` on the
- * component `*.php` files in CI.
+ * The loader cannot stop a web server from running the file when someone
+ * requests its URL. A site should deny `*.php` inside the component folders at
+ * the web server. Only the fixed `<component>.php` name is ever loaded, never
+ * the `.twig` or `.yaml` beside it.
+ *
+ * Only a ParseError is recoverable.
  */
 class ComponentMapperFileLoader implements ComponentMapperFileLoaderInterface {
 
@@ -102,9 +101,6 @@ class ComponentMapperFileLoader implements ComponentMapperFileLoaderInterface {
    * Checks the source of a file, includes it and checks what it returned.
    */
   private function include(string $file): ComponentMapperFile {
-    // Read the tokens first. A file with top-level code never runs.
-    $this->assertSafeSource($file);
-
     $level = ob_get_level();
     ob_start();
     $outputs = [];
@@ -169,164 +165,6 @@ class ComponentMapperFileLoader implements ComponentMapperFileLoaderInterface {
       throw new InvalidComponentDefinitionException(sprintf('A closure returned by the component file %s cannot be unbound from its class scope.', $file));
     }
     return $bound;
-  }
-
-  /**
-   * Refuses a file whose source has code the loader does not allow.
-   *
-   * Only the open tag, whitespace and comments, `declare(strict_types=1);` as
-   * the first statement, `use` statements and then `return` may come before the
-   * first `return`. Named functions, classes, interfaces, traits, enums and
-   * namespaces are refused anywhere: PHP declares them at compile time, and a
-   * second declaration is a fatal error that no code can catch.
-   *
-   * @throws \Drupal\drupal_kit\Component\InvalidComponentDefinitionException
-   *   When the file breaks the rules or has a syntax error.
-   */
-  private function assertSafeSource(string $file): void {
-    $source = file_get_contents($file);
-    if ($source === FALSE) {
-      throw new InvalidComponentDefinitionException(sprintf('The component file %s cannot be read.', $file));
-    }
-    try {
-      $tokens = token_get_all($source, TOKEN_PARSE);
-    }
-    catch (\ParseError $e) {
-      throw new InvalidComponentDefinitionException(sprintf('The component file %s has a syntax error: %s', $file, $e->getMessage()), 0, $e);
-    }
-
-    $code = array_values(array_filter(
-      $tokens,
-      static fn ($token): bool => !is_array($token) || !in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], TRUE),
-    ));
-    $this->assertHeader($code, $file);
-    $this->assertNoDeclarations($code, $file);
-  }
-
-  /**
-   * Checks what comes before the first `return`.
-   *
-   * @param array<int, array{0: int, 1: string, 2: int}|string> $code
-   *   The tokens without whitespace and comments.
-   * @param string $file
-   *   The file, for messages.
-   */
-  private function assertHeader(array $code, string $file): void {
-    $count = count($code);
-    if (!isset($code[0]) || !is_array($code[0]) || $code[0][0] !== T_OPEN_TAG) {
-      throw $this->unsafe($file, 'it must start with <?php');
-    }
-
-    $statements = 0;
-    $i = 1;
-    while ($i < $count) {
-      $token = $code[$i];
-      $id = is_array($token) ? $token[0] : NULL;
-      if ($id === T_RETURN) {
-        return;
-      }
-
-      if ($id === T_DECLARE && $statements === 0) {
-        $text = '';
-        while ($i < $count && $code[$i] !== ';') {
-          $text .= is_array($code[$i]) ? $code[$i][1] : $code[$i];
-          $i++;
-        }
-        if (strtolower((string) preg_replace('/\s+/', '', $text)) !== 'declare(strict_types=1)') {
-          throw $this->unsafe($file, 'only declare(strict_types=1) is allowed as a declare statement');
-        }
-        $i++;
-        $statements++;
-        continue;
-      }
-
-      if ($id === T_USE) {
-        $i++;
-        while ($i < $count && $code[$i] !== ';') {
-          $part = $code[$i];
-          $part_id = is_array($part) ? $part[0] : NULL;
-          $name_tokens = [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NS_SEPARATOR, T_AS, T_FUNCTION, T_CONST];
-          $allowed = in_array($part_id, $name_tokens, TRUE)
-            || in_array($part, [',', '{', '}'], TRUE);
-          if (!$allowed) {
-            throw $this->unsafe($file, 'a use statement may only import names');
-          }
-          $i++;
-        }
-        $i++;
-        $statements++;
-        continue;
-      }
-
-      throw $this->unsafe($file, 'only declare(strict_types=1), use statements and comments may come before return');
-    }
-
-    throw $this->unsafe($file, 'it has no return statement');
-  }
-
-  /**
-   * Refuses declarations that PHP makes at compile time.
-   *
-   * @param array<int, array{0: int, 1: string, 2: int}|string> $code
-   *   The tokens without whitespace and comments.
-   * @param string $file
-   *   The file, for messages.
-   */
-  private function assertNoDeclarations(array $code, string $file): void {
-    $depth = 0;
-    $anonymous_depths = [];
-    $pending_anonymous = FALSE;
-    $previous = NULL;
-    $count = count($code);
-
-    for ($i = 0; $i < $count; $i++) {
-      $token = $code[$i];
-      $id = is_array($token) ? $token[0] : NULL;
-
-      if (in_array($id, [T_NAMESPACE, T_INTERFACE, T_TRAIT, T_ENUM], TRUE)) {
-        throw $this->unsafe($file, 'it declares a namespace, interface, trait or enum');
-      }
-      if ($id === T_CLASS) {
-        if ($previous === T_NEW) {
-          $pending_anonymous = TRUE;
-        }
-        elseif ($previous !== T_DOUBLE_COLON) {
-          throw $this->unsafe($file, 'it declares a class');
-        }
-      }
-      if ($id === T_FUNCTION && $anonymous_depths === []) {
-        $next = $code[$i + 1] ?? NULL;
-        if ($next === '&') {
-          $next = $code[$i + 2] ?? NULL;
-        }
-        if (is_array($next) && $next[0] === T_STRING) {
-          throw $this->unsafe($file, 'it declares the named function ' . $next[1]);
-        }
-      }
-
-      if ($token === '{' || $id === T_CURLY_OPEN || $id === T_DOLLAR_OPEN_CURLY_BRACES) {
-        $depth++;
-        if ($token === '{' && $pending_anonymous) {
-          $anonymous_depths[] = $depth;
-          $pending_anonymous = FALSE;
-        }
-      }
-      elseif ($token === '}') {
-        if ($anonymous_depths !== [] && end($anonymous_depths) === $depth) {
-          array_pop($anonymous_depths);
-        }
-        $depth--;
-      }
-
-      $previous = $id;
-    }
-  }
-
-  /**
-   * Builds the exception for a source that breaks the rules.
-   */
-  private function unsafe(string $file, string $reason): InvalidComponentDefinitionException {
-    return new InvalidComponentDefinitionException(sprintf('The component file %s is not allowed: %s. It must only return a closure.', $file, $reason));
   }
 
 }

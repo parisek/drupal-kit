@@ -217,35 +217,70 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     }
 
     $mapping->setComponent($component)->setTemplate($component);
+    $mapping->setSource('definition', $definition->getPath())->setSource('file', $file?->getPath());
     $context = new MappingContext($paragraph, $viewMode, $definition, $this->container);
+    $before = $mapping->getData();
     $this->mapFrameworkFields($mapping, $paragraph);
+    $this->recordOrigins($mapping, $before, 'framework');
     $replace = $file?->getReplace();
     if ($replace !== NULL) {
+      $before = $mapping->getData();
       $replaced = $replace($paragraph, $viewMode, $this->entityHelper, $context);
       if (!$replaced instanceof ParagraphMapping) {
         throw new \UnexpectedValueException(sprintf('The "replace" step in %s must return a ParagraphMapping.', $file->getPath()));
       }
       $this->closeLeakedScopes($scope, 'the replace step in ' . $file->getPath());
       $this->adopt($mapping, $replaced);
+      $this->recordOrigins($mapping, $before, 'file replace');
     }
     else {
+      $before = $mapping->getData();
       foreach ($generic ?? [] as $key => $value) {
         $this->merge($mapping, $key, $value);
       }
+      $this->recordOrigins($mapping, $before, 'definition');
     }
 
     $alter = $file?->getAlter();
     if ($alter !== NULL) {
+      $before = $mapping->getData();
       $alter($mapping, $context, $this->entityHelper);
       $this->closeLeakedScopes($scope, 'the alter step in ' . $file->getPath());
+      $this->recordOrigins($mapping, $before, 'file alter');
     }
 
     // Modules first, then the active theme and its base themes.
     $types = [self::ALTER_HOOK, self::ALTER_HOOK . '_' . str_replace('-', '_', $component)];
+    $before = $mapping->getData();
     $this->moduleHandler->alter($types, $mapping, $context);
     $this->closeLeakedScopes($scope, 'a module alter hook');
+    $this->recordOrigins($mapping, $before, 'module hook');
+    $before = $mapping->getData();
     $this->themeManager->alter($types, $mapping, $context);
     $this->closeLeakedScopes($scope, 'a theme alter hook');
+    $this->recordOrigins($mapping, $before, 'theme hook');
+  }
+
+  /**
+   * Records the top-level keys that a step added, changed or removed.
+   *
+   * @param \Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping $mapping
+   *   The mapping after the step.
+   * @param array<string, mixed> $before
+   *   The data before the step.
+   * @param string $step
+   *   The step name.
+   */
+  private function recordOrigins(ParagraphMapping $mapping, array $before, string $step): void {
+    $after = $mapping->getData();
+    foreach ($after as $key => $value) {
+      if (!array_key_exists($key, $before) || $before[$key] !== $value) {
+        $mapping->recordOrigin((string) $key, $step);
+      }
+    }
+    foreach (array_diff_key($before, $after) as $key => $value) {
+      $mapping->recordOrigin((string) $key, $step . ' (removed)');
+    }
   }
 
   /**

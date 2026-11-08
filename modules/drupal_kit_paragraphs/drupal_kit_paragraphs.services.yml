@@ -22,3 +22,8 @@ services:
       - "@logger.factory"
       - "@service_container"
       - "%drupal_kit_paragraphs.container_node_bundles%"
+  drupal_kit.paragraph_display_switcher:
+    class: Drupal\drupal_kit_paragraphs\Display\ParagraphDisplaySwitcher
+    arguments:
+      - "@entity_type.manager"
+      - "@state"

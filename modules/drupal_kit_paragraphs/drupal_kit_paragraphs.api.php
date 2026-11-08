@@ -83,16 +83,24 @@ function hook_drupal_kit_paragraph_mapping_COMPONENT_alter(ParagraphMapping $map
  *
  * The closures have no class scope and no $this.
  *
- * The loader reads the tokens before it includes the file. The first token
- * must be the open tag. Before the first `return` only whitespace, comments,
+ * The source rules keep the file declarative. The first token must be the open
+ * tag. Before the first `return` only whitespace, comments,
  * `declare(strict_types=1);` as the first statement and `use` statements may
  * appear. Named functions, classes, interfaces, traits, enums and namespaces
- * are refused anywhere. The file must print nothing, at any output buffer
- * level. Only a ParseError is recoverable; a redeclaration is a fatal error
- * that PHP cannot catch, so run `php -l` on the component `*.php` files in CI.
- * `exit` or `die` in the file ends the request. A sub theme that copies only
- * the `.twig` and `.yaml` loses the base theme's `.php`. A Fiber that
- * suspends during a mapping is not supported.
+ * are refused anywhere. The loader does not read the source on a request. CI
+ * checks it: run `drush drupal-kit:lint-components web/themes/custom`. A
+ * redeclared function is a fatal error that PHP cannot catch, and top-level
+ * code runs when the file is included. The loader checks the name, the real
+ * path and the return value, and the file must print nothing, at any output
+ * buffer level. Only a ParseError is recoverable. `exit` or `die` in the file
+ * ends the request. A sub theme that copies only the `.twig` and `.yaml` loses
+ * the base theme's `.php`. A Fiber that suspends during a mapping is not
+ * supported.
+ *
+ * To see how a paragraph is mapped, run `drush drupal-kit:paragraph-map ID`. It
+ * shows the step that wrote each content key. To move a bundle between its
+ * legacy display and the component, run
+ * `drush drupal-kit:paragraph-switch BUNDLE component|legacy`.
  *
  * Order: generic mapping (or `replace`), the file's `alter`, then
  * hook_drupal_kit_paragraph_mapping_alter() and its COMPONENT variant.

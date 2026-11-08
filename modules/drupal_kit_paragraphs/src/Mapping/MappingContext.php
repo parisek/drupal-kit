@@ -14,6 +14,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Component files and alter hooks get the context next to the mapping. They
  * read the paragraph, the view mode and the definition here. They write only
  * to the mapping.
+ *
+ * @experimental
+ *   The API may change before the module has a stable release.
  */
 final class MappingContext {
 

@@ -401,61 +401,6 @@ class ComponentMapperFileLoaderTest extends TestCase {
   }
 
   /**
-   * Top-level code is refused before the file is included.
-   *
-   * The file would write a marker file if it ran. It must not.
-   *
-   * @covers ::load
-   */
-  #[DataProvider('rejectedSourceProvider')]
-  public function testRejectedSourceNeverRuns(string $source): void {
-    $marker = $this->tmp . '/ran';
-    $this->write(str_replace('MARKER', $marker, $source));
-
-    try {
-      $this->loadFoo();
-      $this->fail('Expected an exception.');
-    }
-    catch (InvalidComponentDefinitionException $e) {
-      $this->assertStringContainsString('not allowed', $e->getMessage());
-    }
-
-    $this->assertFileDoesNotExist($marker);
-  }
-
-  /**
-   * Data provider for refused sources.
-   *
-   * @return array<string, array<int, string>>
-   *   The cases.
-   */
-  public static function rejectedSourceProvider(): array {
-    $return = 'return static function (): void {};';
-    return [
-      'function call' => ["<?php\nfile_put_contents('MARKER', 'x');\n$return"],
-      'echo' => ["<?php\necho 'x';\n$return"],
-      'assignment' => ["<?php\n\$a = file_put_contents('MARKER', 'x');\n$return"],
-      'named function before return' => ["<?php\nfunction evil() { file_put_contents('MARKER', 'x'); }\nevil();\n$return"],
-      'class before return' => ["<?php\nclass Evil {}\n$return"],
-      'require' => ["<?php\nrequire 'MARKER';\n$return"],
-      'inline html' => ["<?php\n?>html<?php\n$return"],
-      'namespace' => ["<?php\nnamespace Foo;\n$return"],
-      'declare ticks' => ["<?php\ndeclare(ticks=1);\n$return"],
-      'declare after use' => ["<?php\nuse Foo\\Bar;\ndeclare(strict_types=1);\n$return"],
-      'if statement' => ["<?php\nif (TRUE) { file_put_contents('MARKER', 'x'); }\n$return"],
-      'named function after return' => ["<?php\n$return\nfunction hoisted() {}\n"],
-      'class after return' => ["<?php\n$return\nclass Hoisted {}\n"],
-      'interface after return' => ["<?php\n$return\ninterface Hoisted {}\n"],
-      'trait after return' => ["<?php\n$return\ntrait Hoisted {}\n"],
-      'enum after return' => ["<?php\n$return\nenum Hoisted {}\n"],
-      'named function inside a closure' => ["<?php\nreturn static function (): void { function inner() {} };\n"],
-      'no return' => ["<?php\n// nothing here\n"],
-      'no open tag' => ["return static function (): void {};\n"],
-      'close tag before return' => ["<?php ?>\n<?php\n$return"],
-    ];
-  }
-
-  /**
    * Headers that the loader accepts.
    *
    * @covers ::load

@@ -16,6 +16,9 @@ use Drupal\Core\Cache\CacheableMetadata;
  *
  * A mapping with no component is empty: the mapper found no usable definition
  * or failed. An empty mapping renders nothing.
+ *
+ * @experimental
+ *   The API may change before the module has a stable release.
  */
 final class ParagraphMapping {
 
@@ -37,6 +40,20 @@ final class ParagraphMapping {
    * @var string[]
    */
   private array $diagnostics = [];
+
+  /**
+   * The steps that wrote each top-level key, in order.
+   *
+   * @var array<string, string[]>
+   */
+  private array $origins = [];
+
+  /**
+   * The files that took part: `definition` and `file`, as paths or NULL.
+   *
+   * @var array<string, string|null>
+   */
+  private array $sources = [];
 
   /**
    * Constructs a ParagraphMapping.
@@ -179,6 +196,45 @@ final class ParagraphMapping {
    */
   public function getDiagnostics(): array {
     return $this->diagnostics;
+  }
+
+  /**
+   * Records which step wrote a top-level key.
+   *
+   * The mapper calls this after each step, for the diagnostic command. A key
+   * written by several steps lists them all, the last one is the winner.
+   */
+  public function recordOrigin(string $key, string $step): static {
+    $this->origins[$key][] = $step;
+    return $this;
+  }
+
+  /**
+   * Gets the steps that wrote each top-level key.
+   *
+   * @return array<string, string[]>
+   *   The step names per key, in the order they ran.
+   */
+  public function getOrigins(): array {
+    return $this->origins;
+  }
+
+  /**
+   * Records a file that took part, for the diagnostic command.
+   */
+  public function setSource(string $name, ?string $path): static {
+    $this->sources[$name] = $path;
+    return $this;
+  }
+
+  /**
+   * Gets the files that took part.
+   *
+   * @return array<string, string|null>
+   *   The paths, keyed by `definition` and `file`.
+   */
+  public function getSources(): array {
+    return $this->sources;
   }
 
   /**
