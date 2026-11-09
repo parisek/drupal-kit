@@ -7,8 +7,9 @@ namespace Drupal\drupal_kit_paragraphs\Mapper;
 /**
  * The callables a colocated `<component>.php` file returned.
  *
- * - alter: Closure(ParagraphMapping, MappingContext, EntityHelper): void.
- *   Runs after the generic mapping (or after replace).
+ * - alter: Closure(ParagraphMapping, MappingContext): void. Runs after the
+ *   generic mapping (or after replace). The mapper also passes the
+ *   EntityHelper as a third argument for older files.
  * - replace: Closure(ParagraphInterface, string, EntityHelper,
  *   MappingContext): ParagraphMapping. Builds the data instead of the generic
  *   rules. The framework fields stay unless it sets them.

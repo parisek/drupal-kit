@@ -224,7 +224,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
 
     $mapping->setComponent($component)->setTemplate($component);
     $mapping->setSource('definition', $definition->getPath())->setSource('file', $file?->getPath());
-    $context = new MappingContext($paragraph, $viewMode, $definition, $this->container);
+    $context = new MappingContext($paragraph, $viewMode, $definition, $this->container, $this->entityHelper);
     $before = $mapping->getData();
     $this->mapFrameworkFields($mapping, $paragraph);
     $this->recordOrigins($mapping, $before, 'framework');
@@ -237,6 +237,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
       }
       $this->closeLeakedScopes($scope, 'the replace step in ' . $file->getPath());
       $this->adopt($mapping, $replaced);
+      $this->adoptLoaded($mapping, $context);
       $this->recordOrigins($mapping, $before, 'file replace');
     }
     else {
@@ -252,6 +253,7 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
       $before = $mapping->getData();
       $alter($mapping, $context, $this->entityHelper);
       $this->closeLeakedScopes($scope, 'the alter step in ' . $file->getPath());
+      $this->adoptLoaded($mapping, $context);
       $this->recordOrigins($mapping, $before, 'file alter');
     }
 
@@ -260,10 +262,12 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     $before = $mapping->getData();
     $this->moduleHandler->alter($types, $mapping, $context);
     $this->closeLeakedScopes($scope, 'a module alter hook');
+    $this->adoptLoaded($mapping, $context);
     $this->recordOrigins($mapping, $before, 'module hook');
     $before = $mapping->getData();
     $this->themeManager->alter($types, $mapping, $context);
     $this->closeLeakedScopes($scope, 'a theme alter hook');
+    $this->adoptLoaded($mapping, $context);
     $this->recordOrigins($mapping, $before, 'theme hook');
 
     return $query_fields;
@@ -318,6 +322,15 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     }
     foreach (array_diff_key($before, $after) as $key => $value) {
       $mapping->recordOrigin((string) $key, $step . ' (removed)');
+    }
+  }
+
+  /**
+   * Adds the entities that a step loaded through the context as dependencies.
+   */
+  private function adoptLoaded(ParagraphMapping $mapping, MappingContext $context): void {
+    foreach ($context->takeLoaded() as $entity) {
+      $mapping->addCacheableDependency($entity);
     }
   }
 
