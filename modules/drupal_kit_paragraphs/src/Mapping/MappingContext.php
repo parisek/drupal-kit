@@ -33,9 +33,9 @@ final class MappingContext {
   ) {}
 
   /**
-   * The entities that loadVisible() loaded and the mapper has not yet taken.
+   * The entities and access results that loadVisible() recorded.
    *
-   * @var \Drupal\Core\Entity\EntityInterface[]
+   * @var \Drupal\Core\Cache\CacheableDependencyInterface[]
    */
   private array $loaded = [];
 
@@ -132,8 +132,8 @@ final class MappingContext {
    * entity that the current user may not view is left out. A raw database
    * query ignores access, so every list that starts from one needs this check.
    *
-   * The mapper adds every loaded entity, also a hidden one, as a cache
-   * dependency of the mapping. A component file does not do that by hand.
+   * The mapper adds every loaded entity, also a hidden one, and the cache
+   * metadata of each access answer as cache dependencies of the mapping. A component file does not do that by hand.
    * It adds the list tag with ParagraphMapping::addListDependency().
    *
    * @param string $entity_type
@@ -156,8 +156,13 @@ final class MappingContext {
         continue;
       }
       $entity = $repository->getTranslationFromContext($loaded[$id]);
+      // The access result carries the contexts and tags that the answer
+      // depends on (permissions, node grants, the published state). A plain
+      // boolean would drop them and let the list be cached for the wrong user.
+      $access = $entity->access('view', NULL, TRUE);
       $this->loaded[] = $entity;
-      if ($entity->access('view')) {
+      $this->loaded[] = $access;
+      if ($access->isAllowed()) {
         $visible[$id] = $entity;
       }
     }
@@ -165,10 +170,10 @@ final class MappingContext {
   }
 
   /**
-   * Hands the entities loaded so far to the mapper, and forgets them.
+   * Hands the entities and access results recorded so far to the mapper.
    *
-   * @return \Drupal\Core\Entity\EntityInterface[]
-   *   The entities that loadVisible() loaded since the last call.
+   * @return \Drupal\Core\Cache\CacheableDependencyInterface[]
+   *   What loadVisible() recorded since the last call.
    *
    * @internal
    */

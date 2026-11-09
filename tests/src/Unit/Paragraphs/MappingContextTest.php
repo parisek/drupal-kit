@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\drupal_kit\Unit\Paragraphs;
 
+use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
@@ -54,7 +55,9 @@ class MappingContextTest extends TestCase {
    */
   private function entity(bool $access): EntityInterface {
     $entity = $this->createMock(EntityInterface::class);
-    $entity->method('access')->with('view')->willReturn($access);
+    $result = $access ? AccessResult::allowed() : AccessResult::forbidden();
+    $result->addCacheTags([$access ? 'access:allowed' : 'access:forbidden']);
+    $entity->method('access')->with('view', NULL, TRUE)->willReturn($result);
     return $entity;
   }
 
@@ -143,8 +146,12 @@ class MappingContextTest extends TestCase {
 
     $this->assertSame([3, 1], array_keys($visible));
     $this->assertSame($translated[3], $visible[3]);
-    // The hidden entity is recorded too, because its access can change.
-    $this->assertSame([$translated[3], $translated[2], $translated[1]], $context->takeLoaded());
+    // The hidden entity is recorded too, because its access can change. Each
+    // entity is followed by its access result with the cache metadata.
+    $taken = $context->takeLoaded();
+    $this->assertCount(6, $taken);
+    $this->assertSame([$translated[3], $translated[2], $translated[1]], [$taken[0], $taken[2], $taken[4]]);
+    $this->assertSame(['access:forbidden'], $taken[3]->getCacheTags());
     $this->assertSame([], $context->takeLoaded());
   }
 
