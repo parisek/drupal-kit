@@ -32,10 +32,9 @@ use Drupal\paragraphs\ParagraphInterface;
  * 2. The `fields` tree of the definition. Only `role: field` nodes map. A node
  *    without a role inherits the role of its parent. Roles `query`, `parent`
  *    and `global` do not map.
- *    A colocated `<component>.php` file may return a `replace` step that
- *    builds the data of rule 2 instead. Its data merges over rule 1.
- * 3. The `alter` step of that file, if it has one. The Components registry
- *    already picked the winning folder, so Twig precedence decides the file.
+ * 3. The alter closure of the colocated `<component>.php` file, if there is
+ *    one. The Components registry already picked the winning folder, so Twig
+ *    precedence decides the file.
  * 4. The module alter hooks, then the theme alter hooks of the active theme
  *    chain.
  *
@@ -49,7 +48,7 @@ use Drupal\paragraphs\ParagraphInterface;
 class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
 
   /**
-   * Alter hook that runs for every component.
+   * Alter hook that runs for every component. It reads the name from context.
    */
   public const ALTER_HOOK = 'drupal_kit_paragraph_mapping';
 
@@ -180,10 +179,9 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
       $definition = $this->repository->loadForBundle($paragraph->bundle());
       $file = $definition === NULL ? NULL : $this->fileLoader->load($definition);
       $query_fields = $definition === NULL ? [] : $this->findQueryFields($definition->getFields());
-      // Read fields only when something will render. An alert, and a replace
-      // step that builds everything, need no generic rules, and the reads
-      // would only spend cache tags.
-      $generic = $definition === NULL || ($query_fields !== [] && $file === NULL) || $file?->getReplace() !== NULL
+      // Read fields only when something will render. An alert needs no generic
+      // rules, and the reads would only spend cache tags.
+      $generic = $definition === NULL || ($query_fields !== [] && $file === NULL)
         ? NULL
         : $this->mapNodes($paragraph, $definition->getFields(), NULL, $mapping, '');
     }
@@ -228,25 +226,11 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
     $before = $mapping->getData();
     $this->mapFrameworkFields($mapping, $paragraph);
     $this->recordOrigins($mapping, $before, 'framework');
-    $replace = $file?->getReplace();
-    if ($replace !== NULL) {
-      $before = $mapping->getData();
-      $replaced = $replace($paragraph, $viewMode, $this->entityHelper, $context);
-      if (!$replaced instanceof ParagraphMapping) {
-        throw new \UnexpectedValueException(sprintf('The "replace" step in %s must return a ParagraphMapping.', $file->getPath()));
-      }
-      $this->closeLeakedScopes($scope, 'the replace step in ' . $file->getPath());
-      $this->adopt($mapping, $replaced);
-      $this->adoptLoaded($mapping, $context);
-      $this->recordOrigins($mapping, $before, 'file replace');
+    $before = $mapping->getData();
+    foreach ($generic ?? [] as $key => $value) {
+      $this->merge($mapping, $key, $value);
     }
-    else {
-      $before = $mapping->getData();
-      foreach ($generic ?? [] as $key => $value) {
-        $this->merge($mapping, $key, $value);
-      }
-      $this->recordOrigins($mapping, $before, 'definition');
-    }
+    $this->recordOrigins($mapping, $before, 'definition');
 
     $alter = $file?->getAlter();
     if ($alter !== NULL) {
@@ -257,8 +241,9 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
       $this->recordOrigins($mapping, $before, 'file alter');
     }
 
-    // Modules first, then the active theme and its base themes.
-    $types = [self::ALTER_HOOK, self::ALTER_HOOK . '_' . str_replace('-', '_', $component)];
+    // Modules first, then the active theme and its base themes. A hook reads
+    // the component name from the context.
+    $types = self::ALTER_HOOK;
     $before = $mapping->getData();
     $this->moduleHandler->alter($types, $mapping, $context);
     $this->closeLeakedScopes($scope, 'a module alter hook');
@@ -331,31 +316,6 @@ class ParagraphComponentMapper implements ParagraphComponentMapperInterface {
   private function adoptLoaded(ParagraphMapping $mapping, MappingContext $context): void {
     foreach ($context->takeLoaded() as $entity) {
       $mapping->addCacheableDependency($entity);
-    }
-  }
-
-  /**
-   * Takes the result of a `replace` step into our mapping.
-   *
-   * The data merges over the framework fields, so container, heading,
-   * wrapper_id, wrapper_classes, spacing and border stay unless the step sets
-   * them. Template, component, cacheability and notes move over. The mapping
-   * the caller gets stays our object, so the cache scope bookkeeping holds.
-   */
-  private function adopt(ParagraphMapping $mapping, ParagraphMapping $replaced): void {
-    foreach ($replaced->getData() as $key => $value) {
-      $this->merge($mapping, $key, $value);
-    }
-    if ($replaced->getComponent() !== NULL) {
-      $mapping->setComponent($replaced->getComponent());
-    }
-    $template = $replaced->getTemplate();
-    if ($template !== NULL) {
-      $mapping->setTemplate($template);
-    }
-    $mapping->addCacheableDependency($replaced->getCacheableMetadata());
-    foreach ($replaced->getDiagnostics() as $note) {
-      $mapping->addDiagnostic($note);
     }
   }
 

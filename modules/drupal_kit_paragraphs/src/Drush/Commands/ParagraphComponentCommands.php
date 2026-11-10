@@ -50,7 +50,7 @@ final class ParagraphComponentCommands extends DrushCommands {
    * Explains how one paragraph is mapped to its component.
    *
    * Prints the component, the files that took part, the content keys, the step
-   * that wrote each key (framework, definition, file replace, file alter,
+   * that wrote each key (framework, definition, file alter,
    * module hook, theme hook) and the cache metadata. It changes nothing.
    *
    * @param int $id

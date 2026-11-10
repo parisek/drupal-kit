@@ -18,7 +18,9 @@ use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
  *
  * Runs after the generic rules and after the colocated component file. Modules
  * run first. The active theme and its base themes run next. A hook may call
- * $mapping->setTemplate().
+ * $mapping->setTemplate(). A hook that acts on one component reads its name
+ * with $context->getComponent(). It is the place for logic that needs a
+ * service of the site and its own tests.
  *
  * Implement it as an OOP hook with
  * #[Hook('drupal_kit_paragraph_mapping_alter')] on a method of a class in
@@ -28,30 +30,9 @@ use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
  *   The mapping. Change it in place.
  * @param \Drupal\drupal_kit_paragraphs\Mapping\MappingContext $context
  *   The paragraph, the view mode and the component definition.
- *
- * @see hook_drupal_kit_paragraph_mapping_COMPONENT_alter()
  */
 function hook_drupal_kit_paragraph_mapping_alter(ParagraphMapping $mapping, MappingContext $context): void {
   $mapping->set('analytics_id', $context->getParagraph()->id());
-}
-
-/**
- * Alters the mapping of one paragraph component.
- *
- * COMPONENT is the component name with underscores: the `article-video`
- * component uses hook_drupal_kit_paragraph_mapping_article_video_alter().
- * It runs after hook_drupal_kit_paragraph_mapping_alter(). The OOP form is
- * #[Hook('drupal_kit_paragraph_mapping_article_video_alter')].
- *
- * @param \Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping $mapping
- *   The mapping. Change it in place.
- * @param \Drupal\drupal_kit_paragraphs\Mapping\MappingContext $context
- *   The paragraph, the view mode and the component definition.
- *
- * @see hook_drupal_kit_paragraph_mapping_alter()
- */
-function hook_drupal_kit_paragraph_mapping_COMPONENT_alter(ParagraphMapping $mapping, MappingContext $context): void {
-  $mapping->remove('legacy_key');
 }
 
 /**
@@ -71,17 +52,11 @@ function hook_drupal_kit_paragraph_mapping_COMPONENT_alter(ParagraphMapping $map
  * and no attribute. The Components registry picks the folder, so Twig
  * precedence decides the file: active theme, then base themes, then modules.
  *
- * The file has no top-level code. It returns one of:
- * - A Closure(ParagraphMapping $mapping, MappingContext $context,
- *   EntityHelper $fields): void. This is the `alter` step. It runs after the
- *   generic mapping from the YAML definition.
- * - An array with `alter` and/or `replace`. `replace` is a
- *   Closure(ParagraphInterface $paragraph, string $view_mode,
- *   EntityHelper $fields, MappingContext $context): ParagraphMapping that
- *   builds the data instead of the generic rules. The framework fields are set
- *   first and its data merges over them.
- *
- * The closures have no class scope and no $this.
+ * The file has no top-level code. It returns a Closure(ParagraphMapping
+ * $mapping, MappingContext $context): void. This is the `alter` step. It runs
+ * after the generic mapping from the YAML definition. The mapper also passes
+ * the EntityHelper as a third argument, so an older file with that parameter
+ * keeps working. The closure has no class scope and no $this.
  *
  * The source rules keep the file declarative. The first token must be the open
  * tag. Before the first `return` only whitespace, comments,
@@ -102,8 +77,8 @@ function hook_drupal_kit_paragraph_mapping_COMPONENT_alter(ParagraphMapping $map
  * legacy display and the component, run
  * `drush drupal-kit:paragraph-switch BUNDLE component|legacy`.
  *
- * Order: generic mapping (or `replace`), the file's `alter`, then
- * hook_drupal_kit_paragraph_mapping_alter() and its COMPONENT variant.
+ * Order: generic mapping, the file's closure, then
+ * hook_drupal_kit_paragraph_mapping_alter().
  *
  * MappingContext::service('id') gives any other service.
  *
@@ -114,14 +89,12 @@ function hook_drupal_kit_paragraph_mapping_COMPONENT_alter(ParagraphMapping $map
  * @code
  * <?php
  *
- * use Drupal\drupal_kit\Services\EntityHelper;
  * use Drupal\drupal_kit_paragraphs\Mapping\MappingContext;
  * use Drupal\drupal_kit_paragraphs\Mapping\ParagraphMapping;
  *
- * return static function (ParagraphMapping $mapping, MappingContext $context, EntityHelper $fields): void {
- *   $paragraph = $context->getParagraph();
- *   $image = $fields->getMediaField($paragraph, 'image');
- *   $media = $fields->getMediaField($paragraph, 'media');
+ * return static function (ParagraphMapping $mapping, MappingContext $context): void {
+ *   $image = $context->media('image');
+ *   $media = $context->media('media');
  *   $mapping->set('video', $media['iframe'] ?? NULL);
  *   $mapping->set('image', !empty($image) ? $image : ($media['image'] ?? NULL));
  * };

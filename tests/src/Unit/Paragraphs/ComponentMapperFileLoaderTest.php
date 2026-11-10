@@ -109,7 +109,6 @@ class ComponentMapperFileLoaderTest extends TestCase {
   private function runAlter(ComponentMapperFile $file): ParagraphMapping {
     $mapping = new ParagraphMapping('x');
     $alter = $file->getAlter();
-    $this->assertNotNull($alter);
     $alter(
       $mapping,
       new MappingContext($this->createMock(ParagraphInterface::class), 'default', new ComponentDefinition('x', 'x/x.yaml', [])),
@@ -193,20 +192,6 @@ class ComponentMapperFileLoaderTest extends TestCase {
   }
 
   /**
-   * An array with both steps loads both.
-   *
-   * @covers ::load
-   */
-  public function testArrayWithBothSteps(): void {
-    $definition = new ComponentDefinition('replacing', 'theme_active/component/replacing/replacing.yaml', []);
-    $file = $this->loader($this->fixtures)->load($definition);
-
-    $this->assertNotNull($file);
-    $this->assertNotNull($file->getAlter());
-    $this->assertNotNull($file->getReplace());
-  }
-
-  /**
    * A bad component name is refused before any path is built.
    *
    * @covers ::load
@@ -273,7 +258,7 @@ class ComponentMapperFileLoaderTest extends TestCase {
   }
 
   /**
-   * An unsupported return value, or an array without a usable closure, throws.
+   * An unsupported return value throws. Only a Closure is accepted.
    *
    * @covers ::load
    */
@@ -299,9 +284,9 @@ class ComponentMapperFileLoaderTest extends TestCase {
       'string' => ["'strlen'"],
       'object' => ['new \\stdClass()'],
       'empty array' => ['[]'],
+      'array with alter' => ["['alter' => static function (): void {}]"],
+      'array with replace' => ["['replace' => static function (): void {}]"],
       'unknown key' => ["['alter' => static function (): void {}, 'extra' => 1]"],
-      'alter is no closure' => ["['alter' => 'strlen']"],
-      'replace is no closure' => ["['replace' => 1]"],
       'list of closures' => ['[static function (): void {}]'],
     ];
   }
@@ -426,7 +411,6 @@ class ComponentMapperFileLoaderTest extends TestCase {
       'use statements' => ["<?php\n\nuse Drupal\\drupal_kit\\Services\\EntityHelper;\nuse function Foo\\bar;\nuse const Foo\\BAZ;\nuse Foo\\{Bar, Baz as Qux};\n\nreturn static function (EntityHelper \$fields): void {};\n"],
       'strict types and use' => ["<?php\ndeclare(strict_types=1);\nuse Foo\\Bar;\nreturn static function (): void {};\n"],
       'class constant and anonymous class' => ["<?php\nreturn static function (): object {\n  \$name = \\stdClass::class;\n  return new class(\$name) {\n    public function __construct(public string \$name) {}\n    public function method(): string { return \$this->name; }\n  };\n};\n"],
-      'array form' => ["<?php\nreturn ['alter' => static function (): void {}, 'replace' => static fn () => NULL];\n"],
     ];
   }
 
@@ -441,7 +425,6 @@ class ComponentMapperFileLoaderTest extends TestCase {
     $file = $this->loadFoo();
     $this->assertNotNull($file);
     $alter = $file->getAlter();
-    $this->assertNotNull($alter);
 
     $this->expectException(\Error::class);
     $alter(new ParagraphMapping(), new MappingContext($this->createMock(ParagraphInterface::class), 'default', new ComponentDefinition('foo', 'x/x.yaml', [])), $this->createMock(EntityHelper::class));
@@ -458,21 +441,6 @@ class ComponentMapperFileLoaderTest extends TestCase {
       'self' => ['self::class'],
       'static' => ['static::class'],
     ];
-  }
-
-  /**
-   * The closures of the array form have no class scope either.
-   *
-   * @covers ::load
-   */
-  public function testArrayFormClosuresHaveNoClassScope(): void {
-    $this->write("<?php\nreturn ['replace' => static function (): string { return self::class; }];\n");
-    $file = $this->loadFoo();
-    $replace = $file?->getReplace();
-    $this->assertNotNull($replace);
-
-    $this->expectException(\Error::class);
-    $replace();
   }
 
   /**

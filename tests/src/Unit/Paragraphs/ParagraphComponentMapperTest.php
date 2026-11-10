@@ -203,11 +203,11 @@ class ParagraphComponentMapperTest extends TestCase {
   }
 
   /**
-   * Lets the loader return a component file with the given steps.
+   * Lets the loader return a component file with the given alter closure.
    */
-  private function useFile(?\Closure $alter, ?\Closure $replace = NULL): void {
+  private function useFile(\Closure $alter): void {
     $this->loader = $this->createMock(ComponentMapperFileLoaderInterface::class);
-    $this->loader->method('load')->willReturn(new ComponentMapperFile('/component/x.php', $alter, $replace));
+    $this->loader->method('load')->willReturn(new ComponentMapperFile('/component/x.php', $alter));
   }
 
   /**
@@ -607,7 +607,7 @@ class ParagraphComponentMapperTest extends TestCase {
       $mapping->set('from_file', TRUE)->setTemplate('custom');
     });
 
-    $types = ['drupal_kit_paragraph_mapping', 'drupal_kit_paragraph_mapping_article_video'];
+    $types = 'drupal_kit_paragraph_mapping';
     $this->moduleHandler->expects($this->once())->method('alter')
       ->with($types, $this->isInstanceOf(ParagraphMapping::class), $this->isInstanceOf(MappingContext::class))
       ->willReturnCallback(function ($types, ParagraphMapping $mapping) use ($calls) {
@@ -655,54 +655,6 @@ class ParagraphComponentMapperTest extends TestCase {
     ], $mapping->getOrigins());
     $this->assertSame('/component/x.php', $mapping->getSources()['file']);
     $this->assertArrayHasKey('definition', $mapping->getSources());
-  }
-
-  /**
-   * A replace step builds the mapping; the generic rules do not run.
-   *
-   * @covers ::build
-   * @covers ::adopt
-   */
-  public function testReplaceStepReplacesGenericMapping(): void {
-    $this->helper->expects($this->never())->method('mapFields');
-    $this->definition(['phone' => ['type' => 'text', 'role' => 'field']], 'replacing');
-    $calls = new \ArrayObject();
-    $this->useFile(
-      static function (ParagraphMapping $mapping) use ($calls): void {
-        $calls->append('alter:' . $mapping->get('built'));
-        $mapping->set('altered', TRUE);
-      },
-      static function (ParagraphInterface $paragraph, string $view_mode, EntityHelper $fields, MappingContext $context) use ($calls): ParagraphMapping {
-        $calls->append('context:' . $context->getComponent());
-        $calls->append('replace:' . $view_mode);
-        return (new ParagraphMapping())->set('built', 'by-replace')->setTemplate('other')
-          ->addDiagnostic('note')
-          ->addCacheableDependency((new CacheableMetadata())->setCacheTags(['replace:tag']));
-      },
-    );
-
-    $mapping = $this->mapper()->map($this->paragraph([], 'replacing'), 'full');
-
-    $this->assertSame(['context:replacing', 'replace:full', 'alter:by-replace'], $calls->getArrayCopy());
-    // The framework field stays, the replace data merges over it.
-    $this->assertSame(['container' => '', 'built' => 'by-replace', 'altered' => TRUE], $mapping->getData());
-    $this->assertSame('replacing', $mapping->getComponent());
-    $this->assertSame('other', $mapping->getTemplate());
-    $this->assertSame(['note'], $mapping->getDiagnostics());
-    $this->assertContains('replace:tag', $mapping->getCacheableMetadata()->getCacheTags());
-  }
-
-  /**
-   * A replace step that returns something else is a programming error.
-   *
-   * @covers ::build
-   */
-  public function testReplaceStepWithWrongReturnPropagates(): void {
-    $this->definition([], 'replacing');
-    $this->useFile(NULL, static fn () => 'nope');
-
-    $this->expectException(\UnexpectedValueException::class);
-    $this->mapper()->map($this->paragraph([], 'replacing'), 'full');
   }
 
   /**
@@ -1349,47 +1301,6 @@ class ParagraphComponentMapperTest extends TestCase {
     $this->assertSame('https://video.example/embed/1', $mapping->get('video'));
     $this->assertSame([['src' => 'thumb.jpg']], $mapping->get('image'));
     $this->assertSame(['outer:1'], $helper->collectCacheMetadata()->getCacheTags());
-  }
-
-  /**
-   * The real replacing.php fixture keeps the framework fields.
-   *
-   * The file is loaded by the real loader, not a stub. Its replace step sets
-   * only `built`; the framework keys come from the mapper and survive.
-   *
-   * @covers ::build
-   * @covers ::adopt
-   */
-  public function testRealReplaceFileKeepsFrameworkFields(): void {
-    $repository = $this->createMock(ComponentDefinitionRepositoryInterface::class);
-    $repository->method('isValidComponentName')->willReturn(TRUE);
-    $repository->method('loadForBundle')->willReturn(new ComponentDefinition(
-      'replacing',
-      'theme_active/component/replacing/replacing.yaml',
-      ['fields' => ['never' => ['type' => 'text', 'role' => 'field']]],
-    ));
-    $this->repository = $repository;
-    $loader = new ComponentMapperFileLoader($repository, dirname(__DIR__, 3) . '/fixtures/component_files');
-    $string = ['type' => 'string', 'cardinality' => 1];
-    $paragraph = $this->stateful([
-      'field_title' => $string + ['values' => ['Title']],
-      'field_wrapper_id' => $string + ['values' => ['anchor']],
-      'field_wrapper_classes' => $string + ['values' => ['a b']],
-      'field_never' => $string + ['values' => ['generic rule ran']],
-    ]);
-    $helper = $this->realHelper();
-
-    $mapping = $this->mapper($helper, $loader)->map($paragraph, 'default');
-
-    $data = $mapping->getData();
-    $this->assertSame('', $data['container']);
-    $this->assertSame('Title', $data['heading']['title']);
-    $this->assertSame('anchor', $data['wrapper_id']);
-    $this->assertSame('a b', $data['wrapper_classes']);
-    $this->assertSame('by replace', $data['built']);
-    $this->assertTrue($data['altered']);
-    // The generic rules did not run.
-    $this->assertArrayNotHasKey('never', $data);
   }
 
   /**

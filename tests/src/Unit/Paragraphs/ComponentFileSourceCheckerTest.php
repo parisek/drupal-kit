@@ -87,7 +87,6 @@ class ComponentFileSourceCheckerTest extends TestCase {
       'use statements' => ["<?php\n\nuse Drupal\\drupal_kit\\Services\\EntityHelper;\nuse function Foo\\bar;\nuse const Foo\\BAZ;\nuse Foo\\{Bar, Baz as Qux};\n\nreturn static function (EntityHelper \$fields): void {};\n"],
       'strict types and use' => ["<?php\ndeclare(strict_types=1);\nuse Foo\\Bar;\nreturn static function (): void {};\n"],
       'class constant and anonymous class' => ["<?php\nreturn static function (): object {\n  \$name = \\stdClass::class;\n  return new class(\$name) {\n    public function __construct(public string \$name) {}\n    public function method(): string { return \$this->name; }\n  };\n};\n"],
-      'array form' => ["<?php\nreturn ['alter' => static function (): void {}, 'replace' => static fn () => NULL];\n"],
     ];
   }
 

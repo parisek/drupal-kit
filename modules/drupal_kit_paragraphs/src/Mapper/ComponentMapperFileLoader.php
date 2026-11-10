@@ -22,9 +22,8 @@ use Drupal\drupal_kit\Component\InvalidComponentDefinitionException;
  *   directory. A symbolic link out of the folder is refused.
  * - The file must print nothing, in any output buffer level it opens. Output is
  *   refused.
- * - It returns a Closure (the alter step) or an array with `alter` and
- *   `replace` Closures. Anything else is refused. The closures have no class
- *   scope and no $this.
+ * - It returns a Closure (the alter step). Anything else is refused. The
+ *   closure has no class scope and no $this.
  * - A file is included once per request. The result stays in memory.
  *
  * The loader does not read the source of the file. A component file belongs to
@@ -140,20 +139,8 @@ class ComponentMapperFileLoader implements ComponentMapperFileLoaderInterface {
     if ($returned instanceof \Closure) {
       return new ComponentMapperFile($file, $this->unscope($returned, $file));
     }
-    if (is_array($returned)) {
-      $unknown = array_diff(array_keys($returned), ['alter', 'replace']);
-      $alter = $returned['alter'] ?? NULL;
-      $replace = $returned['replace'] ?? NULL;
-      if ($unknown === [] && ($alter === NULL || $alter instanceof \Closure) && ($replace === NULL || $replace instanceof \Closure) && ($alter !== NULL || $replace !== NULL)) {
-        return new ComponentMapperFile(
-          $file,
-          $alter === NULL ? NULL : $this->unscope($alter, $file),
-          $replace === NULL ? NULL : $this->unscope($replace, $file),
-        );
-      }
-    }
 
-    throw new InvalidComponentDefinitionException(sprintf('The component file %s must return a Closure, or an array with an "alter" and/or "replace" Closure.', $file));
+    throw new InvalidComponentDefinitionException(sprintf('The component file %s must return a Closure.', $file));
   }
 
   /**
