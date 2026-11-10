@@ -1,0 +1,12 @@
+name: "Drupal Kit Paragraphs"
+type: module
+description: "Maps a Paragraph to its Twig component from the component definition (YAML). Replaces a hand-written per-bundle display switch."
+core_version_requirement: ^11.4
+package: "PORTA"
+
+# A submodule, because drupal_kit does not require Paragraphs. Sites without
+# Paragraphs enable drupal_kit alone and never load these classes.
+dependencies:
+  - drupal_kit:drupal_kit
+  - drupal:extra_field
+  - paragraphs:paragraphs

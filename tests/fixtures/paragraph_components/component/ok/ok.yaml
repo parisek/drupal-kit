@@ -1,0 +1,5 @@
+name: Ok
+fields:
+  title:
+    type: text
+    role: field

@@ -1,0 +1,37 @@
+parameters:
+  # Parent node bundles whose paragraphs get `container: container`. The
+  # paragraph is then the top level of the page and the component needs the
+  # page container. A site overrides this in its own services.yml.
+  drupal_kit_paragraphs.container_node_bundles:
+    - page
+
+services:
+  drupal_kit.component_mapper_file_loader:
+    class: Drupal\drupal_kit_paragraphs\Mapper\ComponentMapperFileLoader
+    arguments:
+      - "@drupal_kit.component_definition_repository"
+      - "%app.root%"
+  drupal_kit.paragraph_component_mapper:
+    class: Drupal\drupal_kit_paragraphs\Mapper\ParagraphComponentMapper
+    arguments:
+      - "@drupal_kit.component_definition_repository"
+      - "@drupal_kit.entity_helper"
+      - "@drupal_kit.component_mapper_file_loader"
+      - "@module_handler"
+      - "@theme.manager"
+      - "@logger.factory"
+      - "@service_container"
+      - "%drupal_kit_paragraphs.container_node_bundles%"
+  drupal_kit.paragraph_display_switcher:
+    class: Drupal\drupal_kit_paragraphs\Display\ParagraphDisplaySwitcher
+    arguments:
+      - "@entity_type.manager"
+      - "@state"
+      - "@entity_field.manager"
+  drupal_kit.paragraph_component_uninstall_validator:
+    class: Drupal\drupal_kit_paragraphs\Display\ParagraphComponentUninstallValidator
+    arguments:
+      - "@entity_type.manager"
+      - "@string_translation"
+    tags:
+      - { name: module_install.uninstall_validator }

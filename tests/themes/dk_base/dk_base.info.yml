@@ -1,0 +1,8 @@
+name: 'Drupal Kit test base theme'
+type: theme
+description: 'Base theme of the component definition kernel test.'
+core_version_requirement: ^11
+base theme: false
+components:
+  namespaces:
+    component: templates
