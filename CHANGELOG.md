@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [3.7.0] — 2026-11-10
+
 ### Added
 
 - **`ComponentDefinitionRepository`** (service `drupal_kit.component_definition_repository`) — finds the `<component>/<component>.yaml` that sits beside the Twig template of a component in the Components registry, so theme and base theme precedence is the Twig precedence. It parses the file, caches it in `cache.discovery` under the `components_registry` tag (a cache rebuild invalidates it), resolves a bundle to a kebab-case component name (alias map `drupal_kit.component_bundle_aliases`, default `html` to `content`; exclusion list `drupal_kit.component_bundle_exclusions`), and checks that a name is a machine name before it builds a path. A missing file returns NULL. A malformed file throws `InvalidComponentDefinitionException`. The definition records the module or theme that owns it (`getProvider()`). New behavior, nothing calls it unless a module does.
