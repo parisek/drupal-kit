@@ -133,8 +133,9 @@ final class MappingContext {
    * query ignores access, so every list that starts from one needs this check.
    *
    * The mapper adds every loaded entity, also a hidden one, and the cache
-   * metadata of each access answer as cache dependencies of the mapping. A component file does not do that by hand.
-   * It adds the list tag with ParagraphMapping::addListDependency().
+   * metadata of each access answer as cache dependencies of the mapping. A
+   * component file does not do that by hand. It adds the list tag with
+   * ParagraphMapping::addListDependency().
    *
    * @param string $entity_type
    *   The entity type id, for example "node".
