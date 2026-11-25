@@ -5,15 +5,20 @@ namespace Drupal\Tests\drupal_kit\Unit\Services;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\Context\CacheContextsManager;
+use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
+use Drupal\Core\Menu\MenuLinkInterface;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
 use Drupal\Core\Menu\MenuTreeParameters;
+use Drupal\Core\Url;
 use Drupal\drupal_kit\Services\MenuActiveTrailResolver;
 use Drupal\drupal_kit\Services\MenuTreeBuilder;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
@@ -292,6 +297,67 @@ class MenuTreeBuilderTest extends TestCase {
     $callables = array_column($manipulators, 'callable');
     $this->assertContains('menu.language_menu_link_tree_manipulator:process', $callables);
     $this->assertNotContains('menu.language_tree_manipulator:filterLanguage', $callables);
+  }
+
+  /**
+   * The active item ignores the query string of the request.
+   *
+   * A request with a query string (?utm_source=..., ?page=2) is the same
+   * page. The menu is cached per active trail, not per query string, so a
+   * wrong flag here is stored for every later visitor of the page.
+   *
+   * @covers ::build
+   */
+  #[DataProvider('providerIsActive')]
+  public function testIsActiveIgnoresQueryString(string $request_uri, bool $expected): void {
+    $this->requestStack->method('getCurrentRequest')
+      ->willReturn(Request::create($request_uri));
+    $this->entityTypeManager->method('getStorage')
+      ->willReturn($this->createMock(EntityStorageInterface::class));
+
+    $link = $this->createMock(MenuLinkInterface::class);
+    $link->method('getPluginDefinition')->willReturn(['metadata' => []]);
+    $url = $this->createMock(Url::class);
+    $url->method('getOption')->willReturn(NULL);
+    $url->method('toString')->willReturn('/cs/produkty');
+
+    $this->menuLinkTree->method('load')->willReturn([]);
+    $this->menuLinkTree->method('transform')->willReturn([]);
+    $this->menuLinkTree->method('build')->willReturn([
+      '#items' => [
+        'menu_link_content:1' => [
+          'original_link' => $link,
+          'url' => $url,
+          'title' => 'Produkty',
+          'in_active_trail' => TRUE,
+          'below' => [],
+        ],
+      ],
+    ]);
+
+    $items = $this->newBuilder()->build('main');
+
+    $this->assertSame($expected, $items[0]['is_active']);
+  }
+
+  /**
+   * Request URIs and the expected is_active flag of '/cs/produkty'.
+   *
+   * @return array<string, array{string, bool}>
+   *   The request URI and the expected flag.
+   */
+  public static function providerIsActive(): array {
+    return [
+      'same path' => ['/cs/produkty', TRUE],
+      'query string' => ['/cs/produkty?utm_source=x', TRUE],
+      'two query arguments' => ['/cs/produkty?utm_source=x&page=2', TRUE],
+      'empty query string' => ['/cs/produkty?', TRUE],
+      'other path' => ['/cs/kontakt', FALSE],
+      'other path with query string' => ['/cs/kontakt?utm_source=x', FALSE],
+      // Unchanged behaviour: the comparison is exact on the path.
+      'trailing slash' => ['/cs/produkty/', FALSE],
+      'other language prefix' => ['/en/produkty', FALSE],
+    ];
   }
 
 }

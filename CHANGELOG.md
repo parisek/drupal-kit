@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Fixed
+
+- **Menu active item on a URL with a query string** — `MenuTreeBuilder` compared each link URL with the full request URI, query string included. On `/cs/produkty?utm_source=x` no item had `is_active`, and because the menu is cached per active trail (`route.menu_active_trails:<menu>`), not per query string, that copy could reach every later visitor of the page. The builder now compares the path only. A trailing slash or another language prefix still does not match, as before. After the update, rebuild the cache to drop a wrong copy that is already stored.
+
 ## [3.7.0] — 2026-11-10
 
 ### Added

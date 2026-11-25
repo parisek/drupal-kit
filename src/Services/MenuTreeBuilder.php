@@ -169,7 +169,12 @@ class MenuTreeBuilder {
   protected function renderLinks(array $items, ?callable $field_formatter): array {
     $langcode = $this->languageManager->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)->getId();
     $storage = $this->entityTypeManager->getStorage('menu_link_content');
-    $current_path = $this->requestStack->getCurrentRequest()?->getRequestUri() ?? '';
+    // Compare the path only. The request URI carries the query string
+    // (?utm_source=..., ?page=2), and the built menu is cached per active
+    // trail, not per query string: with the query kept, one such request
+    // stores the menu with no active item for every visitor of the page.
+    $request_uri = $this->requestStack->getCurrentRequest()?->getRequestUri() ?? '';
+    $current_path = substr($request_uri, 0, strcspn($request_uri, '?#'));
 
     $links = [];
     foreach ($items as $key => $item) {
