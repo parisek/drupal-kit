@@ -2158,12 +2158,6 @@ parameters:
 		-
 			message: '#^Cannot access offset ''src'' on array\{src\: string, type\: string, width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\|false\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: tests/src/Kernel/Services/ResizerFocalPointKernelTest.php
-
-		-
-			message: '#^Cannot access offset ''src'' on array\{src\: string, type\: string, width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\|false\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
 			count: 2
 			path: tests/src/Kernel/Services/ResizerOrientationTest.php
 
@@ -2263,12 +2257,6 @@ parameters:
 			'''
 			identifier: phpunit.coversMethod
 			count: 1
-			path: tests/src/Kernel/Services/ResizerTest.php
-
-		-
-			message: '#^Cannot access offset ''src'' on array\{src\: string, type\: string, width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\|false\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 4
 			path: tests/src/Kernel/Services/ResizerTest.php
 
 		-
@@ -3751,12 +3739,6 @@ parameters:
 			path: tests/src/Unit/TwigExtensionTest.php
 
 		-
-			message: '#^Call to an undefined method Drupal\\Core\\Datetime\\DateFormatterInterface\:\:expects\(\)\.$#'
-			identifier: method.notFound
-			count: 3
-			path: tests/src/Unit/TwigExtensionTest.php
-
-		-
 			message: '#^Call to an undefined method Drupal\\Core\\StringTranslation\\TranslationInterface\:\:expects\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -3784,7 +3766,7 @@ parameters:
 			path: tests/src/Unit/TwigExtensionTest.php
 
 		-
-			message: '#^Method class@anonymous/tests/src/Unit/TwigExtensionTest\.php\:642\:\:getSetting\(\) return type has no value type specified in iterable type array\.$#'
+			message: '#^Method class@anonymous/tests/src/Unit/TwigExtensionTest\.php\:681\:\:getSetting\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: tests/src/Unit/TwigExtensionTest.php

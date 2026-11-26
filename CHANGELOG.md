@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Fixed
+
+- **`|date` of `NULL` no longer breaks the page** — the kit's `|date` filter passed `NULL` on to Drupal's date formatter, which threw "The timestamp must be numeric.". `{{ now|date('Y') }}` with an undefined `now` took a component down. `NULL`, `''` and `'now'` now mean the current time, as in Twig's own filter, and a `\DateTimeInterface` is read through `getTimestamp()`. A value the filter cannot read renders an empty string and writes a warning to the `drupal_kit` log channel.
+- **`component_*()` and `page_*()` report the real error** — every exception rendered "Component template **name.twig** not found", also for a template that exists and threw while it rendered, and nothing was logged. A missing template keeps that message. Any other exception now says "failed to render:" with the escaped exception message. Both write an error with the template path and the exception to the `drupal_kit` log channel.
+
+### Changed
+
+- **The template error alert is for site administrators only** — only a user with `access site reports` sees it. Everyone else, anonymous visitors and editors without that permission included, gets an empty string, so the rest of the page renders. The bare `<div>` fallback (no `alert` component) follows the same rule. `TwigExtension` takes `@logger.factory` and `@current_user` as new trailing constructor arguments (container-wired, not public API per RELEASING.md). Without a current user it shows no alert; without a logger it logs nothing.
+
 ## [3.7.1] — 2026-11-25
 
 ### Fixed

@@ -4,19 +4,33 @@ namespace Drupal\drupal_kit;
 
 use Twig\Extension\AbstractExtension;
 use Twig\Environment;
+use Twig\Error\LoaderError;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
+use Drupal\Component\Utility\Html;
 use Drupal\Core\Locale\CountryManager;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Utility\Error;
 use Drupal\drupal_kit\Services\Resizer;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Psr\Log\LogLevel;
 
 /**
  * Twig extension with some useful functions and filters.
  */
 class TwigExtension extends AbstractExtension {
+
+  /**
+   * The permission a user needs to see a template error in the page.
+   *
+   * The alert repeats what the log entry says, exception message included.
+   * The user who may read the log may also see it in the page.
+   */
+  const ALERT_PERMISSION = 'access site reports';
 
   /**
    * Array of generated unique IDs to prevent duplicates.
@@ -58,15 +72,21 @@ class TwigExtension extends AbstractExtension {
    * @param \Drupal\drupal_kit\Services\Resizer|null $resizer
    *   The resizer service. Trailing and optional, which RELEASING.md
    *   classifies as MINOR; the container always supplies it.
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface|null $loggerFactory
+   *   The logger factory. Without it, nothing is logged.
+   * @param \Drupal\Core\Session\AccountInterface|null $currentUser
+   *   The current user. Without it, no user sees a template error alert.
    */
   public function __construct(
     DateFormatterInterface $date_formatter,
     LanguageManagerInterface $language_manager,
     TranslationInterface $string_translation,
     // Trailing and optional, which RELEASING.md § Public API surface
-    // classifies as MINOR. The container always supplies it; the default
-    // keeps a consumer that constructs this class by hand working.
+    // classifies as MINOR. The container always supplies them; the defaults
+    // keep a consumer that constructs this class by hand working.
     protected ?Resizer $resizer = NULL,
+    protected ?LoggerChannelFactoryInterface $loggerFactory = NULL,
+    protected ?AccountInterface $currentUser = NULL,
   ) {
     $this->dateFormatter = $date_formatter;
     $this->languageManager = $language_manager;
@@ -203,21 +223,40 @@ class TwigExtension extends AbstractExtension {
    * Overrides Twig's built-in date filter to ensure Czech (and other language)
    * month names are properly translated.
    *
+   * NULL, '' and 'now' mean the current time, as in Twig's own filter. A
+   * value the filter cannot read logs a warning and renders an empty
+   * string, so one bad value does not stop the page.
+   *
    * @param mixed $timestamp
-   *   The timestamp to format (Unix timestamp or string).
+   *   A Unix timestamp, a numeric string, a string strtotime() reads, a
+   *   \DateTimeInterface, or NULL.
    * @param string $format
    *   The PHP date format string (e.g., 'F j, Y' or 'j. F Y').
    *
    * @return string
-   *   The formatted and localized date string.
+   *   The formatted and localized date string, or '' for invalid input.
    */
   public function formatDate($timestamp, string $format = 'F j, Y'): string {
-    // Convert to integer timestamp if needed.
-    if (is_string($timestamp) && !is_numeric($timestamp)) {
-      $timestamp = strtotime($timestamp);
+    $value = $timestamp;
+    if ($timestamp === NULL || $timestamp === '' || $timestamp === 'now') {
+      $timestamp = time();
+    }
+    elseif ($timestamp instanceof \DateTimeInterface) {
+      $timestamp = $timestamp->getTimestamp();
     }
     elseif (is_numeric($timestamp)) {
       $timestamp = intval($timestamp);
+    }
+    elseif (is_string($timestamp)) {
+      $timestamp = strtotime($timestamp);
+    }
+
+    if (!is_int($timestamp)) {
+      $this->loggerFactory?->get('drupal_kit')->warning('The date filter cannot read @value (@type) and renders an empty string.', [
+        '@value' => is_scalar($value) ? var_export($value, TRUE) : get_debug_type($value),
+        '@type' => get_debug_type($value),
+      ]);
+      return '';
     }
 
     // Get current language code.
@@ -347,6 +386,11 @@ class TwigExtension extends AbstractExtension {
   /**
    * Load and render a template with fallback to alert component.
    *
+   * A missing template and a template that fails to render get different
+   * messages, and both are logged to the drupal_kit channel. Only a user
+   * with ALERT_PERMISSION sees the alert. Everyone else gets an empty
+   * string, so the rest of the page renders.
+   *
    * @param \Twig\Environment $env
    *   The Twig environment.
    * @param array $context
@@ -372,25 +416,74 @@ class TwigExtension extends AbstractExtension {
       $type = 'Template';
     }
 
+    $path = $namespace . '/' . $template_name . '/' . $template_name . '.twig';
+    $label = $type . ' template <strong>' . $template_name . '.twig</strong>';
+
+    // Two try blocks: a LoaderError from render() comes from a missing
+    // include inside a template that exists, so it is a render error.
     try {
-      $template = $env->load($namespace . '/' . $template_name . '/' . $template_name . '.twig');
-      $context = array_merge($context, ['content' => $content]);
-      return $template->render($context);
+      $template = $env->load($path);
+    }
+    catch (LoaderError $e) {
+      return $this->templateError($env, $context, $path, $label . ' not found', $e);
     }
     catch (\Throwable $e) {
-      try {
-        $template = $env->load('@component/alert/alert.twig');
-        $content = [
+      return $this->templateError($env, $context, $path, $label . ' failed to render: ' . Html::escape($e->getMessage()), $e);
+    }
+
+    try {
+      return $template->render(array_merge($context, ['content' => $content]));
+    }
+    catch (\Throwable $e) {
+      return $this->templateError($env, $context, $path, $label . ' failed to render: ' . Html::escape($e->getMessage()), $e);
+    }
+  }
+
+  /**
+   * Logs a template error and renders the alert for a user who may see it.
+   *
+   * @param \Twig\Environment $env
+   *   The Twig environment.
+   * @param array<string, mixed> $context
+   *   The current Twig context.
+   * @param string $path
+   *   The template path that failed.
+   * @param string $message
+   *   The alert message. Safe markup: the caller escapes the parts it does
+   *   not control.
+   * @param \Throwable $e
+   *   The exception.
+   *
+   * @return string
+   *   The alert, the bare <div> fallback, or '' for other users.
+   */
+  private function templateError(Environment $env, array $context, string $path, string $message, \Throwable $e): string {
+    if ($this->loggerFactory !== NULL) {
+      Error::logException(
+        $this->loggerFactory->get('drupal_kit'),
+        $e,
+        'Template %template: ' . Error::DEFAULT_ERROR_MESSAGE,
+        ['%template' => $path],
+        LogLevel::ERROR,
+      );
+    }
+
+    if ($this->currentUser === NULL || !$this->currentUser->hasPermission(self::ALERT_PERMISSION)) {
+      return '';
+    }
+
+    try {
+      $alert = $env->load('@component/alert/alert.twig');
+      return $alert->render(array_merge($context, [
+        'content' => [
           'type' => 'error',
           'container' => 'container',
-          'message' => $type . ' template <strong>' . $template_name . '.twig</strong> not found',
-        ];
-        $context = array_merge($context, ['content' => $content]);
-        return $template->render($context);
-      }
-      catch (\Throwable $e) {
-        return '<div>' . $type . ' template <strong>' . $template_name . '.twig</strong> not found</div>';
-      }
+          'message' => $message,
+        ],
+      ]));
+    }
+    catch (\Throwable) {
+      return '<div>' . $message . '</div>';
     }
   }
 

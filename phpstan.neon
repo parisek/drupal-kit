@@ -51,6 +51,20 @@ parameters:
             path: src/Services/MediaArrayBuilder.php
             reportUnmatched: false
 
+        # `end($result)` and `$result[0]` on a Resizer result in two kernel
+        # tests. With drupal/core 11.4.13 PHPStan reports `array|false`
+        # there. A fresh install (drupal/core 11.4.14, 2026-11-26) does not,
+        # and the unused baseline entries failed CI. Both resolve under
+        # `^11.4`, so the ignore lives here with `reportUnmatched: false`,
+        # for the same reason as the two above.
+        -
+            message: '#^Cannot access offset ''src'' on array\{src\: string, type\: string, width\: int\|string, height\: int\|string, media\?\: string, alt\?\: string, caption\?\: string, description\?\: string\}\|false\.$#'
+            identifier: offsetAccess.nonOffsetAccessible
+            paths:
+                - tests/src/Kernel/Services/ResizerFocalPointKernelTest.php
+                - tests/src/Kernel/Services/ResizerTest.php
+            reportUnmatched: false
+
         # getCropEntity() on the optional focal_point manager. The
         # argument is typed `?object` because FocalPointManager does not
         # exist without the module, and a signature naming it would fail

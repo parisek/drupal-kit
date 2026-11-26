@@ -33,7 +33,7 @@ drush en drupal_kit
 - `Drupal\drupal_kit\Services\FeatureFlags` (`drupal_kit.feature_flags`) — reads the opt-in flags in the `drupal_kit.feature_flags` config object, the shape core uses for `system.feature_flags`. `enabled('<flag>')` is FALSE unless the module declares the flag **and** the project set it, which is how hook-level behaviour ships opt-in.
 - `Drupal\drupal_kit\Services\Resizer` (`drupal_kit.resizer`) — image style + focal point + responsive variant generator. Take the service, or call the static `Resizer::resizer($images, $variants)` facade, which delegates to it and is kept for backwards compatibility. `$variants` is a list of positional tuples, or an orientation map (`landscape` / `portrait` / `square`) that picks its tuples from the image's own aspect ratio — see [Orientation-aware variants](#orientation-aware-variants).
 - `drupal_kit.menu_active_trail_resolver` — resolves the active menu trail accounting for entity references and aliases.
-- `drupal_kit.twig_extension` — registers Twig functions used by component templates, including the typography-aware translation helpers `_xt` / `__t` / `_nt` / `_nxt` (translate, then pipe through `|typography`).
+- `drupal_kit.twig_extension` — registers Twig functions used by component templates, including the typography-aware translation helpers `_xt` / `__t` / `_nt` / `_nxt` (translate, then pipe through `|typography`). See [Template errors and `|date`](#template-errors-and-date).
 - `drupal_kit.typography_twig_extension` — provides the `|typography` Twig filter; delegates to [`parisek/twig-typography`](https://github.com/parisek/twig-typography) and resolves typography config from `{active_theme}/static/typography.yml`.
 - `drupal_kit.route_subscriber` — alters routes for entity access edge cases.
 - `drupal_kit.config_applier` (`Drupal\drupal_kit\Services\ConfigApplier`) — creates (and, opt-in, updates) an explicit list of config objects through the entity/config API, in dependency order. See [Applying config on deploy](#applying-config-on-deploy).
@@ -77,6 +77,17 @@ missing file or a broken one arrives with neither.
 
 The same call shape works in [`parisek/timber-kit`](https://github.com/parisek/timber-kit)
 and in the styleguide preview, so one template renders on every stack.
+
+### Template errors and `|date`
+
+`component_*()` and `page_*()` render `@component/<name>/<name>.twig` or `@page/<name>/<name>.twig`. When that fails, the function writes an error to the `drupal_kit` log channel, with the template path and the exception. The page renders on.
+
+- A missing template gives the message "Component template **name.twig** not found".
+- An exception thrown while the template loads or renders (a syntax error, a filter that throws, a missing include) gives "Component template **name.twig** failed to render: `<exception message>`".
+
+Only a user with the `access site reports` permission sees the message, in the `alert` component or, without one, in a bare `<div>`. Everyone else, anonymous visitors included, gets an empty string. It is the permission that opens the log at `/admin/reports/dblog`, so the alert shows nothing that user cannot read there. Render caches already vary by `user.permissions`.
+
+The kit replaces Twig's `|date` filter with one that formats through Drupal's date formatter, so month names follow the content language. It reads a Unix timestamp, a numeric string, a string that `strtotime()` reads, or a `\DateTimeInterface`. `NULL`, `''` and `'now'` mean the current time, as in Twig. Any other value renders an empty string and writes a warning to the `drupal_kit` channel.
 
 ## Applying config on deploy
 
