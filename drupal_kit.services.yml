@@ -55,7 +55,7 @@ services:
     tags:
       - { name: event_subscriber }
   drupal_kit.twig_extension:
-    arguments: ["@date.formatter", "@language_manager", "@string_translation", "@drupal_kit.resizer"]
+    arguments: ["@date.formatter", "@language_manager", "@string_translation", "@drupal_kit.resizer", "@logger.factory", "@current_user"]
     class: Drupal\drupal_kit\TwigExtension
     tags:
       - { name: twig.extension }
