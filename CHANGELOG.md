@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [3.7.2] — 2026-11-26
+
 ### Fixed
 
 - **`|date` of `NULL` no longer breaks the page** — the kit's `|date` filter passed `NULL` on to Drupal's date formatter, which threw "The timestamp must be numeric.". `{{ now|date('Y') }}` with an undefined `now` took a component down. `NULL`, `''` and `'now'` now mean the current time, as in Twig's own filter, and a `\DateTimeInterface` is read through `getTimestamp()`. A value the filter cannot read renders an empty string and writes a warning to the `drupal_kit` log channel.
